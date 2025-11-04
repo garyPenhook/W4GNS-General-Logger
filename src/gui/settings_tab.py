@@ -57,7 +57,13 @@ class SettingsTab:
         qrz_row2.pack(fill='x', pady=5)
         ttk.Label(qrz_row2, text="QRZ Password:").pack(side='left')
         self.qrz_password_var = tk.StringVar(value=self.config.get('qrz.password', ''))
-        ttk.Entry(qrz_row2, textvariable=self.qrz_password_var, width=20, show='*').pack(side='left', padx=5)
+        self.qrz_password_entry = ttk.Entry(qrz_row2, textvariable=self.qrz_password_var, width=20, show='*')
+        self.qrz_password_entry.pack(side='left', padx=5)
+
+        # Show/hide password button
+        self.password_visible = False
+        self.toggle_password_btn = ttk.Button(qrz_row2, text="👁", width=3, command=self.toggle_password_visibility)
+        self.toggle_password_btn.pack(side='left', padx=2)
 
         qrz_row3 = ttk.Frame(qrz_frame)
         qrz_row3.pack(fill='x', pady=5)
@@ -78,8 +84,10 @@ class SettingsTab:
 
         qrz_test_frame = ttk.Frame(qrz_frame)
         qrz_test_frame.pack(fill='x', pady=5)
-        ttk.Button(qrz_test_frame, text="Test QRZ Connection",
-                  command=self.test_qrz_connection).pack(side='left')
+        ttk.Button(qrz_test_frame, text="Test QRZ Connection (GET)",
+                  command=self.test_qrz_connection).pack(side='left', padx=2)
+        ttk.Button(qrz_test_frame, text="Test with POST",
+                  command=self.test_qrz_connection_post).pack(side='left', padx=2)
 
         # Logging Preferences
         logging_frame = ttk.LabelFrame(self.frame, text="Logging Preferences", padding=10)
@@ -152,8 +160,71 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         ttk.Button(btn_frame, text="Save Settings", command=self.save_settings).pack(side='left')
         ttk.Button(btn_frame, text="Reset to Defaults", command=self.reset_settings).pack(side='left', padx=5)
 
-    def test_qrz_connection(self):
-        """Test QRZ.com connection"""
+        # Add debug button for QRZ issues
+        ttk.Button(btn_frame, text="Debug QRZ", command=self.debug_qrz_raw).pack(side='left', padx=5)
+        ttk.Button(btn_frame, text="Verify Password", command=self.verify_qrz_password).pack(side='left', padx=5)
+
+    def toggle_password_visibility(self):
+        """Toggle password visibility"""
+        if self.password_visible:
+            self.qrz_password_entry.config(show='*')
+            self.password_visible = False
+        else:
+            self.qrz_password_entry.config(show='')
+            self.password_visible = True
+
+    def verify_qrz_password(self):
+        """Verify what password is being sent to QRZ"""
+        import urllib.parse
+
+        username = self.qrz_username_var.get().strip()
+        password = self.qrz_password_var.get()  # Don't strip password - spaces might be intentional
+
+        if not username or not password:
+            messagebox.showwarning("Missing Credentials", "Please enter QRZ username and password")
+            return
+
+        # Show what's being sent
+        info = "Password Verification\n"
+        info += "=" * 50 + "\n\n"
+        info += f"Username: {username}\n"
+        info += f"Password length: {len(password)} characters\n"
+        info += f"Password (visible): {password}\n\n"
+
+        # Show URL encoded versions
+        encoded_user = urllib.parse.quote(username)
+        encoded_pass = urllib.parse.quote(password)
+
+        info += "URL-Encoded Values:\n"
+        info += f"Username: {encoded_user}\n"
+        info += f"Password: {encoded_pass}\n\n"
+
+        # Check for special characters
+        special_chars = ['&', '=', '?', '#', '%', '+', ' ', '@', '!', '$', '*']
+        found_special = [c for c in special_chars if c in password]
+
+        if found_special:
+            info += f"⚠️  Special characters found: {', '.join(found_special)}\n"
+            info += "These are automatically URL-encoded when sent to QRZ.\n\n"
+
+        # Check for leading/trailing spaces
+        if password != password.strip():
+            info += "⚠️  WARNING: Password has leading or trailing spaces!\n\n"
+
+        info += "Tips:\n"
+        info += "• Try logging into https://www.qrz.com with these credentials\n"
+        info += "• If login fails on QRZ website, reset your password there\n"
+        info += "• Special characters are handled automatically\n"
+        info += "• Check for typos by clicking the 👁 button to show password"
+
+        # Show in message box
+        messagebox.showinfo("QRZ Password Verification", info)
+
+    def debug_qrz_raw(self):
+        """Show raw QRZ XML response for debugging"""
+        import urllib.request
+        import urllib.parse
+
         username = self.qrz_username_var.get().strip()
         password = self.qrz_password_var.get().strip()
 
@@ -161,13 +232,87 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             messagebox.showwarning("Missing Credentials", "Please enter QRZ username and password")
             return
 
-        # Test the connection
-        success, message = test_qrz_login(username, password)
+        try:
+            # Build request exactly as the code does
+            params = urllib.parse.urlencode({
+                'username': username,
+                'password': password,
+                'agent': 'W4GNS-General-Logger-1.0'
+            })
 
-        if success:
-            messagebox.showinfo("QRZ Test Successful", message)
-        else:
-            messagebox.showerror("QRZ Test Failed", message)
+            url = f"https://xmldata.qrz.com/xml/current/?{params}"
+
+            request = urllib.request.Request(url)
+            request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
+
+            with urllib.request.urlopen(request, timeout=10) as response:
+                xml_data = response.read().decode('utf-8')
+
+            # Show the raw response in a new window
+            debug_window = tk.Toplevel(self.parent)
+            debug_window.title("QRZ Raw XML Response")
+            debug_window.geometry("800x600")
+
+            # Add scrolled text widget
+            from tkinter import scrolledtext
+            text_widget = scrolledtext.ScrolledText(debug_window, wrap=tk.WORD)
+            text_widget.pack(fill='both', expand=True, padx=10, pady=10)
+            text_widget.insert('1.0', xml_data)
+            text_widget.config(state='disabled')
+
+            # Add close button
+            ttk.Button(debug_window, text="Close", command=debug_window.destroy).pack(pady=5)
+
+        except Exception as e:
+            messagebox.showerror("Debug Error", f"Error fetching QRZ response:\n{type(e).__name__}: {str(e)}")
+
+    def test_qrz_connection(self):
+        """Test QRZ.com connection using GET method"""
+        self._test_qrz_connection(use_post=False)
+
+    def test_qrz_connection_post(self):
+        """Test QRZ.com connection using POST method (better for special characters)"""
+        self._test_qrz_connection(use_post=True)
+
+    def _test_qrz_connection(self, use_post=False):
+        """Internal method to test QRZ connection"""
+        username = self.qrz_username_var.get().strip()
+        password = self.qrz_password_var.get()  # Don't strip - preserve exact password
+
+        if not username or not password:
+            messagebox.showwarning("Missing Credentials", "Please enter QRZ username and password")
+            return
+
+        # Show a message that we're testing
+        self.parent.config(cursor="watch")
+        self.parent.update()
+
+        method_name = "POST" if use_post else "GET"
+
+        try:
+            # Test the connection
+            success, message = test_qrz_login(username, password, use_post=use_post)
+
+            if success:
+                messagebox.showinfo("QRZ Test Successful",
+                    f"{message}\n\n"
+                    f"✅ Your QRZ credentials are working!\n\n"
+                    f"Method used: {method_name}\n"
+                    f"Username: {username}")
+            else:
+                # Show detailed error with troubleshooting tips
+                error_msg = f"Method: {method_name}\n\n{message}\n\n"
+                error_msg += "Troubleshooting steps:\n"
+                error_msg += "1. Click 'Verify Password' to check what's being sent\n"
+                error_msg += "2. Click 👁 button to show password and verify it's correct\n"
+                error_msg += "3. Try 'Test with POST' if GET fails (better for special chars)\n"
+                error_msg += "4. Log into https://www.qrz.com to verify credentials\n"
+                error_msg += "5. Check if you have an active QRZ XML subscription\n\n"
+                error_msg += "Note: QRZ XML lookups require a separate XML Data subscription."
+
+                messagebox.showerror("QRZ Test Failed", error_msg)
+        finally:
+            self.parent.config(cursor="")
 
     def save_settings(self):
         """Save settings to config"""

@@ -13,11 +13,12 @@ from datetime import datetime
 class QRZSession:
     """Manage QRZ.com XML API session"""
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, use_post=False):
         self.username = username
         self.password = password
         self.session_key = None
         self.base_url = "https://xmldata.qrz.com/xml/current/"
+        self.use_post = use_post  # Option to use POST instead of GET
 
     def login(self):
         """
@@ -27,37 +28,76 @@ class QRZSession:
             (bool, str): (success, message)
         """
         try:
-            params = urllib.parse.urlencode({
+            # Per QRZ XML spec, include agent parameter (strongly recommended)
+            # urlencode will properly handle special characters in password
+            params = {
                 'username': self.username,
-                'password': self.password
-            })
+                'password': self.password,
+                'agent': 'W4GNS-General-Logger-1.0'
+            }
 
-            url = f"{self.base_url}?{params}"
+            # QRZ supports both GET and POST
+            if self.use_post:
+                # POST method - better for passwords with special characters
+                url = self.base_url
+                data = urllib.parse.urlencode(params).encode('utf-8')
+                request = urllib.request.Request(url, data=data, method='POST')
+            else:
+                # GET method (default)
+                url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
+                request = urllib.request.Request(url)
 
-            with urllib.request.urlopen(url, timeout=10) as response:
+            # Add proper User-Agent header
+            request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
+
+            with urllib.request.urlopen(request, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
+
+            # Debug: Print raw XML for troubleshooting
+            print("QRZ Response XML:")
+            print(xml_data)
 
             root = ET.fromstring(xml_data)
 
-            # Check for session key
+            # Check for session element
             session = root.find('.//Session')
-            if session is not None:
-                key_elem = session.find('Key')
-                if key_elem is not None:
-                    self.session_key = key_elem.text
-                    return True, "QRZ login successful"
+            if session is None:
+                # Show the actual response to help debug
+                preview = xml_data[:200] if len(xml_data) > 200 else xml_data
+                return False, f"QRZ login failed: No session element in response.\n\nReceived:\n{preview}..."
 
-            # Check for error
-            error_elem = session.find('Error') if session is not None else None
-            if error_elem is not None:
-                return False, f"QRZ login failed: {error_elem.text}"
+            # Check for error first (QRZ returns errors in Session/Error)
+            error_elem = session.find('Error')
+            if error_elem is not None and error_elem.text:
+                return False, f"QRZ Error: {error_elem.text}"
 
-            return False, "QRZ login failed: Unknown error"
+            # Check for session key
+            key_elem = session.find('Key')
+            if key_elem is not None and key_elem.text:
+                self.session_key = key_elem.text
 
+                # Get subscription info if available
+                sub_exp = session.find('SubExp')
+                if sub_exp is not None and sub_exp.text:
+                    if sub_exp.text == 'non-subscriber':
+                        return True, "QRZ login successful (non-subscriber - limited access)"
+                    return True, f"QRZ login successful (subscription expires: {sub_exp.text})"
+
+                return True, "QRZ login successful"
+
+            # No key and no error - unexpected response
+            return False, "QRZ login failed: No session key in response. You may need an active QRZ XML subscription."
+
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8', errors='ignore')
+            return False, f"HTTP Error {e.code}: {e.reason}\n\nResponse:\n{error_body[:300]}"
         except urllib.error.URLError as e:
             return False, f"Network error: {str(e)}"
+        except ET.ParseError as e:
+            # XML parsing failed - show what we received
+            return False, f"Invalid XML response from QRZ: {str(e)}\n\nThis might not be an XML response. Check if the URL is correct."
         except Exception as e:
-            return False, f"Error: {str(e)}"
+            return False, f"Unexpected error: {type(e).__name__}: {str(e)}"
 
     def lookup_callsign(self, callsign):
         """
@@ -169,8 +209,9 @@ class QRZLogbook:
                 'ADIF': adif_record
             }).encode('utf-8')
 
-            # Make request
+            # Make request with proper User-Agent (required by QRZ API)
             request = urllib.request.Request(self.base_url, data=post_data)
+            request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
 
             with urllib.request.urlopen(request, timeout=15) as response:
                 result = response.read().decode('utf-8')
@@ -185,6 +226,8 @@ class QRZLogbook:
                     reason = urllib.parse.unquote(reason)
                     return False, f"QRZ upload failed: {reason}"
                 return False, "QRZ upload failed"
+            elif 'RESULT=AUTH' in result:
+                return False, "QRZ authentication failed: Invalid API key or insufficient privileges"
             else:
                 return False, f"Unexpected response: {result}"
 
@@ -250,14 +293,19 @@ class QRZLogbook:
         return ' '.join(fields) + ' <EOR>'
 
 
-def test_qrz_login(username, password):
+def test_qrz_login(username, password, use_post=False):
     """
     Test QRZ login credentials
+
+    Args:
+        username: QRZ username
+        password: QRZ password
+        use_post: If True, use POST instead of GET
 
     Returns:
         (bool, str): (success, message)
     """
-    session = QRZSession(username, password)
+    session = QRZSession(username, password, use_post=use_post)
     return session.login()
 
 

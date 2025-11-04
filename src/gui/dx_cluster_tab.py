@@ -210,7 +210,12 @@ class DXClusterTab:
         self.append_console(f"> {command}")
 
     def on_spot_received(self, spot):
-        """Callback when a spot is received"""
+        """Callback when a spot is received - called from client thread"""
+        # Schedule UI and database updates on the main thread
+        self.parent.after(0, self._process_spot, spot)
+
+    def _process_spot(self, spot):
+        """Process spot on main thread (safe for database and UI operations)"""
         # Add to treeview at the top
         self.spots_tree.insert('', 0, values=(
             spot['time'],
@@ -225,7 +230,7 @@ class DXClusterTab:
         if len(items) > 100:
             self.spots_tree.delete(items[-1])
 
-        # Save to database
+        # Save to database (now safe - running on main thread)
         spot['cluster_source'] = self.cluster_var.get().split(' - ')[0]
         self.database.add_dx_spot(spot)
 

@@ -7,7 +7,15 @@ import os
 
 
 class Config:
-    def __init__(self, config_path="config.json"):
+    def __init__(self, config_path=None):
+        # Default to config.json in the project root directory
+        if config_path is None:
+            # Get the directory where this script is located (src/)
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to the project root
+            project_root = os.path.dirname(script_dir)
+            config_path = os.path.join(project_root, "config.json")
+
         self.config_path = config_path
         self.data = self.load()
 
