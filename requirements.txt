@@ -1,0 +1,6 @@
+# W4GNS General Logger Requirements
+# Python 3.12+
+
+# GUI is built with tkinter (included with Python)
+
+# No additional dependencies required - uses Python standard library
