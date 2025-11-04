@@ -17,8 +17,30 @@ class SettingsTab:
     def create_widgets(self):
         """Create the settings interface"""
 
+        # Create a canvas with scrollbar for the settings content
+        canvas = tk.Canvas(self.frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack the canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Enable mousewheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
         # Station Information
-        station_frame = ttk.LabelFrame(self.frame, text="Station Information", padding=10)
+        station_frame = ttk.LabelFrame(scrollable_frame, text="Station Information", padding=10)
         station_frame.pack(fill='x', padx=10, pady=5)
 
         row1 = ttk.Frame(station_frame)
@@ -44,7 +66,7 @@ class SettingsTab:
         ttk.Entry(row3, textvariable=self.power_var, width=8).pack(side='left', padx=5)
 
         # QRZ.com Integration
-        qrz_frame = ttk.LabelFrame(self.frame, text="QRZ.com Integration", padding=10)
+        qrz_frame = ttk.LabelFrame(scrollable_frame, text="QRZ.com Integration", padding=10)
         qrz_frame.pack(fill='x', padx=10, pady=5)
 
         qrz_row1 = ttk.Frame(qrz_frame)
@@ -90,7 +112,7 @@ class SettingsTab:
                   command=self.test_qrz_connection_post).pack(side='left', padx=2)
 
         # Logging Preferences
-        logging_frame = ttk.LabelFrame(self.frame, text="Logging Preferences", padding=10)
+        logging_frame = ttk.LabelFrame(scrollable_frame, text="Logging Preferences", padding=10)
         logging_frame.pack(fill='x', padx=10, pady=5)
 
         self.auto_lookup_var = tk.BooleanVar(value=self.config.get('logging.auto_lookup', True))
@@ -106,7 +128,7 @@ class SettingsTab:
                        variable=self.auto_timeoff_var).pack(anchor='w', pady=2)
 
         # DX Cluster Settings
-        cluster_frame = ttk.LabelFrame(self.frame, text="DX Cluster Preferences", padding=10)
+        cluster_frame = ttk.LabelFrame(scrollable_frame, text="DX Cluster Preferences", padding=10)
         cluster_frame.pack(fill='x', padx=10, pady=5)
 
         self.auto_connect_var = tk.BooleanVar(value=self.config.get('dx_cluster.auto_connect', False))
@@ -130,7 +152,7 @@ class SettingsTab:
                        variable=self.show_digital_var).pack(anchor='w', padx=20)
 
         # Available Clusters Info
-        info_frame = ttk.LabelFrame(self.frame, text="Available DX Clusters", padding=10)
+        info_frame = ttk.LabelFrame(scrollable_frame, text="Available DX Clusters", padding=10)
         info_frame.pack(fill='both', expand=True, padx=10, pady=5)
 
         info_text = """
@@ -154,7 +176,7 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         info_label.pack(anchor='w')
 
         # Save button
-        btn_frame = ttk.Frame(self.frame)
+        btn_frame = ttk.Frame(scrollable_frame)
         btn_frame.pack(fill='x', padx=10, pady=10)
 
         ttk.Button(btn_frame, text="Save Settings", command=self.save_settings).pack(side='left')
