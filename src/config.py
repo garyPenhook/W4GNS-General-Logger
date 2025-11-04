@@ -36,6 +36,7 @@ class Config:
             "callsign": "",
             "gridsquare": "",
             "default_rst": "59",
+            "default_power": "100",
             "dx_cluster": {
                 "selected": "W3LPL",
                 "auto_connect": False,
@@ -44,9 +45,21 @@ class Config:
                 "show_digital_spots": True,
                 "filter_band": None
             },
+            "qrz": {
+                "username": "",
+                "password": "",
+                "api_key": "",
+                "auto_upload": False,
+                "enable_lookup": True
+            },
+            "logging": {
+                "auto_lookup": True,
+                "warn_duplicates": True,
+                "auto_time_off": True
+            },
             "window": {
-                "width": 1000,
-                "height": 700
+                "width": 1200,
+                "height": 750
             }
         }
 
