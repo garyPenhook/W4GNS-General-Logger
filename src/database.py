@@ -155,7 +155,8 @@ class Database:
             ORDER BY date DESC, time_on DESC
             LIMIT ?
         ''', (limit,))
-        return cursor.fetchall()
+        # Convert Row objects to dicts for compatibility
+        return [dict(row) for row in cursor.fetchall()]
 
     def search_contacts(self, callsign):
         """Search for contacts by callsign"""
@@ -165,7 +166,8 @@ class Database:
             WHERE callsign LIKE ?
             ORDER BY date DESC, time_on DESC
         ''', (f'%{callsign}%',))
-        return cursor.fetchall()
+        # Convert Row objects to dicts for compatibility
+        return [dict(row) for row in cursor.fetchall()]
 
     def check_duplicate(self, callsign, band, mode, date):
         """
@@ -209,7 +211,8 @@ class Database:
             ORDER BY received_at DESC
             LIMIT ?
         ''', (limit,))
-        return cursor.fetchall()
+        # Convert Row objects to dicts for compatibility
+        return [dict(row) for row in cursor.fetchall()]
 
     def close(self):
         """Close database connection"""
