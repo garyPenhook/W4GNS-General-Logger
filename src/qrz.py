@@ -28,6 +28,7 @@ class QRZSession:
         """
         try:
             # Per QRZ XML spec, include agent parameter (strongly recommended)
+            # urlencode will properly handle special characters in password
             params = urllib.parse.urlencode({
                 'username': self.username,
                 'password': self.password,
@@ -42,6 +43,10 @@ class QRZSession:
 
             with urllib.request.urlopen(request, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
+
+            # Debug: Print raw XML for troubleshooting (remove in production)
+            print("QRZ Response XML:")
+            print(xml_data[:500])  # Print first 500 chars for debugging
 
             root = ET.fromstring(xml_data)
 

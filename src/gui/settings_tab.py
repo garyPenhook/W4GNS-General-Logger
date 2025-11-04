@@ -161,13 +161,31 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             messagebox.showwarning("Missing Credentials", "Please enter QRZ username and password")
             return
 
-        # Test the connection
-        success, message = test_qrz_login(username, password)
+        # Show a message that we're testing
+        self.parent.config(cursor="watch")
+        self.parent.update()
 
-        if success:
-            messagebox.showinfo("QRZ Test Successful", message)
-        else:
-            messagebox.showerror("QRZ Test Failed", message)
+        try:
+            # Test the connection
+            success, message = test_qrz_login(username, password)
+
+            if success:
+                messagebox.showinfo("QRZ Test Successful",
+                    f"{message}\n\n"
+                    f"✅ Your QRZ credentials are working!\n\n"
+                    f"Username: {username}")
+            else:
+                # Show detailed error with troubleshooting tips
+                error_msg = f"{message}\n\n"
+                error_msg += "Common issues:\n"
+                error_msg += "• Verify your username and password are correct\n"
+                error_msg += "• Check if you have an active QRZ XML subscription\n"
+                error_msg += "• Visit https://www.qrz.com to verify your account\n\n"
+                error_msg += "Note: QRZ XML lookups require a separate XML Data subscription."
+
+                messagebox.showerror("QRZ Test Failed", error_msg)
+        finally:
+            self.parent.config(cursor="")
 
     def save_settings(self):
         """Save settings to config"""
