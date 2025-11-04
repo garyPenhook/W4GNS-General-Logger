@@ -39,23 +39,29 @@ class QRZSession:
 
             root = ET.fromstring(xml_data)
 
-            # Check for session key
+            # Check for session element
             session = root.find('.//Session')
-            if session is not None:
-                key_elem = session.find('Key')
-                if key_elem is not None:
-                    self.session_key = key_elem.text
-                    return True, "QRZ login successful"
+            if session is None:
+                return False, "QRZ login failed: No session element in response"
 
-            # Check for error
-            error_elem = session.find('Error') if session is not None else None
-            if error_elem is not None:
+            # Check for error first (QRZ returns errors in Session/Error)
+            error_elem = session.find('Error')
+            if error_elem is not None and error_elem.text:
                 return False, f"QRZ login failed: {error_elem.text}"
 
-            return False, "QRZ login failed: Unknown error"
+            # Check for session key
+            key_elem = session.find('Key')
+            if key_elem is not None and key_elem.text:
+                self.session_key = key_elem.text
+                return True, "QRZ login successful"
+
+            # No key and no error - unexpected response
+            return False, "QRZ login failed: No session key or error in response"
 
         except urllib.error.URLError as e:
             return False, f"Network error: {str(e)}"
+        except ET.ParseError as e:
+            return False, f"Invalid XML response from QRZ: {str(e)}"
         except Exception as e:
             return False, f"Error: {str(e)}"
 
