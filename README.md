@@ -13,6 +13,8 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Record operator name, QTH, grid square, and notes
 - SQLite database for reliable local storage
 - View complete contact history
+- **ADIF 3.x import/export** for interoperability with other logging software
+- Compatible with LOTW, QRZ, eQSL, and other services
 
 ### 📡 DX Cluster Integration
 - Connect to 10+ worldwide DX cluster nodes
@@ -119,6 +121,30 @@ The application includes connections to these DX clusters (sourced from [ng3k.co
 - `SH/MUF <prefix>` - Show MUF to location
 - `BYE` or `QUIT` - Disconnect (or use Disconnect button)
 
+### ADIF Import/Export
+
+**Exporting Your Log:**
+1. Go to **File** menu → **Export Log (ADIF)...**
+2. Choose a location and filename (`.adi` or `.adif` extension)
+3. Click Save
+4. All contacts will be exported in ADIF 3.x format
+5. Use the exported file with:
+   - LOTW (Logbook of the World)
+   - QRZ.com logbook
+   - eQSL
+   - Other logging software (Log4OM, N1MM, etc.)
+
+**Importing a Log:**
+1. Go to **File** menu → **Import Log (ADIF)...**
+2. Select an ADIF file (`.adi` or `.adif`)
+3. The file will be validated automatically
+4. Review the number of contacts found
+5. Click "Yes" to confirm import
+6. Contacts will be added to your database
+7. The log display will refresh automatically
+
+**Note:** Duplicate checking is not currently performed during import. Be careful not to import the same file multiple times.
+
 ## Project Structure
 
 ```
@@ -131,6 +157,7 @@ W4GNS-General-Logger/
     ├── __init__.py
     ├── config.py          # Configuration management
     ├── database.py        # SQLite database layer
+    ├── adif.py            # ADIF 3.x import/export
     ├── dx_clusters.py     # DX cluster definitions
     ├── dx_client.py       # Telnet client for clusters
     └── gui/
@@ -184,7 +211,7 @@ Built with:
 ## Future Enhancements
 
 Potential features for future releases:
-- [ ] ADIF import/export
+- [x] ADIF import/export ✅
 - [ ] Rig control (CAT interface)
 - [ ] QRZ.com lookups
 - [ ] Contest logging modes
@@ -192,6 +219,7 @@ Potential features for future releases:
 - [ ] LOTW upload
 - [ ] Logbook statistics and reports
 - [ ] Multiple logbook support
+- [ ] Duplicate contact detection on import
 
 ## Troubleshooting
 

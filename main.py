@@ -5,7 +5,7 @@ Amateur Radio Contact Logging and DX Cluster Integration
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
 import sys
 import os
 
@@ -17,6 +17,7 @@ from src.config import Config
 from src.gui.logging_tab import LoggingTab
 from src.gui.dx_cluster_tab import DXClusterTab
 from src.gui.settings_tab import SettingsTab
+from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
 
 class W4GNSLogger:
@@ -62,8 +63,8 @@ class W4GNSLogger:
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Export Log (ADIF)...", command=self.export_adif, state='disabled')
-        file_menu.add_command(label="Import Log (ADIF)...", command=self.import_adif, state='disabled')
+        file_menu.add_command(label="Export Log (ADIF)...", command=self.export_adif)
+        file_menu.add_command(label="Import Log (ADIF)...", command=self.import_adif)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_closing)
 
@@ -94,13 +95,110 @@ class W4GNSLogger:
 
     def export_adif(self):
         """Export contacts to ADIF format"""
-        # TODO: Implement ADIF export
-        pass
+        # Get all contacts from database
+        contacts = self.database.get_all_contacts(limit=999999)
+
+        if not contacts:
+            messagebox.showwarning("No Contacts", "No contacts found to export.")
+            return
+
+        # Ask user for save location
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".adi",
+            filetypes=[
+                ("ADIF files", "*.adi"),
+                ("ADIF files", "*.adif"),
+                ("All files", "*.*")
+            ],
+            title="Export Log to ADIF"
+        )
+
+        if not filename:
+            return  # User cancelled
+
+        try:
+            # Export to ADIF
+            export_contacts_to_adif(contacts, filename)
+            messagebox.showinfo(
+                "Export Successful",
+                f"Successfully exported {len(contacts)} contacts to:\n{filename}"
+            )
+            self.status_bar.config(text=f"Exported {len(contacts)} contacts to ADIF")
+        except Exception as e:
+            messagebox.showerror("Export Failed", f"Failed to export log:\n{str(e)}")
 
     def import_adif(self):
         """Import contacts from ADIF format"""
-        # TODO: Implement ADIF import
-        pass
+        # Ask user for file to import
+        filename = filedialog.askopenfilename(
+            filetypes=[
+                ("ADIF files", "*.adi"),
+                ("ADIF files", "*.adif"),
+                ("All files", "*.*")
+            ],
+            title="Import Log from ADIF"
+        )
+
+        if not filename:
+            return  # User cancelled
+
+        try:
+            # Validate ADIF file
+            is_valid, message = validate_adif_file(filename)
+            if not is_valid:
+                messagebox.showerror("Invalid ADIF File", message)
+                return
+
+            # Import contacts
+            contacts = import_contacts_from_adif(filename)
+
+            if not contacts:
+                messagebox.showwarning("No Contacts", "No contacts found in ADIF file.")
+                return
+
+            # Ask for confirmation
+            response = messagebox.askyesno(
+                "Confirm Import",
+                f"Found {len(contacts)} contacts in file.\n\n"
+                f"Import these contacts into your log?\n\n"
+                f"Note: Duplicate checking is not performed."
+            )
+
+            if not response:
+                return
+
+            # Import each contact
+            imported_count = 0
+            error_count = 0
+
+            for contact in contacts:
+                try:
+                    self.database.add_contact(contact)
+                    imported_count += 1
+                except Exception as e:
+                    error_count += 1
+                    print(f"Error importing contact: {e}")
+
+            # Refresh the log display
+            self.logging_tab.refresh_log()
+
+            # Show results
+            if error_count == 0:
+                messagebox.showinfo(
+                    "Import Successful",
+                    f"Successfully imported {imported_count} contacts!"
+                )
+            else:
+                messagebox.showwarning(
+                    "Import Completed with Errors",
+                    f"Imported {imported_count} contacts\n"
+                    f"Failed to import {error_count} contacts"
+                )
+
+            self.status_bar.config(text=f"Imported {imported_count} contacts from ADIF")
+
+        except Exception as e:
+            messagebox.showerror("Import Failed", f"Failed to import log:\n{str(e)}")
 
     def show_about(self):
         """Show about dialog"""

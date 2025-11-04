@@ -1,0 +1,237 @@
+"""
+ADIF (Amateur Data Interchange Format) Parser and Generator
+Supports ADIF 3.x format for import/export of contact logs
+"""
+
+import re
+from datetime import datetime
+
+
+class ADIFParser:
+    """Parse ADIF files and extract contact records"""
+
+    def __init__(self):
+        self.records = []
+
+    def parse_file(self, filename):
+        """Parse an ADIF file and return list of contact records"""
+        with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+
+        # Find the end of header marker
+        eoh_match = re.search(r'<eoh>|<EOH>', content, re.IGNORECASE)
+        if eoh_match:
+            content = content[eoh_match.end():]
+
+        # Split into records (each record ends with <eor>)
+        records = re.split(r'<eor>|<EOR>', content, flags=re.IGNORECASE)
+
+        contacts = []
+        for record in records:
+            if record.strip():
+                contact = self._parse_record(record)
+                if contact:
+                    contacts.append(contact)
+
+        return contacts
+
+    def _parse_record(self, record):
+        """Parse a single ADIF record"""
+        # ADIF field format: <FIELD_NAME:LENGTH:TYPE>DATA
+        # Type is optional, most common is just <FIELD_NAME:LENGTH>DATA
+        pattern = r'<([A-Za-z0-9_]+):(\d+)(?::([A-Z]))?>(.*?(?=<|$))'
+        matches = re.finditer(pattern, record, re.IGNORECASE | re.DOTALL)
+
+        contact = {}
+        for match in matches:
+            field_name = match.group(1).upper()
+            field_length = int(match.group(2))
+            field_data = match.group(4)[:field_length]
+
+            # Map ADIF fields to our database fields
+            field_map = {
+                'CALL': 'callsign',
+                'QSO_DATE': 'date',
+                'TIME_ON': 'time_on',
+                'TIME_OFF': 'time_off',
+                'FREQ': 'frequency',
+                'BAND': 'band',
+                'MODE': 'mode',
+                'RST_SENT': 'rst_sent',
+                'RST_RCVD': 'rst_rcvd',
+                'NAME': 'name',
+                'QTH': 'qth',
+                'GRIDSQUARE': 'gridsquare',
+                'COMMENT': 'notes',
+                'NOTES': 'notes'
+            }
+
+            if field_name in field_map:
+                db_field = field_map[field_name]
+
+                # Format date from YYYYMMDD to YYYY-MM-DD
+                if field_name == 'QSO_DATE' and len(field_data) == 8:
+                    field_data = f"{field_data[:4]}-{field_data[4:6]}-{field_data[6:8]}"
+
+                # Format time from HHMM or HHMMSS to HH:MM
+                elif field_name in ('TIME_ON', 'TIME_OFF') and field_data:
+                    if len(field_data) >= 4:
+                        field_data = f"{field_data[:2]}:{field_data[2:4]}"
+
+                # Convert frequency from MHz to display format
+                elif field_name == 'FREQ':
+                    field_data = field_data  # Keep as-is
+
+                contact[db_field] = field_data.strip()
+
+        return contact if contact else None
+
+
+class ADIFGenerator:
+    """Generate ADIF files from contact records"""
+
+    def __init__(self):
+        self.version = "3.1.4"
+
+    def generate_file(self, filename, contacts, program_name="W4GNS General Logger", program_version="1.0.0"):
+        """Generate an ADIF file from list of contact records"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            # Write header
+            f.write(f"ADIF Export from {program_name}\n")
+            f.write(f"<ADIF_VER:{len(self.version)}>{self.version}\n")
+            f.write(f"<PROGRAMID:{len(program_name)}>{program_name}\n")
+            f.write(f"<PROGRAMVERSION:{len(program_version)}>{program_version}\n")
+            f.write(f"<CREATED_TIMESTAMP:15>{datetime.utcnow().strftime('%Y%m%d %H%M%S')}\n")
+            f.write("<EOH>\n\n")
+
+            # Write records
+            for contact in contacts:
+                record = self._generate_record(contact)
+                f.write(record)
+                f.write("\n")
+
+    def _generate_record(self, contact):
+        """Generate a single ADIF record from contact data"""
+        fields = []
+
+        # Map database fields to ADIF fields
+        field_map = {
+            'callsign': 'CALL',
+            'date': 'QSO_DATE',
+            'time_on': 'TIME_ON',
+            'time_off': 'TIME_OFF',
+            'frequency': 'FREQ',
+            'band': 'BAND',
+            'mode': 'MODE',
+            'rst_sent': 'RST_SENT',
+            'rst_rcvd': 'RST_RCVD',
+            'name': 'NAME',
+            'qth': 'QTH',
+            'gridsquare': 'GRIDSQUARE',
+            'notes': 'COMMENT'
+        }
+
+        for db_field, adif_field in field_map.items():
+            value = contact.get(db_field, '')
+
+            if isinstance(value, str):
+                value = value.strip()
+            else:
+                value = str(value) if value else ''
+
+            if not value:
+                continue
+
+            # Format date from YYYY-MM-DD to YYYYMMDD
+            if adif_field == 'QSO_DATE':
+                value = value.replace('-', '')
+
+            # Format time from HH:MM to HHMMSS (append 00 for seconds)
+            elif adif_field in ('TIME_ON', 'TIME_OFF'):
+                value = value.replace(':', '') + '00'
+
+            # Ensure gridsquare is uppercase
+            elif adif_field == 'GRIDSQUARE':
+                value = value.upper()
+
+            # Ensure callsign is uppercase
+            elif adif_field == 'CALL':
+                value = value.upper()
+
+            fields.append(f"<{adif_field}:{len(value)}>{value}")
+
+        # Add end-of-record marker
+        fields.append("<EOR>")
+
+        return " ".join(fields)
+
+
+def export_contacts_to_adif(contacts, filename, program_name="W4GNS General Logger"):
+    """
+    Export contacts to ADIF file
+
+    Args:
+        contacts: List of contact dictionaries (from database)
+        filename: Output filename
+        program_name: Name of the program generating the file
+    """
+    generator = ADIFGenerator()
+
+    # Convert database Row objects to dictionaries if needed
+    contact_list = []
+    for contact in contacts:
+        if hasattr(contact, 'keys'):
+            # It's a sqlite3.Row object or dict-like
+            contact_dict = {key: contact[key] for key in contact.keys()}
+        else:
+            contact_dict = contact
+        contact_list.append(contact_dict)
+
+    generator.generate_file(filename, contact_list, program_name)
+
+
+def import_contacts_from_adif(filename):
+    """
+    Import contacts from ADIF file
+
+    Args:
+        filename: Input ADIF filename
+
+    Returns:
+        List of contact dictionaries ready for database insertion
+    """
+    parser = ADIFParser()
+    contacts = parser.parse_file(filename)
+    return contacts
+
+
+def validate_adif_file(filename):
+    """
+    Validate an ADIF file
+
+    Returns:
+        (bool, str): (is_valid, error_message)
+    """
+    try:
+        with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+
+        # Check for basic ADIF structure
+        if not re.search(r'<eoh>|<EOH>', content, re.IGNORECASE):
+            return False, "No <EOH> marker found - may not be a valid ADIF file"
+
+        # Check for at least one record
+        if not re.search(r'<eor>|<EOR>', content, re.IGNORECASE):
+            return False, "No records found in ADIF file"
+
+        # Try to parse
+        parser = ADIFParser()
+        contacts = parser.parse_file(filename)
+
+        if not contacts:
+            return False, "No valid contacts found in file"
+
+        return True, f"Valid ADIF file with {len(contacts)} contacts"
+
+    except Exception as e:
+        return False, f"Error reading file: {str(e)}"
