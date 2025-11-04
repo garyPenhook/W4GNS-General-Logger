@@ -7,16 +7,34 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 
 ## Features
 
-### 📝 Contact Logging
-- Log amateur radio contacts with comprehensive details
-- Store callsign, date/time, frequency, band, mode, RST reports
-- Record operator name, QTH, grid square, and notes
-- SQLite database for reliable local storage
-- View complete contact history
-- **ADIF 3.x import/export** for interoperability with other logging software
-- Compatible with LOTW, QRZ, eQSL, and other services
+### 📝 **Log4OM-Style Contact Logging**
+- **Professional QSO entry interface** inspired by Log4OM
+- **25+ fields supported**: Call, Date/Time, Freq, Band, Mode, RST, Power, Name, QTH, Grid, County, State, Country, Continent, CQ/ITU Zones, IOTA, SOTA, POTA, and more
+- **Auto-lookup callsign information** using DXCC prefix database and QRZ.com
+- **Duplicate contact detection** with real-time warnings
+- **Frequency/band auto-correlation** - enter frequency, band auto-fills
+- **Keyboard shortcuts**: Ctrl+Enter to log, Esc to clear
+- **Smart auto-fill**: Date/time (UTC), power, RST from settings
+- **ADIF 3.x import/export** compatible with LOTW, QRZ, eQSL, and other logging software
+- SQLite database for fast, reliable local storage
+- View 100 most recent contacts in sortable table
 
-### 📡 DX Cluster Integration
+### 🔍 **QRZ.com Integration**
+- **QRZ XML Lookup**: Auto-populate name, QTH, grid, state, county, zones
+- **QRZ Logbook Upload**: Automatically or manually upload contacts
+- **Test connection** from settings before use
+- Requires QRZ username/password (XML subscription) and API key (for uploads)
+- Full ADIF field support for uploads
+- Upload status feedback
+
+### 🌍 **DXCC Auto-Lookup**
+- Automatic country/continent/zone lookup from callsign prefix
+- Covers 40+ major DXCC entities worldwide
+- Instant population of country, continent, CQ zone, ITU zone
+- Works offline - no internet required
+- Handles portable/mobile suffixes (/P, /M, /MM)
+
+### 📡 **DX Cluster Integration**
 - Connect to 10+ worldwide DX cluster nodes
 - Real-time DX spot monitoring
 - Clusters from North America, Europe, and Oceania
@@ -25,12 +43,13 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Automatic spot parsing and display
 - Cache spots in local database
 
-### ⚙️ Configuration
-- Save your station information (callsign, grid square)
-- Customize default RST reports
-- Configure DX cluster preferences
-- Filter spot types (CW, SSB, Digital)
-- Persistent settings storage
+### ⚙️ **Configuration & Preferences**
+- **Station Information**: Callsign, grid square, default power, default RST
+- **QRZ Integration**: Username, password, API key, auto-upload toggle
+- **Logging Preferences**: Auto-lookup, duplicate warnings, auto time-off
+- **DX Cluster Preferences**: Auto-connect, spot filtering (CW/SSB/Digital)
+- All settings persist across sessions
+- Test QRZ connection before saving credentials
 
 ## Available DX Clusters
 
@@ -78,23 +97,62 @@ The application includes connections to these DX clusters (sourced from [ng3k.co
 
 ### First Time Setup
 
+**Station Information:**
 1. Go to the **Settings** tab
 2. Enter your callsign and grid square
-3. Configure your preferences
+3. Set default power and RST
 4. Click "Save Settings"
 
-### Logging Contacts
+**QRZ.com Setup (Optional but Recommended):**
+1. Go to **Settings** → **QRZ.com Integration**
+2. Enter your QRZ username and password (for XML lookups)
+3. Enter your QRZ API key (get from QRZ.com → Logbook → Settings → API)
+4. Enable "Auto-lookup" if you want automatic callsign lookups
+5. Enable "Auto-upload" if you want contacts automatically uploaded to QRZ Logbook
+6. Click "Test QRZ Connection" to verify credentials
+7. Click "Save Settings"
 
+**Logging Preferences:**
+1. Toggle "Auto-lookup" for automatic callsign information retrieval
+2. Toggle "Warn duplicates" for duplicate contact warnings
+3. Toggle "Auto-fill Time OFF" to automatically set end time when logging
+
+### Logging Contacts (Log4OM-Style Interface)
+
+**Quick Logging Workflow:**
 1. Go to the **Log Contacts** tab
-2. Fill in contact details:
-   - Callsign (required)
-   - Date and time (auto-filled with current UTC)
-   - Frequency, band, and mode
-   - RST sent/received
-   - Name, QTH, grid square
-   - Optional notes
-3. Click "Log Contact"
-4. View all logged contacts in the table below
+2. Enter **Callsign** - information auto-populates if lookup is enabled:
+   - Country, continent, and zones from DXCC prefix
+   - Name, QTH, grid, state, county from QRZ (if configured)
+   - Duplicate warning if same call/band/mode today
+3. Enter **Frequency** - band auto-selects (e.g., 14.250 → 20m)
+4. Select **Mode** (SSB, CW, FT8, etc.)
+5. Adjust **Time ON** if needed (auto-filled with UTC)
+6. Fill optional fields:
+   - **Power** (defaults from settings)
+   - **RST Sent/Rcvd** (defaults from settings)
+   - **Name, QTH, Grid** (may be pre-filled from QRZ)
+   - **State, County** (US stations)
+   - **IOTA, SOTA, POTA** (awards programs)
+   - **Notes** (any additional info)
+7. Click **"Log Contact"** or press **Ctrl+Enter**
+8. Contact is saved and optionally uploaded to QRZ
+
+**Keyboard Shortcuts:**
+- **Ctrl+Enter**: Log the contact
+- **Esc**: Clear the form
+- **Tab**: Move between fields
+
+**Features During Logging:**
+- 🔴 **Duplicate Warning**: "⚠️ DUPLICATE - Worked on HH:MM" appears in red if dupe detected
+- 🔍 **Manual Lookup**: Click "Lookup" button to force callsign lookup
+- 📤 **QRZ Upload**: Click "Upload to QRZ" after logging (if not auto-uploading)
+- 🔄 **Auto-Fill**: Date/time updates to current UTC, Time OFF auto-fills on log
+
+**Contact Log Display:**
+- View 100 most recent contacts
+- Columns: Call, Date, Time, Freq, Mode, RST, Name, Country, Grid
+- Scrollable list with all logged QSOs
 
 ### Using DX Clusters
 
@@ -149,22 +207,24 @@ The application includes connections to these DX clusters (sourced from [ng3k.co
 
 ```
 W4GNS-General-Logger/
-├── main.py                 # Application entry point
-├── requirements.txt        # Python dependencies
-├── README.md              # This file
-├── LICENSE                # MIT License
+├── main.py                          # Application entry point
+├── requirements.txt                 # Python dependencies
+├── README.md                        # This file
+├── LICENSE                          # MIT License
 └── src/
     ├── __init__.py
-    ├── config.py          # Configuration management
-    ├── database.py        # SQLite database layer
-    ├── adif.py            # ADIF 3.x import/export
-    ├── dx_clusters.py     # DX cluster definitions
-    ├── dx_client.py       # Telnet client for clusters
+    ├── config.py                    # Configuration management
+    ├── database.py                  # SQLite database layer (25+ fields)
+    ├── adif.py                      # ADIF 3.x import/export
+    ├── dxcc.py                      # DXCC prefix lookup (40+ entities)
+    ├── qrz.py                       # QRZ.com API integration
+    ├── dx_clusters.py               # DX cluster definitions
+    ├── dx_client.py                 # Telnet client for clusters
     └── gui/
         ├── __init__.py
-        ├── logging_tab.py     # Contact logging interface
-        ├── dx_cluster_tab.py  # DX cluster interface
-        └── settings_tab.py    # Settings interface
+        ├── logging_tab_enhanced.py  # Log4OM-style logging interface
+        ├── dx_cluster_tab.py        # DX cluster interface
+        └── settings_tab.py          # Settings interface
 ```
 
 ## Database
@@ -185,6 +245,19 @@ Example configuration:
   "callsign": "W4GNS",
   "gridsquare": "EM73",
   "default_rst": "59",
+  "default_power": "100",
+  "qrz": {
+    "username": "YOUR_QRZ_USERNAME",
+    "password": "YOUR_QRZ_PASSWORD",
+    "api_key": "YOUR_QRZ_API_KEY",
+    "auto_upload": false,
+    "enable_lookup": true
+  },
+  "logging": {
+    "auto_lookup": true,
+    "warn_duplicates": true,
+    "auto_time_off": true
+  },
   "dx_cluster": {
     "selected": "W3LPL",
     "auto_connect": false,
@@ -193,8 +266,8 @@ Example configuration:
     "show_digital_spots": true
   },
   "window": {
-    "width": 1000,
-    "height": 700
+    "width": 1200,
+    "height": 750
   }
 }
 ```
@@ -202,26 +275,70 @@ Example configuration:
 ## Development
 
 Built with:
-- Python 3.12
-- tkinter for GUI
-- sqlite3 for database
-- telnetlib for cluster connections
-- Standard library only!
+- **Python 3.12** - Modern Python features
+- **tkinter** - Native cross-platform GUI
+- **sqlite3** - Fast local database with 25+ fields
+- **telnetlib** - DX cluster telnet connections
+- **urllib** - QRZ.com API integration
+- **Standard library only** - No external dependencies!
+
+**Modules:**
+- `dxcc.py` - 40+ DXCC entities with prefix matching
+- `qrz.py` - QRZ XML API and Logbook upload
+- `adif.py` - Complete ADIF 3.x parser/generator
+- `database.py` - SQLite ORM with duplicate detection
+- `logging_tab_enhanced.py` - Log4OM-inspired interface
 
 ## Future Enhancements
 
-Potential features for future releases:
-- [x] ADIF import/export ✅
-- [ ] Rig control (CAT interface)
-- [ ] QRZ.com lookups
-- [ ] Contest logging modes
-- [ ] Digital mode integration
-- [ ] LOTW upload
-- [ ] Logbook statistics and reports
+Completed features:
+- [x] ADIF 3.x import/export ✅
+- [x] QRZ.com XML lookups ✅
+- [x] QRZ.com Logbook upload ✅
+- [x] DXCC prefix lookup ✅
+- [x] Duplicate contact detection ✅
+- [x] Log4OM-style interface ✅
+
+Potential future features:
+- [ ] Rig control (CAT interface via Hamlib)
+- [ ] Contest logging modes (field day, sweepstakes, etc.)
+- [ ] Digital mode integration (WSJT-X, JTDX, Fldigi)
+- [ ] LOTW direct upload
+- [ ] Logbook statistics and reports (DXCC progress, WAS, etc.)
 - [ ] Multiple logbook support
-- [ ] Duplicate contact detection on import
+- [ ] Duplicate contact detection on ADIF import
+- [ ] HamQTH lookups (alternative to QRZ)
+- [ ] eQSL integration
+- [ ] Spot alerts and notifications
+- [ ] Map display of worked countries/grids
 
 ## Troubleshooting
+
+**QRZ lookups not working:**
+- Verify QRZ username/password are correct
+- Click "Test QRZ Connection" in Settings
+- XML lookups require QRZ XML subscription ($)
+- Check QRZ.com website is accessible
+- Ensure "Enable lookup" is checked in Settings
+
+**QRZ Logbook upload fails:**
+- Verify API key is correct (get from QRZ.com → Logbook → Settings)
+- API key is different from XML password
+- Check you have QRZ Logbook access
+- Test connection before uploading
+- Check error message for specific reason
+
+**Duplicate warnings not appearing:**
+- Enable "Warn duplicates" in Settings → Logging Preferences
+- Duplicate detection checks: call + band + mode + date
+- Different modes on same band = not a duplicate
+- Contact must have been logged today to show warning
+
+**Auto-lookup not working:**
+- Enable "Auto-lookup" in Settings → Logging Preferences
+- Enter QRZ credentials for XML lookups
+- DXCC lookup always works (offline, no credentials needed)
+- Tab out of callsign field to trigger lookup
 
 **Connection fails to DX cluster:**
 - Check your internet connection
@@ -232,10 +349,13 @@ Potential features for future releases:
 **Application won't start:**
 - Ensure Python 3.12+ is installed: `python3 --version`
 - Check tkinter is available: `python3 -c "import tkinter"`
+- Delete `config.json` if corrupted
 
 **Database errors:**
 - Check write permissions in application directory
-- Delete `logger.db` to start fresh (backs up your old file first!)
+- Existing databases will auto-upgrade to new schema
+- Delete `logger.db` to start fresh (backup first!)
+- Export to ADIF before deleting for safety
 
 ## License
 
