@@ -93,29 +93,38 @@ class DXClusterTab:
         self.spots_tree.pack(side='left', fill='both', expand=True)
         spots_scrollbar.pack(side='right', fill='y')
 
-        # Console output frame
+        # Console output frame - reduced expand to ensure command input is visible
         console_frame = ttk.LabelFrame(self.frame, text="Cluster Console", padding=10)
-        console_frame.pack(fill='both', expand=True, padx=10, pady=5)
+        console_frame.pack(fill='both', expand=False, padx=10, pady=5)
 
-        self.console_text = scrolledtext.ScrolledText(console_frame, height=10,
+        self.console_text = scrolledtext.ScrolledText(console_frame, height=8,
                                                       state='disabled', wrap='word')
         self.console_text.pack(fill='both', expand=True)
 
-        # Command input
-        cmd_frame = ttk.Frame(self.frame)
+        # Command input frame - made more prominent with LabelFrame
+        cmd_frame = ttk.LabelFrame(self.frame, text="Send Commands to Cluster", padding=10)
         cmd_frame.pack(fill='x', padx=10, pady=5)
 
-        ttk.Label(cmd_frame, text="Command:").pack(side='left')
+        # Command entry row
+        entry_row = ttk.Frame(cmd_frame)
+        entry_row.pack(fill='x', pady=(0, 5))
+
+        ttk.Label(entry_row, text="Command:").pack(side='left')
         self.command_var = tk.StringVar()
-        self.command_entry = ttk.Entry(cmd_frame, textvariable=self.command_var, width=40)
+        self.command_entry = ttk.Entry(entry_row, textvariable=self.command_var, width=40)
         self.command_entry.pack(side='left', padx=5, fill='x', expand=True)
         self.command_entry.bind('<Return>', self.send_command)
 
-        ttk.Button(cmd_frame, text="Send", command=self.send_command).pack(side='left')
+        ttk.Button(entry_row, text="Send", command=self.send_command).pack(side='left', padx=2)
 
-        # Common commands
-        ttk.Button(cmd_frame, text="SH/DX", command=lambda: self.quick_command("SH/DX")).pack(side='left', padx=2)
-        ttk.Button(cmd_frame, text="SH/DX 20M", command=lambda: self.quick_command("SH/DX 14000-14350")).pack(side='left', padx=2)
+        # Quick commands row
+        quick_row = ttk.Frame(cmd_frame)
+        quick_row.pack(fill='x')
+
+        ttk.Label(quick_row, text="Quick Commands:").pack(side='left')
+        ttk.Button(quick_row, text="SH/DX", command=lambda: self.quick_command("SH/DX")).pack(side='left', padx=2)
+        ttk.Button(quick_row, text="SH/DX 20M", command=lambda: self.quick_command("SH/DX 14000-14350")).pack(side='left', padx=2)
+        ttk.Button(quick_row, text="SH/DX 40M", command=lambda: self.quick_command("SH/DX 7000-7300")).pack(side='left', padx=2)
 
     def on_cluster_changed(self, event=None):
         """Handle cluster selection change"""
