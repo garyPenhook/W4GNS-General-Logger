@@ -9,7 +9,15 @@ from datetime import datetime
 
 
 class Database:
-    def __init__(self, db_path="logger.db"):
+    def __init__(self, db_path=None):
+        # Default to logger.db in the project root directory
+        if db_path is None:
+            # Get the directory where this script is located (src/)
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to the project root
+            project_root = os.path.dirname(script_dir)
+            db_path = os.path.join(project_root, "logger.db")
+
         self.db_path = db_path
         self.conn = None
         self.init_database()
