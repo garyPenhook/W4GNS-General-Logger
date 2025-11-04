@@ -44,16 +44,18 @@ class QRZSession:
             with urllib.request.urlopen(request, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
 
-            # Debug: Print raw XML for troubleshooting (remove in production)
+            # Debug: Print raw XML for troubleshooting
             print("QRZ Response XML:")
-            print(xml_data[:500])  # Print first 500 chars for debugging
+            print(xml_data)
 
             root = ET.fromstring(xml_data)
 
             # Check for session element
             session = root.find('.//Session')
             if session is None:
-                return False, "QRZ login failed: No session element in response"
+                # Show the actual response to help debug
+                preview = xml_data[:200] if len(xml_data) > 200 else xml_data
+                return False, f"QRZ login failed: No session element in response.\n\nReceived:\n{preview}..."
 
             # Check for error first (QRZ returns errors in Session/Error)
             error_elem = session.find('Error')
@@ -77,12 +79,16 @@ class QRZSession:
             # No key and no error - unexpected response
             return False, "QRZ login failed: No session key in response. You may need an active QRZ XML subscription."
 
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8', errors='ignore')
+            return False, f"HTTP Error {e.code}: {e.reason}\n\nResponse:\n{error_body[:300]}"
         except urllib.error.URLError as e:
             return False, f"Network error: {str(e)}"
         except ET.ParseError as e:
-            return False, f"Invalid XML response from QRZ: {str(e)}"
+            # XML parsing failed - show what we received
+            return False, f"Invalid XML response from QRZ: {str(e)}\n\nThis might not be an XML response. Check if the URL is correct."
         except Exception as e:
-            return False, f"Error: {str(e)}"
+            return False, f"Unexpected error: {type(e).__name__}: {str(e)}"
 
     def lookup_callsign(self, callsign):
         """

@@ -152,6 +152,55 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         ttk.Button(btn_frame, text="Save Settings", command=self.save_settings).pack(side='left')
         ttk.Button(btn_frame, text="Reset to Defaults", command=self.reset_settings).pack(side='left', padx=5)
 
+        # Add debug button for QRZ issues
+        ttk.Button(btn_frame, text="Debug QRZ", command=self.debug_qrz_raw).pack(side='left', padx=5)
+
+    def debug_qrz_raw(self):
+        """Show raw QRZ XML response for debugging"""
+        import urllib.request
+        import urllib.parse
+
+        username = self.qrz_username_var.get().strip()
+        password = self.qrz_password_var.get().strip()
+
+        if not username or not password:
+            messagebox.showwarning("Missing Credentials", "Please enter QRZ username and password")
+            return
+
+        try:
+            # Build request exactly as the code does
+            params = urllib.parse.urlencode({
+                'username': username,
+                'password': password,
+                'agent': 'W4GNS-General-Logger-1.0'
+            })
+
+            url = f"https://xmldata.qrz.com/xml/current/?{params}"
+
+            request = urllib.request.Request(url)
+            request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
+
+            with urllib.request.urlopen(request, timeout=10) as response:
+                xml_data = response.read().decode('utf-8')
+
+            # Show the raw response in a new window
+            debug_window = tk.Toplevel(self.parent)
+            debug_window.title("QRZ Raw XML Response")
+            debug_window.geometry("800x600")
+
+            # Add scrolled text widget
+            from tkinter import scrolledtext
+            text_widget = scrolledtext.ScrolledText(debug_window, wrap=tk.WORD)
+            text_widget.pack(fill='both', expand=True, padx=10, pady=10)
+            text_widget.insert('1.0', xml_data)
+            text_widget.config(state='disabled')
+
+            # Add close button
+            ttk.Button(debug_window, text="Close", command=debug_window.destroy).pack(pady=5)
+
+        except Exception as e:
+            messagebox.showerror("Debug Error", f"Error fetching QRZ response:\n{type(e).__name__}: {str(e)}")
+
     def test_qrz_connection(self):
         """Test QRZ.com connection"""
         username = self.qrz_username_var.get().strip()
