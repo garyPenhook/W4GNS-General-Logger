@@ -13,11 +13,12 @@ from datetime import datetime
 class QRZSession:
     """Manage QRZ.com XML API session"""
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, use_post=False):
         self.username = username
         self.password = password
         self.session_key = None
         self.base_url = "https://xmldata.qrz.com/xml/current/"
+        self.use_post = use_post  # Option to use POST instead of GET
 
     def login(self):
         """
@@ -29,16 +30,24 @@ class QRZSession:
         try:
             # Per QRZ XML spec, include agent parameter (strongly recommended)
             # urlencode will properly handle special characters in password
-            params = urllib.parse.urlencode({
+            params = {
                 'username': self.username,
                 'password': self.password,
                 'agent': 'W4GNS-General-Logger-1.0'
-            })
+            }
 
-            url = f"{self.base_url}?{params}"
+            # QRZ supports both GET and POST
+            if self.use_post:
+                # POST method - better for passwords with special characters
+                url = self.base_url
+                data = urllib.parse.urlencode(params).encode('utf-8')
+                request = urllib.request.Request(url, data=data, method='POST')
+            else:
+                # GET method (default)
+                url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
+                request = urllib.request.Request(url)
 
-            # Create request with proper User-Agent header
-            request = urllib.request.Request(url)
+            # Add proper User-Agent header
             request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
 
             with urllib.request.urlopen(request, timeout=10) as response:
@@ -284,14 +293,19 @@ class QRZLogbook:
         return ' '.join(fields) + ' <EOR>'
 
 
-def test_qrz_login(username, password):
+def test_qrz_login(username, password, use_post=False):
     """
     Test QRZ login credentials
+
+    Args:
+        username: QRZ username
+        password: QRZ password
+        use_post: If True, use POST instead of GET
 
     Returns:
         (bool, str): (success, message)
     """
-    session = QRZSession(username, password)
+    session = QRZSession(username, password, use_post=use_post)
     return session.login()
 
 
