@@ -495,16 +495,18 @@ class EnhancedLoggingTab:
         # Load contacts from database
         contacts = self.database.get_all_contacts(limit=100)
         for contact in contacts:
+            # Convert sqlite3.Row to dict to safely access optional fields
+            contact_dict = dict(contact)
             self.log_tree.insert('', 'end', values=(
-                contact['callsign'],
-                contact['date'],
-                contact['time_on'],
-                contact['frequency'],
-                contact['mode'],
-                f"{contact['rst_sent']}/{contact['rst_rcvd']}",
-                contact['name'],
-                contact.get('country', ''),
-                contact.get('gridsquare', '')
+                contact_dict.get('callsign', ''),
+                contact_dict.get('date', ''),
+                contact_dict.get('time_on', ''),
+                contact_dict.get('frequency', ''),
+                contact_dict.get('mode', ''),
+                f"{contact_dict.get('rst_sent', '')}/{contact_dict.get('rst_rcvd', '')}",
+                contact_dict.get('name', ''),
+                contact_dict.get('country', ''),
+                contact_dict.get('gridsquare', '')
             ))
 
     def get_frame(self):
