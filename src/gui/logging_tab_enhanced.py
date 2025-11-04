@@ -322,8 +322,19 @@ class EnhancedLoggingTab:
 
         if not qrz_user or not qrz_pass:
             if not auto:
+                # Provide specific feedback about what's missing
+                missing_items = []
+                if not qrz_user:
+                    missing_items.append("Username")
+                if not qrz_pass:
+                    missing_items.append("Password")
+
+                missing_text = " and ".join(missing_items)
                 messagebox.showinfo("QRZ Not Configured",
-                                   "Configure QRZ credentials in Settings to enable lookups")
+                                   f"QRZ {missing_text} not configured.\n\n"
+                                   "Please go to Settings tab and enter your QRZ credentials,\n"
+                                   "then click 'Save Settings' to enable lookups.\n\n"
+                                   "Note: QRZ XML lookups require a separate XML Data subscription.")
             return
 
         # Create session if needed
@@ -432,7 +443,10 @@ class EnhancedLoggingTab:
 
         if not api_key:
             messagebox.showwarning("QRZ Not Configured",
-                                 "Configure QRZ API key in Settings to upload contacts")
+                                 "QRZ API Key not configured.\n\n"
+                                 "Please go to Settings tab and enter your QRZ API key,\n"
+                                 "then click 'Save Settings' to enable QRZ Logbook uploads.\n\n"
+                                 "Get your API key from: https://www.qrz.com/page/current_spec.html")
             return
 
         if contact_data is None:
