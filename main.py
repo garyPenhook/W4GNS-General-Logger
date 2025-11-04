@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.database import Database
 from src.config import Config
-from src.gui.logging_tab import LoggingTab
+from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.dx_cluster_tab import DXClusterTab
 from src.gui.settings_tab import SettingsTab
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
@@ -80,7 +80,7 @@ class W4GNSLogger:
         self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
 
         # Create tabs
-        self.logging_tab = LoggingTab(self.notebook, self.database, self.config)
+        self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
         self.settings_tab = SettingsTab(self.notebook, self.config)
 

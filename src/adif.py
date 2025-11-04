@@ -59,10 +59,22 @@ class ADIFParser:
                 'MODE': 'mode',
                 'RST_SENT': 'rst_sent',
                 'RST_RCVD': 'rst_rcvd',
+                'TX_PWR': 'power',
                 'NAME': 'name',
                 'QTH': 'qth',
                 'GRIDSQUARE': 'gridsquare',
-                'COMMENT': 'notes',
+                'CNTY': 'county',
+                'STATE': 'state',
+                'COUNTRY': 'country',
+                'CONT': 'continent',
+                'CQZ': 'cq_zone',
+                'ITUZ': 'itu_zone',
+                'DXCC': 'dxcc',
+                'IOTA': 'iota',
+                'SOTA_REF': 'sota',
+                'POTA_REF': 'pota',
+                'MY_GRIDSQUARE': 'my_gridsquare',
+                'COMMENT': 'comment',
                 'NOTES': 'notes'
             }
 
@@ -125,10 +137,23 @@ class ADIFGenerator:
             'mode': 'MODE',
             'rst_sent': 'RST_SENT',
             'rst_rcvd': 'RST_RCVD',
+            'power': 'TX_PWR',
             'name': 'NAME',
             'qth': 'QTH',
             'gridsquare': 'GRIDSQUARE',
-            'notes': 'COMMENT'
+            'county': 'CNTY',
+            'state': 'STATE',
+            'country': 'COUNTRY',
+            'continent': 'CONT',
+            'cq_zone': 'CQZ',
+            'itu_zone': 'ITUZ',
+            'dxcc': 'DXCC',
+            'iota': 'IOTA',
+            'sota': 'SOTA_REF',
+            'pota': 'POTA_REF',
+            'my_gridsquare': 'MY_GRIDSQUARE',
+            'comment': 'COMMENT',
+            'notes': 'NOTES'
         }
 
         for db_field, adif_field in field_map.items():
