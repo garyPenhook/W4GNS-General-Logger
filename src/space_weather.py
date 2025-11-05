@@ -62,26 +62,30 @@ class SpaceWeatherClient:
             response = self.session.get(self.HAMQSL_URL, timeout=10)
             response.raise_for_status()
 
-            # Parse XML
+            # Parse XML - data is nested inside <solar><solardata>
             root = ET.fromstring(response.content)
+            solardata = root.find('solardata')
+            if solardata is None:
+                print("Error: Could not find <solardata> element in XML")
+                return None
 
             data = {
-                'solar_flux': self._get_int(root, 'solarflux'),
-                'sunspot_number': self._get_int(root, 'sunspots'),
-                'a_index': self._get_int(root, 'aindex'),
-                'k_index': self._get_int(root, 'kindex'),
-                'x_ray': self._get_text(root, 'xray'),
-                'geomag_field': self._get_text(root, 'geomagfield'),
-                'solar_wind': self._get_float(root, 'solarwind'),
-                'helium_line': self._get_float(root, 'heliumline'),
-                'proton_flux': self._get_int(root, 'protonflux'),
-                'electron_flux': self._get_int(root, 'electonflux'),  # Note: typo in source XML
-                'aurora': self._get_int(root, 'aurora'),
-                'signal_noise': self._get_text(root, 'signalnoise'),
-                'updated': self._get_text(root, 'updated'),
+                'solar_flux': self._get_int(solardata, 'solarflux'),
+                'sunspot_number': self._get_int(solardata, 'sunspots'),
+                'a_index': self._get_int(solardata, 'aindex'),
+                'k_index': self._get_int(solardata, 'kindex'),
+                'x_ray': self._get_text(solardata, 'xray'),
+                'geomag_field': self._get_text(solardata, 'geomagfield'),
+                'solar_wind': self._get_float(solardata, 'solarwind'),
+                'helium_line': self._get_float(solardata, 'heliumline'),
+                'proton_flux': self._get_int(solardata, 'protonflux'),
+                'electron_flux': self._get_int(solardata, 'electonflux'),  # Note: typo in source XML
+                'aurora': self._get_int(solardata, 'aurora'),
+                'signal_noise': self._get_text(solardata, 'signalnoise'),
+                'updated': self._get_text(solardata, 'updated'),
                 'band_conditions': {
-                    'day': self._parse_band_conditions(root, 'calculatedconditions/band'),
-                    'night': self._parse_band_conditions(root, 'calculatedvhfconditions/phenomenon')
+                    'day': self._parse_band_conditions(solardata, 'calculatedconditions/band'),
+                    'night': self._parse_band_conditions(solardata, 'calculatedvhfconditions/phenomenon')
                 }
             }
 
@@ -96,13 +100,15 @@ class SpaceWeatherClient:
     def _get_text(self, root, path):
         """Get text from XML element"""
         elem = root.find(path)
-        return elem.text if elem is not None else 'N/A'
+        return elem.text.strip() if elem is not None and elem.text else 'N/A'
 
     def _get_int(self, root, path):
         """Get integer from XML element"""
         elem = root.find(path)
         try:
-            return int(elem.text) if elem is not None else 0
+            if elem is not None and elem.text:
+                return int(elem.text.strip())
+            return 0
         except (ValueError, TypeError):
             return 0
 
@@ -110,7 +116,9 @@ class SpaceWeatherClient:
         """Get float from XML element"""
         elem = root.find(path)
         try:
-            return float(elem.text) if elem is not None else 0.0
+            if elem is not None and elem.text:
+                return float(elem.text.strip())
+            return 0.0
         except (ValueError, TypeError):
             return 0.0
 
