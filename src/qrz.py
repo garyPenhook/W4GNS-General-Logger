@@ -59,6 +59,13 @@ class QRZSession:
 
             root = ET.fromstring(xml_data)
 
+            # QRZ XML uses namespaces - need to handle them properly
+            # Strip namespace for easier parsing
+            for elem in root.iter():
+                # Remove namespace from tag
+                if '}' in elem.tag:
+                    elem.tag = elem.tag.split('}', 1)[1]
+
             # Check for session element
             session = root.find('.//Session')
             if session is None:
@@ -142,6 +149,11 @@ class QRZSession:
             print("=== End Debug ===\n")
 
             root = ET.fromstring(xml_data)
+
+            # Strip namespace for easier parsing
+            for elem in root.iter():
+                if '}' in elem.tag:
+                    elem.tag = elem.tag.split('}', 1)[1]
 
             # Check for errors
             session = root.find('.//Session')
