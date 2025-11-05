@@ -307,15 +307,49 @@ class AwardsCalculator:
         Extract WPX prefix from callsign
 
         Rules:
-        - Prefix is everything before the first digit
-        - Include the first digit in the prefix
+        - Remove portable indicators (/P, /M, /MM, /A, /QRP, etc.)
+        - For prefix notation (KH6/W4GNS), use the prefix part
+        - For suffix notation (W4GNS/KH6), use the suffix part if it looks like a location
+        - Prefix is everything up to and including the first digit
         """
+        call = callsign.upper().strip()
+
+        # List of portable/mobile indicators to ignore
+        portable_indicators = ['P', 'M', 'MM', 'AM', 'A', 'QRP', 'LGT', 'BCN', 'B']
+
+        # Check for slash notation
+        if '/' in call:
+            parts = call.split('/')
+
+            # If we have exactly 2 parts
+            if len(parts) == 2:
+                prefix_part = parts[0]
+                suffix_part = parts[1]
+
+                # If suffix is just a portable indicator, ignore it
+                if suffix_part in portable_indicators:
+                    call = prefix_part
+                # If prefix is short (<=4) and has a digit, it's a location prefix (like KH6/, VP9/)
+                # This handles prefix notation like KH6/W4GNS
+                elif len(prefix_part) <= 4 and any(c.isdigit() for c in prefix_part):
+                    call = prefix_part
+                # If suffix is short (<=4) and has a digit, it's a location suffix (like /KH6, /VP9)
+                # This handles suffix notation like W4GNS/KH6
+                elif len(suffix_part) <= 4 and any(c.isdigit() for c in suffix_part):
+                    call = suffix_part
+                else:
+                    # Default to first part (the base callsign)
+                    call = prefix_part
+            else:
+                # Multiple slashes or other cases - take first part
+                call = parts[0]
+
         # Find first digit
-        match = re.search(r'\d', callsign)
+        match = re.search(r'\d', call)
         if match:
             pos = match.start()
             # Include digit and all before it
-            return callsign[:pos+1]
+            return call[:pos+1]
         return None
 
     def _normalize_mode(self, mode):
