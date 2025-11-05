@@ -606,6 +606,76 @@ DXCC_DATA = {
     # US Virgin Islands
     'KV': {'country': 'US Virgin Islands', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 285},
 
+    # Trinidad & Tobago
+    '9Y': {'country': 'Trinidad & Tobago', 'continent': 'NA', 'cq_zone': 9, 'itu_zone': 11, 'entity': 90},
+    '9Z': {'country': 'Trinidad & Tobago', 'continent': 'NA', 'cq_zone': 9, 'itu_zone': 11, 'entity': 90},
+
+    # Barbados
+    '8P': {'country': 'Barbados', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 62},
+
+    # Martinique
+    'FM': {'country': 'Martinique', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 84},
+
+    # Guadeloupe
+    'FG': {'country': 'Guadeloupe', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 77},
+
+    # St. Lucia
+    'J6': {'country': 'St. Lucia', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 97},
+
+    # Grenada
+    'J3': {'country': 'Grenada', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 77},
+
+    # St. Vincent
+    'J8': {'country': 'St. Vincent', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 98},
+
+    # Dominica
+    'J7': {'country': 'Dominica', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 95},
+
+    # Antigua & Barbuda
+    'V2': {'country': 'Antigua & Barbuda', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 100},
+
+    # Montserrat
+    'VP2M': {'country': 'Montserrat', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 96},
+
+    # St. Kitts & Nevis
+    'V4': {'country': 'St. Kitts & Nevis', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 249},
+
+    # Anguilla
+    'VP2E': {'country': 'Anguilla', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 22},
+
+    # Aruba
+    'P4': {'country': 'Aruba', 'continent': 'NA', 'cq_zone': 9, 'itu_zone': 11, 'entity': 91},
+
+    # Bonaire
+    'PJ4': {'country': 'Bonaire', 'continent': 'NA', 'cq_zone': 9, 'itu_zone': 11, 'entity': 520},
+
+    # Curacao
+    'PJ2': {'country': 'Curacao', 'continent': 'NA', 'cq_zone': 9, 'itu_zone': 11, 'entity': 520},
+
+    # Cayman Islands
+    'ZF': {'country': 'Cayman Islands', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 69},
+
+    # Turks & Caicos
+    'VP5': {'country': 'Turks & Caicos', 'continent': 'NA', 'cq_zone': 8, 'itu_zone': 11, 'entity': 89},
+
+    # Bermuda
+    'VP9': {'country': 'Bermuda', 'continent': 'NA', 'cq_zone': 5, 'itu_zone': 11, 'entity': 64},
+
+    # Greenland
+    'OX': {'country': 'Greenland', 'continent': 'NA', 'cq_zone': 40, 'itu_zone': 5, 'entity': 237},
+
+    # Alaska
+    'KL': {'country': 'Alaska', 'continent': 'NA', 'cq_zone': 1, 'itu_zone': 1, 'entity': 6},
+    'AL': {'country': 'Alaska', 'continent': 'NA', 'cq_zone': 1, 'itu_zone': 1, 'entity': 6},
+    'NL': {'country': 'Alaska', 'continent': 'NA', 'cq_zone': 1, 'itu_zone': 1, 'entity': 6},
+    'WL': {'country': 'Alaska', 'continent': 'NA', 'cq_zone': 1, 'itu_zone': 1, 'entity': 6},
+
+    # Hawaii
+    'KH6': {'country': 'Hawaii', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 61, 'entity': 110},
+    'AH6': {'country': 'Hawaii', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 61, 'entity': 110},
+    'NH6': {'country': 'Hawaii', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 61, 'entity': 110},
+    'WH6': {'country': 'Hawaii', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 61, 'entity': 110},
+
     # === OCEANIA - Pacific Islands ===
 
     # Papua New Guinea
@@ -634,6 +704,179 @@ DXCC_DATA = {
 
     # Guam
     'KH2': {'country': 'Guam', 'continent': 'OC', 'cq_zone': 27, 'itu_zone': 64, 'entity': 103},
+
+    # Palau
+    'T8': {'country': 'Palau', 'continent': 'OC', 'cq_zone': 27, 'itu_zone': 64, 'entity': 22},
+
+    # Marshall Islands
+    'V7': {'country': 'Marshall Islands', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 65, 'entity': 122},
+
+    # Micronesia
+    'V6': {'country': 'Micronesia', 'continent': 'OC', 'cq_zone': 27, 'itu_zone': 64, 'entity': 173},
+
+    # Northern Marianas
+    'KH0': {'country': 'Northern Marianas', 'continent': 'OC', 'cq_zone': 27, 'itu_zone': 64, 'entity': 21},
+
+    # American Samoa
+    'KH8': {'country': 'American Samoa', 'continent': 'OC', 'cq_zone': 32, 'itu_zone': 62, 'entity': 10},
+
+    # Cook Islands
+    'E5': {'country': 'Cook Islands', 'continent': 'OC', 'cq_zone': 32, 'itu_zone': 62, 'entity': 234},
+
+    # Niue
+    'ZK2': {'country': 'Niue', 'continent': 'OC', 'cq_zone': 32, 'itu_zone': 62, 'entity': 188},
+
+    # Tuvalu
+    'T2': {'country': 'Tuvalu', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 65, 'entity': 282},
+
+    # Kiribati
+    'T3': {'country': 'Kiribati', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 65, 'entity': 348},
+
+    # Nauru
+    'C2': {'country': 'Nauru', 'continent': 'OC', 'cq_zone': 31, 'itu_zone': 65, 'entity': 157},
+
+    # === AFRICA - Additional Countries ===
+
+    # Cameroon
+    'TJ': {'country': 'Cameroon', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 47, 'entity': 406},
+
+    # Ivory Coast
+    'TU': {'country': 'Ivory Coast', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 428},
+
+    # Benin
+    'TY': {'country': 'Benin', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 416},
+
+    # Togo
+    '5V': {'country': 'Togo', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 483},
+
+    # Burkina Faso
+    'XT': {'country': 'Burkina Faso', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 480},
+
+    # Mali
+    'TZ': {'country': 'Mali', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 442},
+
+    # Mauritania
+    '5T': {'country': 'Mauritania', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 444},
+
+    # Niger
+    '5U': {'country': 'Niger', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 187},
+
+    # Chad
+    'TT': {'country': 'Chad', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 47, 'entity': 410},
+
+    # Central African Republic
+    'TL': {'country': 'Central African Republic', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 47, 'entity': 408},
+
+    # Congo (Brazzaville)
+    'TN': {'country': 'Congo', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 52, 'entity': 412},
+
+    # Dem. Rep. of Congo (Zaire)
+    '9Q': {'country': 'Dem. Rep. of Congo', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 52, 'entity': 414},
+
+    # Gabon
+    'TR': {'country': 'Gabon', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 52, 'entity': 420},
+
+    # Equatorial Guinea
+    '3C': {'country': 'Equatorial Guinea', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 47, 'entity': 195},
+
+    # Sao Tome & Principe
+    'S9': {'country': 'Sao Tome & Principe', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 47, 'entity': 219},
+
+    # Liberia
+    'EL': {'country': 'Liberia', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 434},
+    '5L': {'country': 'Liberia', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 434},
+
+    # Sierra Leone
+    '9L': {'country': 'Sierra Leone', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 458},
+
+    # Gambia
+    'C5': {'country': 'Gambia', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 422},
+
+    # Guinea
+    '3X': {'country': 'Guinea', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 107},
+
+    # Guinea-Bissau
+    'J5': {'country': 'Guinea-Bissau', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 109},
+
+    # Cape Verde
+    'D4': {'country': 'Cape Verde', 'continent': 'AF', 'cq_zone': 35, 'itu_zone': 46, 'entity': 7},
+
+    # Madagascar
+    '5R': {'country': 'Madagascar', 'continent': 'AF', 'cq_zone': 39, 'itu_zone': 53, 'entity': 438},
+
+    # Mauritius
+    '3B8': {'country': 'Mauritius', 'continent': 'AF', 'cq_zone': 39, 'itu_zone': 53, 'entity': 165},
+
+    # Reunion
+    'FR': {'country': 'Reunion', 'continent': 'AF', 'cq_zone': 39, 'itu_zone': 53, 'entity': 453},
+
+    # Seychelles
+    'S7': {'country': 'Seychelles', 'continent': 'AF', 'cq_zone': 39, 'itu_zone': 53, 'entity': 379},
+
+    # Comoros
+    'D6': {'country': 'Comoros', 'continent': 'AF', 'cq_zone': 39, 'itu_zone': 53, 'entity': 411},
+
+    # Malawi
+    '7Q': {'country': 'Malawi', 'continent': 'AF', 'cq_zone': 37, 'itu_zone': 53, 'entity': 440},
+
+    # Somalia
+    '6O': {'country': 'Somalia', 'continent': 'AF', 'cq_zone': 37, 'itu_zone': 48, 'entity': 232},
+    'T5': {'country': 'Somalia', 'continent': 'AF', 'cq_zone': 37, 'itu_zone': 48, 'entity': 232},
+
+    # Djibouti
+    'J2': {'country': 'Djibouti', 'continent': 'AF', 'cq_zone': 37, 'itu_zone': 48, 'entity': 408},
+
+    # Eritrea
+    'E3': {'country': 'Eritrea', 'continent': 'AF', 'cq_zone': 37, 'itu_zone': 48, 'entity': 51},
+
+    # Sudan
+    'ST': {'country': 'Sudan', 'continent': 'AF', 'cq_zone': 34, 'itu_zone': 48, 'entity': 466},
+    '6T': {'country': 'Sudan', 'continent': 'AF', 'cq_zone': 34, 'itu_zone': 48, 'entity': 466},
+
+    # South Sudan
+    'Z8': {'country': 'South Sudan', 'continent': 'AF', 'cq_zone': 36, 'itu_zone': 48, 'entity': 521},
+
+    # Lesotho
+    '7P': {'country': 'Lesotho', 'continent': 'AF', 'cq_zone': 38, 'itu_zone': 57, 'entity': 432},
+
+    # Swaziland (Eswatini)
+    '3DA': {'country': 'Swaziland', 'continent': 'AF', 'cq_zone': 38, 'itu_zone': 57, 'entity': 468},
+
+    # === ASIA - Additional Countries ===
+
+    # Oman
+    'A4': {'country': 'Oman', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 39, 'entity': 370},
+
+    # Yemen
+    '7O': {'country': 'Yemen', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 39, 'entity': 492},
+
+    # Bahrain
+    'A9': {'country': 'Bahrain', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 39, 'entity': 304},
+
+    # Iran
+    'EP': {'country': 'Iran', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 40, 'entity': 330},
+
+    # Afghanistan
+    'YA': {'country': 'Afghanistan', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 40, 'entity': 3},
+    'T6': {'country': 'Afghanistan', 'continent': 'AS', 'cq_zone': 21, 'itu_zone': 40, 'entity': 3},
+
+    # Maldives
+    '8Q': {'country': 'Maldives', 'continent': 'AS', 'cq_zone': 22, 'itu_zone': 41, 'entity': 159},
+
+    # Bhutan
+    'A5': {'country': 'Bhutan', 'continent': 'AS', 'cq_zone': 22, 'itu_zone': 41, 'entity': 306},
+
+    # Macau
+    'XX9': {'country': 'Macau', 'continent': 'AS', 'cq_zone': 24, 'itu_zone': 44, 'entity': 152},
+
+    # North Korea
+    'P5': {'country': 'North Korea', 'continent': 'AS', 'cq_zone': 25, 'itu_zone': 44, 'entity': 344},
+
+    # Brunei
+    'V8': {'country': 'Brunei', 'continent': 'AS', 'cq_zone': 28, 'itu_zone': 54, 'entity': 345},
+
+    # Timor-Leste
+    '4W': {'country': 'Timor-Leste', 'continent': 'OC', 'cq_zone': 28, 'itu_zone': 54, 'entity': 511},
 
     # === ANTARCTICA ===
     # Antarctica
