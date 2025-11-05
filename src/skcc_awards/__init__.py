@@ -31,6 +31,7 @@ from .centurion import CenturionAward
 from .tribune import TribuneAward
 from .senator import SenatorAward
 from .triple_key import TripleKeyAward
+from .rag_chew import RagChewAward
 
 __all__ = [
     'SKCCAwardBase',
@@ -38,4 +39,5 @@ __all__ = [
     'TribuneAward',
     'SenatorAward',
     'TripleKeyAward',
+    'RagChewAward',
 ]

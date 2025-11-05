@@ -73,6 +73,24 @@ TRIPLE_KEY_ENDORSEMENTS: List[Tuple[int, str]] = [
     (3000, "Triple Key x10"), # 1000 per key type minimum
 ]
 
+# Rag Chew Award Endorsement Levels (based on total minutes)
+RAG_CHEW_ENDORSEMENTS: List[Tuple[int, str]] = [
+    (300, "Rag Chew"),
+    (600, "Rag Chew x2"),
+    (900, "Rag Chew x3"),
+    (1200, "Rag Chew x4"),
+    (1500, "Rag Chew x5"),
+    (1800, "Rag Chew x6"),
+    (2100, "Rag Chew x7"),
+    (2400, "Rag Chew x8"),
+    (2700, "Rag Chew x9"),
+    (3000, "Rag Chew x10"),
+    (4500, "Rag Chew x15"),
+    (6000, "Rag Chew x20"),
+    (7500, "Rag Chew x25"),
+    (9000, "Rag Chew x30"),
+]
+
 # ============================================================================
 # EFFECTIVE DATES (YYYYMMDD format)
 # ============================================================================
@@ -197,5 +215,7 @@ def get_next_endorsement_threshold(count: int, endorsement_list: List[Tuple[int,
         return ((count // 200) + 1) * 200  # 200-contact increments
     elif endorsement_list == TRIPLE_KEY_ENDORSEMENTS:
         return ((count // 300) + 1) * 300  # 300-contact increments (100 per key)
+    elif endorsement_list == RAG_CHEW_ENDORSEMENTS:
+        return ((count // 1500) + 1) * 1500  # 1500-minute increments after x10
 
     return last_threshold
