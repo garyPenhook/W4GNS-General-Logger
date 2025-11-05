@@ -69,6 +69,48 @@ class DXClusterTab:
         # Bind cluster selection change
         self.cluster_combo.bind('<<ComboboxSelected>>', self.on_cluster_changed)
 
+        # Filters frame
+        filter_frame = ttk.LabelFrame(self.frame, text="Spot Filters", padding=10)
+        filter_frame.pack(fill='x', padx=10, pady=5)
+
+        # Band filters
+        band_row = ttk.Frame(filter_frame)
+        band_row.pack(fill='x', pady=2)
+
+        ttk.Label(band_row, text="Bands:").pack(side='left', padx=(0, 5))
+
+        self.band_filters = {}
+        bands = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m']
+        for band in bands:
+            var = tk.BooleanVar(value=True)  # All bands enabled by default
+            self.band_filters[band] = var
+            ttk.Checkbutton(band_row, text=band, variable=var,
+                           command=self.apply_filters).pack(side='left', padx=2)
+
+        ttk.Button(band_row, text="All Bands",
+                  command=lambda: self.toggle_all_filters(self.band_filters, True)).pack(side='left', padx=5)
+        ttk.Button(band_row, text="Clear Bands",
+                  command=lambda: self.toggle_all_filters(self.band_filters, False)).pack(side='left')
+
+        # Mode filters
+        mode_row = ttk.Frame(filter_frame)
+        mode_row.pack(fill='x', pady=2)
+
+        ttk.Label(mode_row, text="Modes:").pack(side='left', padx=(0, 5))
+
+        self.mode_filters = {}
+        modes = ['CW', 'SSB', 'RTTY', 'FT8', 'FT4', 'PSK', 'DIGI']
+        for mode in modes:
+            var = tk.BooleanVar(value=True)  # All modes enabled by default
+            self.mode_filters[mode] = var
+            ttk.Checkbutton(mode_row, text=mode, variable=var,
+                           command=self.apply_filters).pack(side='left', padx=2)
+
+        ttk.Button(mode_row, text="All Modes",
+                  command=lambda: self.toggle_all_filters(self.mode_filters, True)).pack(side='left', padx=5)
+        ttk.Button(mode_row, text="Clear Modes",
+                  command=lambda: self.toggle_all_filters(self.mode_filters, False)).pack(side='left')
+
         # Spots display frame
         spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
         spots_frame.pack(fill='both', expand=True, padx=10, pady=5)
@@ -105,19 +147,50 @@ class DXClusterTab:
         cmd_frame = ttk.LabelFrame(self.frame, text="Send Commands to Cluster", padding=10)
         cmd_frame.pack(fill='x', padx=10, pady=5)
 
-        # Command entry row
+        # Command entry row with dropdown (similar to Log4OM approach)
         entry_row = ttk.Frame(cmd_frame)
         entry_row.pack(fill='x', pady=(0, 5))
 
         ttk.Label(entry_row, text="Command:").pack(side='left')
         self.command_var = tk.StringVar()
-        self.command_entry = ttk.Entry(entry_row, textvariable=self.command_var, width=40)
+
+        # Common DX cluster commands dropdown
+        common_commands = [
+            "SH/DX",
+            "SH/DX 14000-14350",
+            "SH/DX 7000-7300",
+            "SH/DX 3500-4000",
+            "SH/DX 21000-21450",
+            "SH/DX 28000-29700",
+            "SH/WWV",
+            "SH/WCY",
+            "SH/SUN",
+            "SH/MOON",
+            "SH/MUF",
+            "SH/QTH <call>",
+            "SH/QRZ <call>",
+            "SET/DX",
+            "UNSET/DX",
+            "SET/WWV",
+            "UNSET/WWV",
+            "SET/WCY",
+            "UNSET/WCY",
+            "ACCEPT/SPOT <filter>",
+            "REJECT/SPOT <filter>",
+            "CLEAR/SPOTS",
+            "SH/FILTER",
+            "CLEAR/FILTER"
+        ]
+
+        # Use combobox to allow both selection and custom typing
+        self.command_entry = ttk.Combobox(entry_row, textvariable=self.command_var,
+                                          values=common_commands, width=40)
         self.command_entry.pack(side='left', padx=5, fill='x', expand=True)
         self.command_entry.bind('<Return>', self.send_command)
 
         ttk.Button(entry_row, text="Send", command=self.send_command).pack(side='left', padx=2)
 
-        # Quick commands row
+        # Quick commands row - most frequently used
         quick_row = ttk.Frame(cmd_frame)
         quick_row.pack(fill='x')
 
@@ -125,6 +198,8 @@ class DXClusterTab:
         ttk.Button(quick_row, text="SH/DX", command=lambda: self.quick_command("SH/DX")).pack(side='left', padx=2)
         ttk.Button(quick_row, text="SH/DX 20M", command=lambda: self.quick_command("SH/DX 14000-14350")).pack(side='left', padx=2)
         ttk.Button(quick_row, text="SH/DX 40M", command=lambda: self.quick_command("SH/DX 7000-7300")).pack(side='left', padx=2)
+        ttk.Button(quick_row, text="SH/WWV", command=lambda: self.quick_command("SH/WWV")).pack(side='left', padx=2)
+        ttk.Button(quick_row, text="Clear Filter", command=lambda: self.quick_command("CLEAR/FILTER")).pack(side='left', padx=2)
 
     def on_cluster_changed(self, event=None):
         """Handle cluster selection change"""
@@ -225,6 +300,10 @@ class DXClusterTab:
 
     def _process_spot(self, spot):
         """Process spot on main thread (safe for database and UI operations)"""
+        # Check if spot passes filters
+        if not self.spot_passes_filters(spot):
+            return
+
         # Add to treeview at the top
         self.spots_tree.insert('', 0, values=(
             spot['time'],
@@ -259,6 +338,96 @@ class DXClusterTab:
 
         # Schedule next update
         self.parent.after(500, self.update_timer)
+
+    def toggle_all_filters(self, filter_dict, state):
+        """Enable or disable all filters in a group"""
+        for var in filter_dict.values():
+            var.set(state)
+        self.apply_filters()
+
+    def apply_filters(self):
+        """Apply current filters to displayed spots"""
+        # Note: This currently only affects new incoming spots
+        # Could be extended to re-filter existing spots in the tree
+        pass
+
+    def spot_passes_filters(self, spot):
+        """Check if a spot passes the current band and mode filters"""
+        # Check band filter
+        frequency = spot.get('frequency', '')
+        band = self.frequency_to_band(frequency)
+        if band and band in self.band_filters:
+            if not self.band_filters[band].get():
+                return False
+
+        # Check mode filter
+        comment = spot.get('comment', '').upper()
+        mode = self.extract_mode_from_comment(comment)
+        if mode and mode in self.mode_filters:
+            if not self.mode_filters[mode].get():
+                return False
+
+        return True
+
+    def frequency_to_band(self, frequency):
+        """Convert frequency (in kHz) to band name"""
+        try:
+            freq = float(frequency)
+
+            # Band ranges in kHz
+            if 1800 <= freq < 2000:
+                return '160m'
+            elif 3500 <= freq < 4000:
+                return '80m'
+            elif 5330 <= freq < 5405:
+                return '60m'
+            elif 7000 <= freq < 7300:
+                return '40m'
+            elif 10100 <= freq < 10150:
+                return '30m'
+            elif 14000 <= freq < 14350:
+                return '20m'
+            elif 18068 <= freq < 18168:
+                return '17m'
+            elif 21000 <= freq < 21450:
+                return '15m'
+            elif 24890 <= freq < 24990:
+                return '12m'
+            elif 28000 <= freq < 29700:
+                return '10m'
+            elif 50000 <= freq < 54000:
+                return '6m'
+            elif 144000 <= freq < 148000:
+                return '2m'
+        except (ValueError, TypeError):
+            pass
+
+        return None
+
+    def extract_mode_from_comment(self, comment):
+        """Extract mode from spot comment"""
+        comment = comment.upper()
+
+        # Check for specific mode keywords
+        if 'FT8' in comment:
+            return 'FT8'
+        elif 'FT4' in comment:
+            return 'FT4'
+        elif 'RTTY' in comment or 'BAUDOT' in comment:
+            return 'RTTY'
+        elif 'PSK' in comment:
+            return 'PSK'
+        elif 'CW' in comment:
+            return 'CW'
+        elif 'SSB' in comment or 'PHONE' in comment:
+            return 'SSB'
+        elif any(mode in comment for mode in ['DIGI', 'FT', 'JS8', 'JT', 'WSPR']):
+            return 'DIGI'
+
+        # Default guess based on frequency band
+        # CW is typically below 7040 on 40m, 14070 on 20m, etc.
+        # For now, return None to allow all if mode not specified
+        return None
 
     def get_frame(self):
         """Return the frame widget"""
