@@ -801,7 +801,8 @@ class EnhancedLoggingTab:
                     try:
                         dt = datetime.fromisoformat(spot_time.replace('Z', '+00:00'))
                         spot_time = dt.strftime('%H:%M')
-                    except:
+                    except (ValueError, AttributeError):
+                        # Keep original time format if parsing fails
                         pass
 
                 self.pota_spots_tree.insert('', 'end', values=(

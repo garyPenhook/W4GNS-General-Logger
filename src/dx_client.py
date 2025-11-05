@@ -50,8 +50,9 @@ class DXClusterClient:
         if self.connection:
             try:
                 self.connection.close()
-            except:
-                pass
+            except (OSError, AttributeError) as e:
+                # OSError for socket errors, AttributeError if connection object invalid
+                print(f"Error closing connection: {e}")
         self.connection = None
 
     def send_command(self, command):

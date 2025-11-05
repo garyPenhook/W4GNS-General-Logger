@@ -58,17 +58,48 @@ class SpaceWeatherClient:
             if (datetime.now() - cached_time).seconds < self.cache_timeout:
                 return cached_data
 
+        # Try up to 3 times with exponential backoff
+        max_retries = 3
+        retry_delay = 1  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(self.HAMQSL_URL, timeout=10)
+                response.raise_for_status()
+
+                # Parse XML - data is nested inside <solar><solardata>
+                root = ET.fromstring(response.content)
+                solardata = root.find('solardata')
+                if solardata is None:
+                    print("Error: Could not find <solardata> element in XML")
+                    return None
+
+                # Success, break out of retry loop
+                break
+
+            except requests.exceptions.Timeout:
+                if attempt < max_retries - 1:
+                    print(f"Timeout fetching space weather, retrying in {retry_delay}s...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    print("Error: Timeout fetching HamQSL data after retries")
+                    return None
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    print(f"Network error ({e}), retrying in {retry_delay}s...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                else:
+                    print(f"Error fetching HamQSL data: {e}")
+                    return None
+
         try:
-            response = self.session.get(self.HAMQSL_URL, timeout=10)
-            response.raise_for_status()
-
-            # Parse XML - data is nested inside <solar><solardata>
-            root = ET.fromstring(response.content)
-            solardata = root.find('solardata')
-            if solardata is None:
-                print("Error: Could not find <solardata> element in XML")
-                return None
-
             data = {
                 'solar_flux': self._get_int(solardata, 'solarflux'),
                 'sunspot_number': self._get_int(solardata, 'sunspots'),

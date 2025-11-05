@@ -133,5 +133,7 @@ class POTAClient:
         try:
             dt = datetime.fromisoformat(iso_time.replace('Z', '+00:00'))
             return dt.strftime('%H:%M:%S')
-        except:
-            return iso_time
+        except (ValueError, AttributeError) as e:
+            # ValueError for invalid ISO format, AttributeError for None/non-string
+            print(f"Invalid time format '{iso_time}': {e}")
+            return iso_time if iso_time else "N/A"

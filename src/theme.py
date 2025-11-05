@@ -68,11 +68,12 @@ class ThemeManager:
         # Try to use 'clam' or 'alt' theme as base (more customizable)
         try:
             style.theme_use('clam')
-        except:
+        except tk.TclError:
             try:
                 style.theme_use('alt')
-            except:
-                pass  # Use default theme
+            except tk.TclError:
+                # Theme not available, use default
+                print("Warning: 'clam' and 'alt' themes not available, using default")
 
         # Configure standard ttk widgets
         style.configure('.',

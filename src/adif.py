@@ -199,20 +199,56 @@ def export_contacts_to_adif(contacts, filename, program_name="W4GNS General Logg
         contacts: List of contact dictionaries (from database)
         filename: Output filename
         program_name: Name of the program generating the file
+
+    Raises:
+        ValueError: If contacts is empty or filename is invalid
+        IOError: If file cannot be written
     """
+    import os
+
+    # Validate inputs
+    if not contacts:
+        raise ValueError("No contacts to export")
+
+    if not filename:
+        raise ValueError("No filename provided")
+
+    # Check if directory exists and is writable
+    directory = os.path.dirname(filename)
+    if directory and not os.path.exists(directory):
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except OSError as e:
+            raise IOError(f"Cannot create directory {directory}: {e}")
+
+    if directory and not os.access(directory, os.W_OK):
+        raise PermissionError(f"Directory not writable: {directory}")
+
     generator = ADIFGenerator()
 
     # Convert database Row objects to dictionaries if needed
     contact_list = []
     for contact in contacts:
-        if hasattr(contact, 'keys'):
-            # It's a sqlite3.Row object or dict-like
-            contact_dict = {key: contact[key] for key in contact.keys()}
-        else:
-            contact_dict = contact
-        contact_list.append(contact_dict)
+        try:
+            if hasattr(contact, 'keys'):
+                # It's a sqlite3.Row object or dict-like
+                contact_dict = {key: contact[key] for key in contact.keys()}
+            else:
+                contact_dict = contact
+            contact_list.append(contact_dict)
+        except Exception as e:
+            print(f"Warning: Skipping invalid contact: {e}")
+            continue
 
-    generator.generate_file(filename, contact_list, program_name)
+    if not contact_list:
+        raise ValueError("No valid contacts to export after filtering")
+
+    try:
+        generator.generate_file(filename, contact_list, program_name)
+    except IOError as e:
+        raise IOError(f"Failed to write ADIF file {filename}: {e}")
+    except Exception as e:
+        raise Exception(f"Error generating ADIF file: {type(e).__name__}: {e}")
 
 
 def import_contacts_from_adif(filename):
@@ -237,9 +273,28 @@ def validate_adif_file(filename):
     Returns:
         (bool, str): (is_valid, error_message)
     """
+    import os
+
+    # Check file exists
+    if not filename:
+        return False, "No filename provided"
+
+    if not os.path.exists(filename):
+        return False, f"File not found: {filename}"
+
+    if not os.path.isfile(filename):
+        return False, f"Path is not a file: {filename}"
+
+    # Check file is readable
+    if not os.access(filename, os.R_OK):
+        return False, f"File is not readable: {filename}"
+
     try:
         with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
+
+        if not content.strip():
+            return False, "File is empty"
 
         # Check for basic ADIF structure
         if not re.search(r'<eoh>|<EOH>', content, re.IGNORECASE):
@@ -258,5 +313,11 @@ def validate_adif_file(filename):
 
         return True, f"Valid ADIF file with {len(contacts)} contacts"
 
+    except PermissionError:
+        return False, f"Permission denied reading file: {filename}"
+    except UnicodeDecodeError as e:
+        return False, f"File encoding error: {str(e)}"
+    except IOError as e:
+        return False, f"I/O error reading file: {str(e)}"
     except Exception as e:
-        return False, f"Error reading file: {str(e)}"
+        return False, f"Unexpected error: {type(e).__name__}: {str(e)}"

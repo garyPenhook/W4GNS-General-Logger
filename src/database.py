@@ -23,10 +23,18 @@ class Database:
         self.init_database()
 
     def init_database(self):
-        """Initialize database and create tables if they don't exist"""
-        self.conn = sqlite3.connect(self.db_path)
-        self.conn.row_factory = sqlite3.Row
-        cursor = self.conn.cursor()
+        """
+        Initialize database and create tables if they don't exist
+
+        Raises:
+            sqlite3.DatabaseError: If database connection or initialization fails
+        """
+        try:
+            self.conn = sqlite3.connect(self.db_path)
+            self.conn.row_factory = sqlite3.Row
+            cursor = self.conn.cursor()
+        except sqlite3.Error as e:
+            raise sqlite3.DatabaseError(f"Failed to connect to database {self.db_path}: {e}")
 
         # Create contacts table
         cursor.execute('''
@@ -115,45 +123,75 @@ class Database:
         self.conn.commit()
 
     def add_contact(self, contact_data):
-        """Add a new contact to the log"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            INSERT INTO contacts
-            (callsign, date, time_on, time_off, frequency, band, mode,
-             rst_sent, rst_rcvd, power, name, qth, gridsquare, county, state,
-             country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
-             my_gridsquare, comment, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            contact_data.get('callsign', ''),
-            contact_data.get('date', ''),
-            contact_data.get('time_on', ''),
-            contact_data.get('time_off', ''),
-            contact_data.get('frequency', ''),
-            contact_data.get('band', ''),
-            contact_data.get('mode', ''),
-            contact_data.get('rst_sent', ''),
-            contact_data.get('rst_rcvd', ''),
-            contact_data.get('power', ''),
-            contact_data.get('name', ''),
-            contact_data.get('qth', ''),
-            contact_data.get('gridsquare', ''),
-            contact_data.get('county', ''),
-            contact_data.get('state', ''),
-            contact_data.get('country', ''),
-            contact_data.get('continent', ''),
-            contact_data.get('cq_zone', ''),
-            contact_data.get('itu_zone', ''),
-            contact_data.get('dxcc', ''),
-            contact_data.get('iota', ''),
-            contact_data.get('sota', ''),
-            contact_data.get('pota', ''),
-            contact_data.get('my_gridsquare', ''),
-            contact_data.get('comment', ''),
-            contact_data.get('notes', '')
-        ))
-        self.conn.commit()
-        return cursor.lastrowid
+        """
+        Add a new contact to the log
+
+        Args:
+            contact_data: Dictionary containing contact fields
+
+        Returns:
+            int: ID of the inserted contact
+
+        Raises:
+            ValueError: If required fields are missing
+            sqlite3.DatabaseError: If database operation fails
+        """
+        # Validate required fields
+        if not contact_data:
+            raise ValueError("No contact data provided")
+
+        if not contact_data.get('callsign'):
+            raise ValueError("Callsign is required")
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO contacts
+                (callsign, date, time_on, time_off, frequency, band, mode,
+                 rst_sent, rst_rcvd, power, name, qth, gridsquare, county, state,
+                 country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
+                 my_gridsquare, comment, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                contact_data.get('callsign', ''),
+                contact_data.get('date', ''),
+                contact_data.get('time_on', ''),
+                contact_data.get('time_off', ''),
+                contact_data.get('frequency', ''),
+                contact_data.get('band', ''),
+                contact_data.get('mode', ''),
+                contact_data.get('rst_sent', ''),
+                contact_data.get('rst_rcvd', ''),
+                contact_data.get('power', ''),
+                contact_data.get('name', ''),
+                contact_data.get('qth', ''),
+                contact_data.get('gridsquare', ''),
+                contact_data.get('county', ''),
+                contact_data.get('state', ''),
+                contact_data.get('country', ''),
+                contact_data.get('continent', ''),
+                contact_data.get('cq_zone', ''),
+                contact_data.get('itu_zone', ''),
+                contact_data.get('dxcc', ''),
+                contact_data.get('iota', ''),
+                contact_data.get('sota', ''),
+                contact_data.get('pota', ''),
+                contact_data.get('my_gridsquare', ''),
+                contact_data.get('comment', ''),
+                contact_data.get('notes', '')
+            ))
+            self.conn.commit()
+            return cursor.lastrowid
+
+        except sqlite3.IntegrityError as e:
+            self.conn.rollback()
+            raise sqlite3.DatabaseError(f"Database integrity error: {e}")
+        except sqlite3.OperationalError as e:
+            self.conn.rollback()
+            raise sqlite3.DatabaseError(f"Database operational error: {e}")
+        except Exception as e:
+            self.conn.rollback()
+            raise Exception(f"Unexpected error adding contact: {type(e).__name__}: {e}")
 
     def get_all_contacts(self, limit=100):
         """Retrieve all contacts (most recent first)"""
