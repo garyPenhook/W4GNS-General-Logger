@@ -17,6 +17,7 @@ class DXClusterTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.client = None
+        self.logging_tab = None  # Reference to logging tab for spot display
 
         # Rate limiting for spots
         self.spot_queue = []
@@ -178,38 +179,7 @@ class DXClusterTab:
         ttk.Button(dup_row, text="Clear Duplicate History",
                   command=self.clear_duplicate_history).pack(side='left', padx=20)
 
-        # Spots display frame
-        spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
-        spots_frame.pack(fill='both', expand=True, padx=10, pady=5)
-
-        # Create treeview for spots - order: DX Call, Country, Mode, Band, Frequency, Comment
-        columns = ('Callsign', 'Country', 'Mode', 'Band', 'Frequency', 'Comment')
-        self.spots_tree = ttk.Treeview(spots_frame, columns=columns, show='headings', height=12)
-
-        # Set column headings
-        self.spots_tree.heading('Callsign', text='DX Call')
-        self.spots_tree.heading('Country', text='Country')
-        self.spots_tree.heading('Mode', text='Mode')
-        self.spots_tree.heading('Band', text='Band')
-        self.spots_tree.heading('Frequency', text='Frequency')
-        self.spots_tree.heading('Comment', text='Comment')
-
-        # Set column widths
-        self.spots_tree.column('Callsign', width=100)
-        self.spots_tree.column('Country', width=150)
-        self.spots_tree.column('Mode', width=70)
-        self.spots_tree.column('Band', width=60)
-        self.spots_tree.column('Frequency', width=90)
-        self.spots_tree.column('Comment', width=300)
-
-        # Scrollbar for spots
-        spots_scrollbar = ttk.Scrollbar(spots_frame, orient='vertical', command=self.spots_tree.yview)
-        self.spots_tree.configure(yscrollcommand=spots_scrollbar.set)
-
-        self.spots_tree.pack(side='left', fill='both', expand=True)
-        spots_scrollbar.pack(side='right', fill='y')
-
-        # Console output frame - reduced expand to ensure command input is visible
+        # Console output frame
         console_frame = ttk.LabelFrame(self.frame, text="Cluster Console", padding=10)
         console_frame.pack(fill='both', expand=False, padx=10, pady=5)
 
@@ -409,20 +379,17 @@ class DXClusterTab:
                 band = self.frequency_to_band(frequency)
                 band_display = band if band else ''
 
-                # Add to treeview at the top - order: Callsign, Country, Mode, Band, Frequency, Comment
-                self.spots_tree.insert('', 0, values=(
-                    callsign,
-                    country,
-                    mode_display,
-                    band_display,
-                    frequency,
-                    comment
-                ))
-
-                # Keep only last 100 spots
-                items = self.spots_tree.get_children()
-                if len(items) > 100:
-                    self.spots_tree.delete(items[-1])
+                # Send spot to logging tab for display
+                if self.logging_tab:
+                    spot_data = {
+                        'callsign': callsign,
+                        'country': country,
+                        'mode': mode_display,
+                        'band': band_display,
+                        'frequency': frequency,
+                        'comment': comment
+                    }
+                    self.logging_tab.add_spot(spot_data)
 
                 # Save to database
                 spot['cluster_source'] = self.cluster_var.get().split(' - ')[0]
@@ -647,6 +614,10 @@ class DXClusterTab:
             pass
 
         return None
+
+    def set_logging_tab(self, logging_tab):
+        """Set the reference to the logging tab for spot display"""
+        self.logging_tab = logging_tab
 
     def get_frame(self):
         """Return the frame widget"""
