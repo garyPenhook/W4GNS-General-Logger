@@ -57,6 +57,11 @@ class W4GNSLogger:
         # Center window
         self.center_window()
 
+        # Start auto-save timer if enabled
+        if self.config.get('backup.auto_save', False):
+            interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000
+            self.root.after(interval, self.auto_save_timer)
+
     def center_window(self):
         """Center the window on screen"""
         self.root.update_idletasks()
@@ -260,6 +265,65 @@ https://www.ng3k.com/Misc/cluster.html
         """
         tk.messagebox.showinfo("About W4GNS Logger", about_text.strip())
 
+    def backup_on_shutdown(self):
+        """Backup log to local and external locations on shutdown"""
+        try:
+            from datetime import datetime
+            import os
+
+            # Get all contacts
+            contacts = self.database.get_all_contacts(limit=999999)
+
+            if not contacts:
+                return  # Nothing to backup
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"w4gns_log_{timestamp}.adi"
+
+            # Always backup to local logs directory
+            logs_dir = "logs"
+            os.makedirs(logs_dir, exist_ok=True)
+            local_path = os.path.join(logs_dir, filename)
+            export_contacts_to_adif(contacts, local_path)
+            print(f"Backed up {len(contacts)} contacts to {local_path}")
+
+            # Backup to external path if configured
+            external_path = self.config.get('backup.external_path', '').strip()
+            if external_path and os.path.exists(external_path):
+                external_file = os.path.join(external_path, filename)
+                export_contacts_to_adif(contacts, external_file)
+                print(f"Also backed up to {external_file}")
+
+        except Exception as e:
+            print(f"Error during shutdown backup: {e}")
+
+    def auto_save_timer(self):
+        """Periodic auto-save timer"""
+        if self.config.get('backup.auto_save', False):
+            external_path = self.config.get('backup.external_path', '').strip()
+
+            if external_path and os.path.exists(external_path):
+                try:
+                    from datetime import datetime
+                    import os
+
+                    contacts = self.database.get_all_contacts(limit=999999)
+
+                    if contacts:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        filename = f"w4gns_log_autosave_{timestamp}.adi"
+                        external_file = os.path.join(external_path, filename)
+                        export_contacts_to_adif(contacts, external_file)
+                        self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
+                        print(f"Auto-save: {len(contacts)} contacts to {external_file}")
+
+                except Exception as e:
+                    print(f"Error during auto-save: {e}")
+
+        # Schedule next auto-save
+        interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000  # Convert to milliseconds
+        self.root.after(interval, self.auto_save_timer)
+
     def on_closing(self):
         """Handle window closing"""
         # Disconnect from cluster if connected
@@ -269,6 +333,10 @@ https://www.ng3k.com/Misc/cluster.html
         # Save window size
         self.config.set('window.width', self.root.winfo_width())
         self.config.set('window.height', self.root.winfo_height())
+
+        # Auto-backup on shutdown if enabled
+        if self.config.get('backup.auto_backup', True):
+            self.backup_on_shutdown()
 
         # Close database
         self.database.close()

@@ -3,7 +3,7 @@ Settings Tab - Configuration and preferences
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 from src.qrz import test_qrz_login
 
 
@@ -149,6 +149,53 @@ class SettingsTab:
         self.auto_timeoff_var = tk.BooleanVar(value=self.config.get('logging.auto_time_off', True))
         ttk.Checkbutton(logging_frame, text="Auto-fill Time OFF when logging contact",
                        variable=self.auto_timeoff_var).pack(anchor='w', pady=2)
+
+        # Backup Settings
+        backup_frame = ttk.LabelFrame(scrollable_frame, text="Backup & Auto-Save", padding=10)
+        backup_frame.pack(fill='x', padx=10, pady=5)
+
+        self.auto_backup_var = tk.BooleanVar(value=self.config.get('backup.auto_backup', True))
+        ttk.Checkbutton(backup_frame, text="Automatically backup log on shutdown",
+                       variable=self.auto_backup_var).pack(anchor='w', pady=2)
+
+        ttk.Label(backup_frame, text="Local logs are always saved to: ./logs/",
+                 font=('', 8), foreground='gray').pack(anchor='w', pady=(0, 10))
+
+        # External backup path
+        external_frame = ttk.Frame(backup_frame)
+        external_frame.pack(fill='x', pady=5)
+
+        ttk.Label(external_frame, text="External Backup Path:").pack(anchor='w')
+        path_row = ttk.Frame(external_frame)
+        path_row.pack(fill='x', pady=2)
+
+        self.backup_path_var = tk.StringVar(value=self.config.get('backup.external_path', ''))
+        backup_path_entry = ttk.Entry(path_row, textvariable=self.backup_path_var, width=50)
+        backup_path_entry.pack(side='left', padx=(0, 5))
+
+        ttk.Button(path_row, text="Browse...", command=self.browse_backup_path).pack(side='left')
+
+        ttk.Label(external_frame, text="(Leave blank to disable external backup, e.g., USB: /media/usb/ham_logs)",
+                 font=('', 8), foreground='gray').pack(anchor='w')
+
+        self.auto_save_var = tk.BooleanVar(value=self.config.get('backup.auto_save', False))
+        auto_save_check = ttk.Checkbutton(backup_frame, text="Enable auto-save to external path",
+                       variable=self.auto_save_var, command=self.toggle_auto_save)
+        auto_save_check.pack(anchor='w', pady=(10, 2))
+
+        # Auto-save interval
+        interval_frame = ttk.Frame(backup_frame)
+        interval_frame.pack(fill='x', pady=2, padx=20)
+
+        ttk.Label(interval_frame, text="Auto-save interval:").pack(side='left')
+        self.auto_save_interval_var = tk.IntVar(value=self.config.get('backup.interval_minutes', 30))
+        interval_spin = ttk.Spinbox(interval_frame, from_=5, to=120, increment=5,
+                                    textvariable=self.auto_save_interval_var, width=8)
+        interval_spin.pack(side='left', padx=5)
+        ttk.Label(interval_frame, text="minutes").pack(side='left')
+
+        # Backup now button
+        ttk.Button(backup_frame, text="Backup Log Now", command=self.backup_now).pack(pady=10)
 
         # DX Cluster Settings
         cluster_frame = ttk.LabelFrame(scrollable_frame, text="DX Cluster Preferences", padding=10)
@@ -359,6 +406,79 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         finally:
             self.parent.config(cursor="")
 
+    def browse_backup_path(self):
+        """Browse for external backup directory"""
+        current_path = self.backup_path_var.get()
+        initial_dir = current_path if current_path else "/"
+
+        directory = filedialog.askdirectory(
+            title="Select Backup Directory",
+            initialdir=initial_dir
+        )
+
+        if directory:
+            self.backup_path_var.set(directory)
+
+    def toggle_auto_save(self):
+        """Handle auto-save checkbox toggle"""
+        if self.auto_save_var.get() and not self.backup_path_var.get():
+            messagebox.showwarning(
+                "No Backup Path",
+                "Please set an external backup path before enabling auto-save."
+            )
+            self.auto_save_var.set(False)
+
+    def backup_now(self):
+        """Manually trigger a backup"""
+        try:
+            # Import here to avoid circular dependency
+            from src.adif import export_contacts_to_adif
+            from datetime import datetime
+            import os
+
+            # Get the main app database
+            # We need to access this from parent chain
+            app_window = self.parent.winfo_toplevel()
+
+            # Find the main app instance
+            for widget in app_window.winfo_children():
+                if hasattr(widget, 'master') and hasattr(widget.master, 'database'):
+                    database = widget.master.database
+                    break
+            else:
+                messagebox.showerror("Error", "Could not access database")
+                return
+
+            # Get all contacts
+            contacts = database.get_all_contacts(limit=999999)
+
+            if not contacts:
+                messagebox.showinfo("No Contacts", "No contacts to backup.")
+                return
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"w4gns_log_{timestamp}.adi"
+
+            # Backup to local logs directory
+            logs_dir = "logs"
+            os.makedirs(logs_dir, exist_ok=True)
+            local_path = os.path.join(logs_dir, filename)
+            export_contacts_to_adif(contacts, local_path)
+
+            backup_message = f"Backed up {len(contacts)} contacts to:\n{local_path}"
+
+            # Backup to external path if configured
+            external_path = self.backup_path_var.get().strip()
+            if external_path and os.path.exists(external_path):
+                external_file = os.path.join(external_path, filename)
+                export_contacts_to_adif(contacts, external_file)
+                backup_message += f"\n\nAlso backed up to:\n{external_file}"
+
+            messagebox.showinfo("Backup Complete", backup_message)
+
+        except Exception as e:
+            messagebox.showerror("Backup Failed", f"Error during backup:\n{str(e)}")
+
     def save_settings(self):
         """Save settings to config"""
         self.config.set('callsign', self.callsign_var.get().strip().upper())
@@ -377,6 +497,12 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         self.config.set('logging.auto_lookup', self.auto_lookup_var.get())
         self.config.set('logging.warn_duplicates', self.warn_dupes_var.get())
         self.config.set('logging.auto_time_off', self.auto_timeoff_var.get())
+
+        # Backup settings
+        self.config.set('backup.auto_backup', self.auto_backup_var.get())
+        self.config.set('backup.external_path', self.backup_path_var.get().strip())
+        self.config.set('backup.auto_save', self.auto_save_var.get())
+        self.config.set('backup.interval_minutes', self.auto_save_interval_var.get())
 
         # DX Cluster settings
         self.config.set('dx_cluster.auto_connect', self.auto_connect_var.get())
