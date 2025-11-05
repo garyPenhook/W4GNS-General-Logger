@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.database import Database
 from src.config import Config
+from src.theme import ThemeManager
 from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.dx_cluster_tab import DXClusterTab
 from src.gui.settings_tab import SettingsTab
@@ -36,9 +37,16 @@ class W4GNSLogger:
         # Initialize database
         self.database = Database()
 
+        # Initialize theme manager
+        self.theme_manager = ThemeManager(self.root, self.config)
+
         # Create UI
         self.create_menu()
         self.create_main_interface()
+
+        # Apply saved theme
+        saved_theme = self.config.get('theme', 'light')
+        self.theme_manager.apply_theme(saved_theme)
 
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -82,7 +90,7 @@ class W4GNSLogger:
         # Create tabs
         self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
-        self.settings_tab = SettingsTab(self.notebook, self.config)
+        self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager)
 
         # Add tabs to notebook
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")

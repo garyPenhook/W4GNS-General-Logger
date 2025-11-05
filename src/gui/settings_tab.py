@@ -8,9 +8,10 @@ from src.qrz import test_qrz_login
 
 
 class SettingsTab:
-    def __init__(self, parent, config):
+    def __init__(self, parent, config, theme_manager=None):
         self.parent = parent
         self.config = config
+        self.theme_manager = theme_manager
         self.frame = ttk.Frame(parent)
         self.create_widgets()
 
@@ -64,6 +65,28 @@ class SettingsTab:
         ttk.Label(row3, text="Default Power (W):").pack(side='left', padx=(20, 0))
         self.power_var = tk.StringVar(value=self.config.get('default_power', '100'))
         ttk.Entry(row3, textvariable=self.power_var, width=8).pack(side='left', padx=5)
+
+        # Appearance Settings
+        appearance_frame = ttk.LabelFrame(scrollable_frame, text="Appearance", padding=10)
+        appearance_frame.pack(fill='x', padx=10, pady=5)
+
+        theme_row = ttk.Frame(appearance_frame)
+        theme_row.pack(fill='x', pady=5)
+
+        ttk.Label(theme_row, text="Color Theme:").pack(side='left')
+
+        current_theme = self.config.get('theme', 'light')
+        theme_text = "Dark Mode" if current_theme == 'light' else "Light Mode"
+
+        self.theme_button = ttk.Button(theme_row, text=f"Switch to {theme_text}",
+                                      command=self.toggle_theme)
+        self.theme_button.pack(side='left', padx=10)
+
+        # Show current theme
+        self.current_theme_label = ttk.Label(theme_row,
+                                            text=f"(Currently: {current_theme.capitalize()})",
+                                            foreground="blue")
+        self.current_theme_label.pack(side='left', padx=5)
 
         # QRZ.com Integration
         qrz_frame = ttk.LabelFrame(scrollable_frame, text="QRZ.com Integration", padding=10)
@@ -389,6 +412,24 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             self.show_cw_var.set(defaults['dx_cluster']['show_cw_spots'])
             self.show_ssb_var.set(defaults['dx_cluster']['show_ssb_spots'])
             self.show_digital_var.set(defaults['dx_cluster']['show_digital_spots'])
+
+    def toggle_theme(self):
+        """Toggle between light and dark themes"""
+        if not self.theme_manager:
+            messagebox.showwarning("Theme Not Available",
+                                 "Theme manager not initialized")
+            return
+
+        # Toggle the theme
+        new_theme = self.theme_manager.toggle_theme()
+
+        # Update button text and label
+        theme_text = "Dark Mode" if new_theme == 'light' else "Light Mode"
+        self.theme_button.config(text=f"Switch to {theme_text}")
+        self.current_theme_label.config(text=f"(Currently: {new_theme.capitalize()})")
+
+        messagebox.showinfo("Theme Changed",
+                          f"Switched to {new_theme.capitalize()} theme!")
 
     def get_frame(self):
         """Return the frame widget"""
