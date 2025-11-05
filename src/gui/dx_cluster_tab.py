@@ -526,11 +526,11 @@ class DXClusterTab:
             # Get spotter's callsign and determine their continent
             spotter = spot.get('spotter', '').upper().strip()
             if spotter:
-                continent_info = get_continent_from_callsign(spotter)
+                # get_continent_from_callsign returns a string like "NA", not a dict
+                continent = get_continent_from_callsign(spotter)
 
-                if continent_info:
-                    continent = continent_info.get('continent')
-                    if continent and continent in self.continent_filters:
+                if continent:
+                    if continent in self.continent_filters:
                         # We know the spotter's continent - check if it's enabled
                         if not self.continent_filters[continent].get():
                             return False
