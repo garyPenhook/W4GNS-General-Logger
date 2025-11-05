@@ -88,37 +88,40 @@ class DXClusterClient:
         # Example: DX de K1TTT:      14025.0  W1AW       CQ NA       2130Z
         # Supports multiple formats from different cluster types
 
-        # More flexible pattern that handles:
+        # Skip lines that are clearly not spots
+        if not line.startswith('DX de '):
+            return
+
+        # Most flexible pattern - handles all common variations:
         # - Variable whitespace (spaces, tabs, multiple spaces)
-        # - Optional comment field
-        # - Different time formats (4 or 6 digits + Z)
-        # - Extended callsign characters
-        spot_pattern = r'DX de ([A-Z0-9\-/]+(?:-#)?)\s*:\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)\s+(.+?)\s+(\d{4,6}Z)'
-        match = re.search(spot_pattern, line)
+        # - Optional decimal in frequency
+        # - Callsigns with various special characters (-, /, #)
+        # - Comment field that may be empty or contain any characters
+        # - Time formats: 4 digits (HHMM) or 6 digits (HHMMSS) followed by Z
+
+        # Primary pattern: DX de SPOTTER: FREQ DX_CALL [COMMENT] TIMEZ
+        # Use \s+ for flexible whitespace, make comment optional with greedy match before time
+        spot_pattern = r'DX de\s+([A-Z0-9\-/#]+)\s*:\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)(?:\s+(.+?))?\s+(\d{4,6}Z)\s*$'
+        match = re.search(spot_pattern, line, re.IGNORECASE)
 
         if match and self.spot_callback:
+            # Extract time and normalize it to 4 digits if needed
+            time_str = match.group(5)
+            if len(time_str) == 7:  # 6 digits + Z (HHMMSSZ)
+                time_str = time_str[0:4] + 'Z'  # Convert to HHMMZ
+
             spot = {
-                'spotter': match.group(1),
+                'spotter': match.group(1).upper(),
                 'frequency': match.group(2),
-                'callsign': match.group(3),
-                'comment': match.group(4).strip(),
-                'time': match.group(5)
+                'callsign': match.group(3).upper(),
+                'comment': match.group(4).strip() if match.group(4) else '',
+                'time': time_str
             }
             self.spot_callback(spot)
         else:
-            # Try alternate pattern for spots without comments
-            spot_pattern_no_comment = r'DX de ([A-Z0-9\-/]+(?:-#)?)\s*:\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)\s+(\d{4,6}Z)'
-            match = re.search(spot_pattern_no_comment, line)
-
-            if match and self.spot_callback:
-                spot = {
-                    'spotter': match.group(1),
-                    'frequency': match.group(2),
-                    'callsign': match.group(3),
-                    'comment': '',
-                    'time': match.group(4)
-                }
-                self.spot_callback(spot)
+            # Debug: Log unparsed spot lines to console for troubleshooting
+            if line.startswith('DX de '):
+                self.message_queue.put(f"[Parser] Could not parse spot format: {line}")
 
     def set_spot_callback(self, callback):
         """Set callback function for when spots are received"""
