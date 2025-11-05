@@ -4,8 +4,10 @@ DX Cluster Tab - Cluster connection and spot monitoring
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+import time
 from src.dx_clusters import DX_CLUSTERS, get_cluster_by_callsign
 from src.dx_client import DXClusterClient
+from src.dxcc import get_continent_from_callsign
 
 
 class DXClusterTab:
@@ -15,6 +17,12 @@ class DXClusterTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.client = None
+
+        # Rate limiting for spots
+        self.spot_queue = []
+        self.last_spot_time = 0
+        self.min_spot_interval = 0.5  # Minimum 0.5 seconds between spot displays
+
         self.create_widgets()
         self.update_timer()
 
@@ -110,6 +118,48 @@ class DXClusterTab:
                   command=lambda: self.toggle_all_filters(self.mode_filters, True)).pack(side='left', padx=5)
         ttk.Button(mode_row, text="Clear Modes",
                   command=lambda: self.toggle_all_filters(self.mode_filters, False)).pack(side='left')
+
+        # Continent filters
+        continent_row = ttk.Frame(filter_frame)
+        continent_row.pack(fill='x', pady=2)
+
+        ttk.Label(continent_row, text="Continents:").pack(side='left', padx=(0, 5))
+
+        self.continent_filters = {}
+        continents = [
+            ('NA', 'North America'),
+            ('SA', 'South America'),
+            ('EU', 'Europe'),
+            ('AF', 'Africa'),
+            ('AS', 'Asia'),
+            ('OC', 'Oceania')
+        ]
+        for code, name in continents:
+            var = tk.BooleanVar(value=True)  # All continents enabled by default
+            self.continent_filters[code] = var
+            ttk.Checkbutton(continent_row, text=code, variable=var,
+                           command=self.apply_filters).pack(side='left', padx=2)
+
+        ttk.Button(continent_row, text="All Continents",
+                  command=lambda: self.toggle_all_filters(self.continent_filters, True)).pack(side='left', padx=5)
+        ttk.Button(continent_row, text="Clear Continents",
+                  command=lambda: self.toggle_all_filters(self.continent_filters, False)).pack(side='left')
+
+        # Rate limiting control
+        rate_row = ttk.Frame(filter_frame)
+        rate_row.pack(fill='x', pady=2)
+
+        ttk.Label(rate_row, text="Spot Display Rate:").pack(side='left', padx=(0, 5))
+        ttk.Label(rate_row, text="Slow").pack(side='left')
+
+        self.rate_limit_var = tk.DoubleVar(value=0.5)
+        rate_scale = ttk.Scale(rate_row, from_=0.1, to=2.0, orient='horizontal',
+                              variable=self.rate_limit_var, command=self.update_rate_limit, length=200)
+        rate_scale.pack(side='left', padx=5)
+
+        ttk.Label(rate_row, text="Fast").pack(side='left')
+        self.rate_label = ttk.Label(rate_row, text="(0.5s between spots)")
+        self.rate_label.pack(side='left', padx=10)
 
         # Spots display frame
         spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
@@ -304,23 +354,37 @@ class DXClusterTab:
         if not self.spot_passes_filters(spot):
             return
 
-        # Add to treeview at the top
-        self.spots_tree.insert('', 0, values=(
-            spot['time'],
-            spot['frequency'],
-            spot['callsign'],
-            spot['spotter'],
-            spot['comment']
-        ))
+        # Add to queue for rate-limited display
+        self.spot_queue.append(spot)
 
-        # Keep only last 100 spots
-        items = self.spots_tree.get_children()
-        if len(items) > 100:
-            self.spots_tree.delete(items[-1])
+    def _display_next_spot(self):
+        """Display next spot from queue with rate limiting"""
+        current_time = time.time()
 
-        # Save to database (now safe - running on main thread)
-        spot['cluster_source'] = self.cluster_var.get().split(' - ')[0]
-        self.database.add_dx_spot(spot)
+        # Check if enough time has passed since last spot
+        if current_time - self.last_spot_time >= self.min_spot_interval:
+            if self.spot_queue:
+                spot = self.spot_queue.pop(0)
+
+                # Add to treeview at the top
+                self.spots_tree.insert('', 0, values=(
+                    spot['time'],
+                    spot['frequency'],
+                    spot['callsign'],
+                    spot['spotter'],
+                    spot['comment']
+                ))
+
+                # Keep only last 100 spots
+                items = self.spots_tree.get_children()
+                if len(items) > 100:
+                    self.spots_tree.delete(items[-1])
+
+                # Save to database
+                spot['cluster_source'] = self.cluster_var.get().split(' - ')[0]
+                self.database.add_dx_spot(spot)
+
+                self.last_spot_time = current_time
 
     def append_console(self, text):
         """Append text to console"""
@@ -330,14 +394,17 @@ class DXClusterTab:
         self.console_text.config(state='disabled')
 
     def update_timer(self):
-        """Periodic update to check for new messages"""
+        """Periodic update to check for new messages and display queued spots"""
         if self.client and self.client.is_connected():
             messages = self.client.get_messages()
             for msg in messages:
                 self.append_console(msg)
 
+        # Display next queued spot if ready
+        self._display_next_spot()
+
         # Schedule next update
-        self.parent.after(500, self.update_timer)
+        self.parent.after(100, self.update_timer)  # Check more frequently for smoother display
 
     def toggle_all_filters(self, filter_dict, state):
         """Enable or disable all filters in a group"""
@@ -351,8 +418,13 @@ class DXClusterTab:
         # Could be extended to re-filter existing spots in the tree
         pass
 
+    def update_rate_limit(self, value):
+        """Update the rate limiting interval"""
+        self.min_spot_interval = float(value)
+        self.rate_label.config(text=f"({self.min_spot_interval:.1f}s between spots)")
+
     def spot_passes_filters(self, spot):
-        """Check if a spot passes the current band and mode filters"""
+        """Check if a spot passes the current band, mode, and continent filters"""
         # Check band filter
         frequency = spot.get('frequency', '')
         band = self.frequency_to_band(frequency)
@@ -366,6 +438,15 @@ class DXClusterTab:
         if mode and mode in self.mode_filters:
             if not self.mode_filters[mode].get():
                 return False
+
+        # Check continent filter - filter by SPOTTED station's continent
+        callsign = spot.get('callsign', '')
+        continent_info = get_continent_from_callsign(callsign)
+        if continent_info:
+            continent = continent_info.get('continent')
+            if continent and continent in self.continent_filters:
+                if not self.continent_filters[continent].get():
+                    return False
 
         return True
 
