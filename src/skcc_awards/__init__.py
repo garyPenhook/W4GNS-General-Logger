@@ -30,10 +30,12 @@ from .base import SKCCAwardBase
 from .centurion import CenturionAward
 from .tribune import TribuneAward
 from .senator import SenatorAward
+from .triple_key import TripleKeyAward
 
 __all__ = [
     'SKCCAwardBase',
     'CenturionAward',
     'TribuneAward',
     'SenatorAward',
+    'TripleKeyAward',
 ]

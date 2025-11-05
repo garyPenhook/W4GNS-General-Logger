@@ -63,6 +63,16 @@ SENATOR_ENDORSEMENTS: List[Tuple[int, str]] = [
     (2000, "Senator x10"),
 ]
 
+# Triple Key Award Endorsement Levels
+# Based on total unique members across all 3 key types
+TRIPLE_KEY_ENDORSEMENTS: List[Tuple[int, str]] = [
+    (300, "Triple Key"),      # 100 per key type minimum
+    (600, "Triple Key x2"),   # 200 per key type minimum
+    (900, "Triple Key x3"),   # 300 per key type minimum
+    (1500, "Triple Key x5"),  # 500 per key type minimum
+    (3000, "Triple Key x10"), # 1000 per key type minimum
+]
+
 # ============================================================================
 # EFFECTIVE DATES (YYYYMMDD format)
 # ============================================================================
@@ -185,5 +195,7 @@ def get_next_endorsement_threshold(count: int, endorsement_list: List[Tuple[int,
         return ((count // 250) + 1) * 250  # 250-contact increments
     elif endorsement_list == SENATOR_ENDORSEMENTS:
         return ((count // 200) + 1) * 200  # 200-contact increments
+    elif endorsement_list == TRIPLE_KEY_ENDORSEMENTS:
+        return ((count // 300) + 1) * 300  # 300-contact increments (100 per key)
 
     return last_threshold
