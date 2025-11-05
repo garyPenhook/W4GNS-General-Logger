@@ -399,8 +399,10 @@ class DXClusterTab:
                 country_info = get_country_from_callsign(callsign)
                 country = country_info if country_info else ''
 
-                # Get mode from comment
+                # Get mode from comment, fall back to frequency-based guess
                 mode = self.extract_mode_from_comment(comment.upper())
+                if not mode:
+                    mode = self.guess_mode_from_frequency(frequency)
                 mode_display = mode if mode else ''
 
                 # Get band from frequency
@@ -475,6 +477,7 @@ class DXClusterTab:
     def spot_passes_filters(self, spot):
         """Check if a spot passes the current band, mode, continent, and duplicate filters"""
         callsign = spot.get('callsign', '').upper().strip()
+        frequency = spot.get('frequency', '')
 
         # Check duplicate filter
         if self.duplicate_filter_var.get():
@@ -497,15 +500,20 @@ class DXClusterTab:
             self.recent_spots[callsign] = current_time
 
         # Check band filter
-        frequency = spot.get('frequency', '')
         band = self.frequency_to_band(frequency)
         if band and band in self.band_filters:
             if not self.band_filters[band].get():
                 return False
 
-        # Check mode filter
+        # Check mode filter - try to detect mode from comment or frequency
         comment = spot.get('comment', '').upper()
         mode = self.extract_mode_from_comment(comment)
+
+        # If mode not in comment, guess from frequency
+        if not mode:
+            mode = self.guess_mode_from_frequency(frequency)
+
+        # Only filter if we detected a mode AND it's in our filters
         if mode and mode in self.mode_filters:
             if not self.mode_filters[mode].get():
                 return False
@@ -587,9 +595,54 @@ class DXClusterTab:
         elif any(mode in comment for mode in ['DIGI', 'FT', 'JS8', 'JT', 'WSPR']):
             return 'DIGI'
 
-        # Default guess based on frequency band
-        # CW is typically below 7040 on 40m, 14070 on 20m, etc.
-        # For now, return None to allow all if mode not specified
+        # If mode not specified in comment, return None to show all spots
+        # regardless of mode filter settings
+        return None
+
+    def guess_mode_from_frequency(self, frequency):
+        """Guess mode from frequency - CW is typically in lower portion of bands"""
+        try:
+            freq = float(frequency)
+
+            # CW band segments (approximate)
+            if 1800 <= freq < 1840:  # 160m CW
+                return 'CW'
+            elif 3500 <= freq < 3600:  # 80m CW
+                return 'CW'
+            elif 7000 <= freq < 7040:  # 40m CW
+                return 'CW'
+            elif 10100 <= freq < 10140:  # 30m CW
+                return 'CW'
+            elif 14000 <= freq < 14070:  # 20m CW
+                return 'CW'
+            elif 18068 <= freq < 18110:  # 17m CW
+                return 'CW'
+            elif 21000 <= freq < 21070:  # 15m CW
+                return 'CW'
+            elif 24890 <= freq < 24920:  # 12m CW
+                return 'CW'
+            elif 28000 <= freq < 28070:  # 10m CW
+                return 'CW'
+            # Phone/SSB segments
+            elif 1840 <= freq < 2000:  # 160m SSB
+                return 'SSB'
+            elif 3600 <= freq < 4000:  # 80m SSB
+                return 'SSB'
+            elif 7040 <= freq < 7300:  # 40m SSB
+                return 'SSB'
+            elif 14070 <= freq < 14350:  # 20m SSB
+                return 'SSB'
+            elif 18110 <= freq < 18168:  # 17m SSB
+                return 'SSB'
+            elif 21070 <= freq < 21450:  # 15m SSB
+                return 'SSB'
+            elif 24920 <= freq < 24990:  # 12m SSB
+                return 'SSB'
+            elif 28070 <= freq < 29700:  # 10m SSB
+                return 'SSB'
+        except (ValueError, TypeError):
+            pass
+
         return None
 
     def get_frame(self):
