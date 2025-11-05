@@ -511,12 +511,24 @@ class DXClusterTab:
                 return False
 
         # Check continent filter - filter by SPOTTED station's continent
-        continent_info = get_continent_from_callsign(callsign)
-        if continent_info:
-            continent = continent_info.get('continent')
-            if continent and continent in self.continent_filters:
-                if not self.continent_filters[continent].get():
+        # Only check if at least one continent is disabled (otherwise show all)
+        any_continent_disabled = any(not var.get() for var in self.continent_filters.values())
+
+        if any_continent_disabled:
+            continent_info = get_continent_from_callsign(callsign)
+
+            if continent_info:
+                continent = continent_info.get('continent')
+                if continent and continent in self.continent_filters:
+                    # We know the continent - check if it's enabled
+                    if not self.continent_filters[continent].get():
+                        return False
+                else:
+                    # Continent not in our filter list - filter it out for safety
                     return False
+            else:
+                # Can't determine continent - filter it out when continent filtering is active
+                return False
 
         return True
 
