@@ -14,7 +14,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.database import Database
 from src.config import Config
+from src.theme import ThemeManager
 from src.gui.logging_tab_enhanced import EnhancedLoggingTab
+from src.gui.contacts_tab import ContactsTab
 from src.gui.dx_cluster_tab import DXClusterTab
 from src.gui.settings_tab import SettingsTab
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
@@ -36,9 +38,16 @@ class W4GNSLogger:
         # Initialize database
         self.database = Database()
 
+        # Initialize theme manager
+        self.theme_manager = ThemeManager(self.root, self.config)
+
         # Create UI
         self.create_menu()
         self.create_main_interface()
+
+        # Apply saved theme
+        saved_theme = self.config.get('theme', 'light')
+        self.theme_manager.apply_theme(saved_theme)
 
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -81,11 +90,16 @@ class W4GNSLogger:
 
         # Create tabs
         self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
+        self.contacts_tab = ContactsTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
-        self.settings_tab = SettingsTab(self.notebook, self.config)
+        self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager)
+
+        # Wire DX cluster to logging tab for DX spot display
+        self.dx_cluster_tab.set_logging_tab(self.logging_tab)
 
         # Add tabs to notebook
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
+        self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
         self.notebook.add(self.settings_tab.get_frame(), text="  Settings  ")
 
@@ -179,8 +193,8 @@ class W4GNSLogger:
                     error_count += 1
                     print(f"Error importing contact: {e}")
 
-            # Refresh the log display
-            self.logging_tab.refresh_log()
+            # Refresh the contacts log display
+            self.contacts_tab.refresh_log()
 
             # Show results
             if error_count == 0:
