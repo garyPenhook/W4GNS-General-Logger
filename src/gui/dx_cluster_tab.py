@@ -123,11 +123,11 @@ class DXClusterTab:
         ttk.Button(mode_row, text="Clear Modes",
                   command=lambda: self.toggle_all_filters(self.mode_filters, False)).pack(side='left')
 
-        # Continent filters
+        # Continent filters (by spotter location)
         continent_row = ttk.Frame(filter_frame)
         continent_row.pack(fill='x', pady=2)
 
-        ttk.Label(continent_row, text="Continents:").pack(side='left', padx=(0, 5))
+        ttk.Label(continent_row, text="Spotter Continents:").pack(side='left', padx=(0, 5))
 
         self.continent_filters = {}
         continents = [
@@ -518,25 +518,28 @@ class DXClusterTab:
             if not self.mode_filters[mode].get():
                 return False
 
-        # Check continent filter - filter by SPOTTED station's continent
-        # Only check if at least one continent is disabled (otherwise show all)
+        # Check continent filter - filter by SPOTTER's continent (not DX station)
+        # This shows you worldwide DX, but only from spotters in selected continents
         any_continent_disabled = any(not var.get() for var in self.continent_filters.values())
 
         if any_continent_disabled:
-            continent_info = get_continent_from_callsign(callsign)
+            # Get spotter's callsign and determine their continent
+            spotter = spot.get('spotter', '').upper().strip()
+            if spotter:
+                continent_info = get_continent_from_callsign(spotter)
 
-            if continent_info:
-                continent = continent_info.get('continent')
-                if continent and continent in self.continent_filters:
-                    # We know the continent - check if it's enabled
-                    if not self.continent_filters[continent].get():
+                if continent_info:
+                    continent = continent_info.get('continent')
+                    if continent and continent in self.continent_filters:
+                        # We know the spotter's continent - check if it's enabled
+                        if not self.continent_filters[continent].get():
+                            return False
+                    else:
+                        # Continent not in our filter list - filter it out for safety
                         return False
                 else:
-                    # Continent not in our filter list - filter it out for safety
+                    # Can't determine spotter's continent - filter it out when filtering is active
                     return False
-            else:
-                # Can't determine continent - filter it out when continent filtering is active
-                return False
 
         return True
 
