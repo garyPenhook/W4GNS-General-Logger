@@ -109,10 +109,16 @@ class QRZSession:
         Returns:
             dict with callsign data or None if not found
         """
+        print(f"\n*** lookup_callsign() called for: {callsign}")
+        print(f"*** Current session_key: {self.session_key}")
+
         if not self.session_key:
+            print("*** No session key, logging in...")
             success, msg = self.login()
             if not success:
+                print(f"*** Login failed: {msg}")
                 return None
+            print(f"*** Login successful, session_key: {self.session_key}")
 
         try:
             params = urllib.parse.urlencode({
