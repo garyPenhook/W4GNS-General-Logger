@@ -53,10 +53,6 @@ class QRZSession:
             with urllib.request.urlopen(request, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
 
-            # Debug: Print raw XML for troubleshooting
-            print("QRZ Response XML:")
-            print(xml_data)
-
             root = ET.fromstring(xml_data)
 
             # QRZ XML uses namespaces - need to handle them properly
@@ -116,16 +112,10 @@ class QRZSession:
         Returns:
             dict with callsign data or None if not found
         """
-        print(f"\n*** lookup_callsign() called for: {callsign}")
-        print(f"*** Current session_key: {self.session_key}")
-
         if not self.session_key:
-            print("*** No session key, logging in...")
             success, msg = self.login()
             if not success:
-                print(f"*** Login failed: {msg}")
                 return None
-            print(f"*** Login successful, session_key: {self.session_key}")
 
         try:
             params = urllib.parse.urlencode({
@@ -135,18 +125,8 @@ class QRZSession:
 
             url = f"{self.base_url}?{params}"
 
-            # Debug output
-            print(f"\n=== QRZ Callsign Lookup Debug ===")
-            print(f"Looking up: {callsign.upper()}")
-            print(f"Request URL: {url}")
-
             with urllib.request.urlopen(url, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
-
-            # Debug: Print raw XML response
-            print(f"Response XML:")
-            print(xml_data)
-            print("=== End Debug ===\n")
 
             root = ET.fromstring(xml_data)
 
