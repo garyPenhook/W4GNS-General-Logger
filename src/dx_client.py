@@ -86,8 +86,14 @@ class DXClusterClient:
         """Parse DX spot from cluster output"""
         # Common DX spot format: DX de CALLSIGN:     FREQ  DX_CALL  info
         # Example: DX de K1TTT:      14025.0  W1AW       CQ NA       2130Z
+        # Supports multiple formats from different cluster types
 
-        spot_pattern = r'DX de ([A-Z0-9\-/]+):\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)\s+(.+?)\s+(\d{4}Z)'
+        # More flexible pattern that handles:
+        # - Variable whitespace (spaces, tabs, multiple spaces)
+        # - Optional comment field
+        # - Different time formats (4 or 6 digits + Z)
+        # - Extended callsign characters
+        spot_pattern = r'DX de ([A-Z0-9\-/]+(?:-#)?)\s*:\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)\s+(.+?)\s+(\d{4,6}Z)'
         match = re.search(spot_pattern, line)
 
         if match and self.spot_callback:
@@ -99,6 +105,20 @@ class DXClusterClient:
                 'time': match.group(5)
             }
             self.spot_callback(spot)
+        else:
+            # Try alternate pattern for spots without comments
+            spot_pattern_no_comment = r'DX de ([A-Z0-9\-/]+(?:-#)?)\s*:\s+(\d+\.?\d*)\s+([A-Z0-9\-/]+)\s+(\d{4,6}Z)'
+            match = re.search(spot_pattern_no_comment, line)
+
+            if match and self.spot_callback:
+                spot = {
+                    'spotter': match.group(1),
+                    'frequency': match.group(2),
+                    'callsign': match.group(3),
+                    'comment': '',
+                    'time': match.group(4)
+                }
+                self.spot_callback(spot)
 
     def set_spot_callback(self, callback):
         """Set callback function for when spots are received"""
