@@ -178,18 +178,34 @@ class W4GNSLogger:
                 "Confirm Import",
                 f"Found {len(contacts)} contacts in file.\n\n"
                 f"Import these contacts into your log?\n\n"
-                f"Note: Duplicate checking is not performed."
+                f"Note: Duplicates within 10 minutes will be skipped."
             )
 
             if not response:
                 return
 
-            # Import each contact
+            # Import each contact with duplicate checking
             imported_count = 0
+            duplicate_count = 0
             error_count = 0
 
             for contact in contacts:
                 try:
+                    # Check for duplicates within 10-minute window
+                    callsign = contact.get('callsign', '')
+                    date = contact.get('date', '')
+                    time_on = contact.get('time_on', '')
+
+                    if callsign and date and time_on:
+                        duplicate = self.database.check_duplicate_within_time_window(
+                            callsign, date, time_on, window_minutes=10
+                        )
+                        if duplicate:
+                            duplicate_count += 1
+                            print(f"Skipping duplicate: {callsign} on {date} at {time_on}")
+                            continue
+
+                    # Not a duplicate, add it
                     self.database.add_contact(contact)
                     imported_count += 1
                 except Exception as e:
@@ -203,19 +219,21 @@ class W4GNSLogger:
             self.awards_tab.refresh_awards()
 
             # Show results
-            if error_count == 0:
-                messagebox.showinfo(
-                    "Import Successful",
-                    f"Successfully imported {imported_count} contacts!"
-                )
-            else:
-                messagebox.showwarning(
-                    "Import Completed with Errors",
-                    f"Imported {imported_count} contacts\n"
-                    f"Failed to import {error_count} contacts"
-                )
+            result_message = f"Successfully imported {imported_count} contacts"
+            if duplicate_count > 0:
+                result_message += f"\nSkipped {duplicate_count} duplicates (within 10 minutes)"
+            if error_count > 0:
+                result_message += f"\nFailed to import {error_count} contacts"
 
-            self.status_bar.config(text=f"Imported {imported_count} contacts from ADIF")
+            if error_count == 0:
+                messagebox.showinfo("Import Successful", result_message)
+            else:
+                messagebox.showwarning("Import Completed with Errors", result_message)
+
+            status_text = f"Imported {imported_count} contacts"
+            if duplicate_count > 0:
+                status_text += f", skipped {duplicate_count} duplicates"
+            self.status_bar.config(text=status_text)
 
         except Exception as e:
             messagebox.showerror("Import Failed", f"Failed to import log:\n{str(e)}")

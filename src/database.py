@@ -194,6 +194,69 @@ class Database:
         result = cursor.fetchone()
         return dict(result) if result else None
 
+    def check_duplicate_within_time_window(self, callsign, date, time_on, window_minutes=10):
+        """
+        Check if a contact is a duplicate within a time window
+
+        Args:
+            callsign: Callsign to check
+            date: Date in YYYYMMDD format
+            time_on: Time in HHMM or HHMMSS format
+            window_minutes: Time window in minutes (default 10)
+
+        Returns:
+            dict with duplicate info or None if not a duplicate
+        """
+        from datetime import datetime, timedelta
+
+        cursor = self.conn.cursor()
+
+        # Get all contacts with same callsign on the same date
+        cursor.execute('''
+            SELECT * FROM contacts
+            WHERE callsign = ? AND date = ?
+            ORDER BY time_on
+        ''', (callsign.upper(), date))
+
+        results = cursor.fetchall()
+        if not results:
+            return None
+
+        # Parse the new contact's time
+        try:
+            # Handle both HHMM and HHMMSS formats
+            if len(time_on) == 4:
+                new_time = datetime.strptime(f"{date}{time_on}", "%Y%m%d%H%M")
+            elif len(time_on) == 6:
+                new_time = datetime.strptime(f"{date}{time_on}", "%Y%m%d%H%M%S")
+            else:
+                return None  # Invalid time format
+        except ValueError:
+            return None
+
+        # Check each existing contact
+        for row in results:
+            existing_time_str = row['time_on']
+            try:
+                # Parse existing time
+                if len(existing_time_str) == 4:
+                    existing_time = datetime.strptime(f"{date}{existing_time_str}", "%Y%m%d%H%M")
+                elif len(existing_time_str) == 6:
+                    existing_time = datetime.strptime(f"{date}{existing_time_str}", "%Y%m%d%H%M%S")
+                else:
+                    continue
+
+                # Calculate time difference
+                time_diff = abs((new_time - existing_time).total_seconds() / 60)
+
+                # If within window, it's a duplicate
+                if time_diff <= window_minutes:
+                    return dict(row)
+            except ValueError:
+                continue
+
+        return None
+
     def add_dx_spot(self, spot_data):
         """Add a DX spot to cache"""
         cursor = self.conn.cursor()
