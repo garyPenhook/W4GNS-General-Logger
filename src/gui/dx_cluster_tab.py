@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox, scrolledtext
 import time
 from src.dx_clusters import DX_CLUSTERS, get_cluster_by_callsign
 from src.dx_client import DXClusterClient
-from src.dxcc import get_continent_from_callsign
+from src.dxcc import get_continent_from_callsign, get_country_from_callsign
 
 
 class DXClusterTab:
@@ -182,17 +182,24 @@ class DXClusterTab:
         spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
         spots_frame.pack(fill='both', expand=True, padx=10, pady=5)
 
-        # Create treeview for spots
-        columns = ('Time', 'Frequency', 'Callsign', 'Spotter', 'Comment')
+        # Create treeview for spots - order: DX Call, Country, Mode, Band, Frequency, Comment
+        columns = ('Callsign', 'Country', 'Mode', 'Band', 'Frequency', 'Comment')
         self.spots_tree = ttk.Treeview(spots_frame, columns=columns, show='headings', height=12)
 
-        for col in columns:
-            self.spots_tree.heading(col, text=col)
+        # Set column headings
+        self.spots_tree.heading('Callsign', text='DX Call')
+        self.spots_tree.heading('Country', text='Country')
+        self.spots_tree.heading('Mode', text='Mode')
+        self.spots_tree.heading('Band', text='Band')
+        self.spots_tree.heading('Frequency', text='Frequency')
+        self.spots_tree.heading('Comment', text='Comment')
 
-        self.spots_tree.column('Time', width=80)
-        self.spots_tree.column('Frequency', width=100)
-        self.spots_tree.column('Callsign', width=120)
-        self.spots_tree.column('Spotter', width=120)
+        # Set column widths
+        self.spots_tree.column('Callsign', width=100)
+        self.spots_tree.column('Country', width=150)
+        self.spots_tree.column('Mode', width=70)
+        self.spots_tree.column('Band', width=60)
+        self.spots_tree.column('Frequency', width=90)
         self.spots_tree.column('Comment', width=300)
 
         # Scrollbar for spots
@@ -383,13 +390,31 @@ class DXClusterTab:
             if self.spot_queue:
                 spot = self.spot_queue.pop(0)
 
-                # Add to treeview at the top
+                # Extract info for display
+                callsign = spot.get('callsign', '')
+                frequency = spot.get('frequency', '')
+                comment = spot.get('comment', '')
+
+                # Get country from callsign
+                country_info = get_country_from_callsign(callsign)
+                country = country_info if country_info else ''
+
+                # Get mode from comment
+                mode = self.extract_mode_from_comment(comment.upper())
+                mode_display = mode if mode else ''
+
+                # Get band from frequency
+                band = self.frequency_to_band(frequency)
+                band_display = band if band else ''
+
+                # Add to treeview at the top - order: Callsign, Country, Mode, Band, Frequency, Comment
                 self.spots_tree.insert('', 0, values=(
-                    spot['time'],
-                    spot['frequency'],
-                    spot['callsign'],
-                    spot['spotter'],
-                    spot['comment']
+                    callsign,
+                    country,
+                    mode_display,
+                    band_display,
+                    frequency,
+                    comment
                 ))
 
                 # Keep only last 100 spots
