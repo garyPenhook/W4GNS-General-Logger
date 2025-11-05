@@ -122,8 +122,18 @@ class QRZSession:
 
             url = f"{self.base_url}?{params}"
 
+            # Debug output
+            print(f"\n=== QRZ Callsign Lookup Debug ===")
+            print(f"Looking up: {callsign.upper()}")
+            print(f"Request URL: {url}")
+
             with urllib.request.urlopen(url, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
+
+            # Debug: Print raw XML response
+            print(f"Response XML:")
+            print(xml_data)
+            print("=== End Debug ===\n")
 
             root = ET.fromstring(xml_data)
 
