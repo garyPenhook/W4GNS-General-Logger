@@ -186,34 +186,6 @@ class EnhancedLoggingTab:
         self.frame.bind_all('<Control-Return>', lambda e: self.log_contact())
         self.frame.bind_all('<Escape>', lambda e: self.clear_form())
 
-        # DX Spots display frame
-        spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
-        spots_frame.pack(fill='both', expand=True, padx=10, pady=5)
-
-        # Create treeview for spots
-        columns = ('Callsign', 'Country', 'Mode', 'Band', 'Frequency', 'Comment')
-        self.spots_tree = ttk.Treeview(spots_frame, columns=columns, show='headings', height=12)
-
-        for col in columns:
-            self.spots_tree.heading(col, text=col)
-
-        self.spots_tree.column('Callsign', width=100)
-        self.spots_tree.column('Country', width=150)
-        self.spots_tree.column('Mode', width=60)
-        self.spots_tree.column('Band', width=60)
-        self.spots_tree.column('Frequency', width=90)
-        self.spots_tree.column('Comment', width=300)
-
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(spots_frame, orient='vertical', command=self.spots_tree.yview)
-        self.spots_tree.configure(yscrollcommand=scrollbar.set)
-
-        self.spots_tree.pack(side='left', fill='both', expand=True)
-        scrollbar.pack(side='right', fill='y')
-
-        # Double-click to populate entry form from spot
-        self.spots_tree.bind('<Double-1>', self.on_spot_double_click)
-
     def on_callsign_changed(self, event=None):
         """Handle callsign field change - auto lookup if enabled"""
         callsign = self.callsign_var.get().strip().upper()
@@ -495,49 +467,6 @@ class EnhancedLoggingTab:
 
         if hasattr(self, 'qrz_upload_btn'):
             self.qrz_upload_btn.config(state='disabled')
-
-    def add_spot(self, spot_data):
-        """Add a spot to the display"""
-        self.spots_tree.insert('', 0, values=(
-            spot_data.get('callsign', ''),
-            spot_data.get('country', ''),
-            spot_data.get('mode', ''),
-            spot_data.get('band', ''),
-            spot_data.get('frequency', ''),
-            spot_data.get('comment', '')
-        ))
-
-        # Keep only the most recent 100 spots
-        children = self.spots_tree.get_children()
-        if len(children) > 100:
-            self.spots_tree.delete(children[-1])
-
-    def on_spot_double_click(self, event):
-        """Handle double-click on a spot - populate entry form"""
-        selection = self.spots_tree.selection()
-        if not selection:
-            return
-
-        item = self.spots_tree.item(selection[0])
-        values = item['values']
-
-        if len(values) >= 5:
-            callsign = values[0]
-            frequency = values[4]
-            mode = values[2]
-            band = values[3]
-
-            # Populate entry form
-            self.callsign_var.set(callsign)
-            self.freq_var.set(frequency)
-            self.mode_var.set(mode)
-            self.band_var.set(band)
-
-            # Trigger callsign lookup
-            self.on_callsign_changed()
-
-            # Focus on RST field
-            self.callsign_entry.focus()
 
     def get_frame(self):
         """Return the frame widget"""

@@ -379,7 +379,7 @@ class DXClusterTab:
                 band = self.frequency_to_band(frequency)
                 band_display = band if band else ''
 
-                # Send spot to logging tab for display
+                # Send spot to combined spots tab for display
                 if self.logging_tab:
                     spot_data = {
                         'callsign': callsign,
@@ -389,7 +389,7 @@ class DXClusterTab:
                         'frequency': frequency,
                         'comment': comment
                     }
-                    self.logging_tab.add_spot(spot_data)
+                    self.logging_tab.add_dx_spot(spot_data)
 
                 # Save to database
                 spot['cluster_source'] = self.cluster_var.get().split(' - ')[0]

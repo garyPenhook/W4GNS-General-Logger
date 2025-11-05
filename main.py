@@ -18,7 +18,7 @@ from src.theme import ThemeManager
 from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.contacts_tab import ContactsTab
 from src.gui.dx_cluster_tab import DXClusterTab
-from src.gui.pota_tab import POTATab
+from src.gui.combined_spots_tab import CombinedSpotsTab
 from src.gui.settings_tab import SettingsTab
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
@@ -92,18 +92,18 @@ class W4GNSLogger:
         # Create tabs
         self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
         self.contacts_tab = ContactsTab(self.notebook, self.database, self.config)
+        self.combined_spots_tab = CombinedSpotsTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
-        self.pota_tab = POTATab(self.notebook, self.database, self.config)
         self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager)
 
-        # Wire DX cluster to logging tab for spot display
-        self.dx_cluster_tab.set_logging_tab(self.logging_tab)
+        # Wire DX cluster to combined spots tab for DX spot display
+        self.dx_cluster_tab.set_logging_tab(self.combined_spots_tab)
 
         # Add tabs to notebook
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")
+        self.notebook.add(self.combined_spots_tab.get_frame(), text="  DX & POTA Spots  ")
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
-        self.notebook.add(self.pota_tab.get_frame(), text="  POTA Spots  ")
         self.notebook.add(self.settings_tab.get_frame(), text="  Settings  ")
 
         # Status bar
