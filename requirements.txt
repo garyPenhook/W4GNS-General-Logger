@@ -3,4 +3,5 @@
 
 # GUI is built with tkinter (included with Python)
 
-# No additional dependencies required - uses Python standard library
+# HTTP requests for POTA API
+requests>=2.31.0
