@@ -23,6 +23,10 @@ class DXClusterTab:
         self.last_spot_time = 0
         self.min_spot_interval = 0.5  # Minimum 0.5 seconds between spot displays
 
+        # Duplicate filtering - track recent spots
+        self.recent_spots = {}  # {callsign: timestamp}
+        self.duplicate_window = 180  # 3 minutes in seconds
+
         self.create_widgets()
         self.update_timer()
 
@@ -160,6 +164,19 @@ class DXClusterTab:
         ttk.Label(rate_row, text="Fast").pack(side='left')
         self.rate_label = ttk.Label(rate_row, text="(0.5s between spots)")
         self.rate_label.pack(side='left', padx=10)
+
+        # Duplicate filtering control
+        dup_row = ttk.Frame(filter_frame)
+        dup_row.pack(fill='x', pady=2)
+
+        ttk.Label(dup_row, text="Duplicate Filter:").pack(side='left', padx=(0, 5))
+
+        self.duplicate_filter_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(dup_row, text="Hide duplicate spots within 3 minutes",
+                       variable=self.duplicate_filter_var).pack(side='left', padx=2)
+
+        ttk.Button(dup_row, text="Clear Duplicate History",
+                  command=self.clear_duplicate_history).pack(side='left', padx=20)
 
         # Spots display frame
         spots_frame = ttk.LabelFrame(self.frame, text="DX Spots", padding=10)
@@ -423,8 +440,37 @@ class DXClusterTab:
         self.min_spot_interval = float(value)
         self.rate_label.config(text=f"({self.min_spot_interval:.1f}s between spots)")
 
+    def clear_duplicate_history(self):
+        """Clear the duplicate spot history"""
+        self.recent_spots.clear()
+        messagebox.showinfo("History Cleared",
+                          "Duplicate spot history has been cleared.\n"
+                          "All spots will now appear again.")
+
     def spot_passes_filters(self, spot):
-        """Check if a spot passes the current band, mode, and continent filters"""
+        """Check if a spot passes the current band, mode, continent, and duplicate filters"""
+        callsign = spot.get('callsign', '').upper().strip()
+
+        # Check duplicate filter
+        if self.duplicate_filter_var.get():
+            current_time = time.time()
+
+            # Clean up old entries (older than duplicate window)
+            expired_calls = [call for call, timestamp in self.recent_spots.items()
+                           if current_time - timestamp > self.duplicate_window]
+            for call in expired_calls:
+                del self.recent_spots[call]
+
+            # Check if this callsign was spotted recently
+            if callsign in self.recent_spots:
+                time_since = current_time - self.recent_spots[callsign]
+                if time_since < self.duplicate_window:
+                    # Duplicate - filter it out
+                    return False
+
+            # Not a duplicate - record it
+            self.recent_spots[callsign] = current_time
+
         # Check band filter
         frequency = spot.get('frequency', '')
         band = self.frequency_to_band(frequency)
@@ -440,7 +486,6 @@ class DXClusterTab:
                 return False
 
         # Check continent filter - filter by SPOTTED station's continent
-        callsign = spot.get('callsign', '')
         continent_info = get_continent_from_callsign(callsign)
         if continent_info:
             continent = continent_info.get('continent')
