@@ -25,14 +25,21 @@ class EnhancedLoggingTab:
         self.refresh_interval = 60
         self.current_pota_spots = []
 
+        # Time tracking for QSO
+        self.time_on_captured = False  # Track if time_on has been set for current contact
+
         self.create_widgets()
 
         # Set up callsign lookup callback
         self.callsign_entry.bind('<FocusOut>', self.on_callsign_changed)
         self.callsign_entry.bind('<Return>', lambda e: self.freq_entry.focus())
+        self.callsign_entry.bind('<KeyRelease>', self.on_callsign_keypress)
 
         # Set up frequency/band correlation
         self.freq_entry.bind('<FocusOut>', self.on_frequency_changed)
+
+        # Start the UTC clock
+        self.update_clock()
 
         # Focus on callsign field
         self.callsign_entry.focus()
@@ -50,6 +57,19 @@ class EnhancedLoggingTab:
         # Top section - QSO Entry
         entry_frame = ttk.LabelFrame(self.frame, text="New Contact", padding=10)
         entry_frame.pack(fill='x', padx=10, pady=5)
+
+        # UTC Clock Display
+        clock_frame = ttk.Frame(entry_frame)
+        clock_frame.pack(fill='x', pady=(0, 10))
+
+        ttk.Label(clock_frame, text="UTC Time:", font=('TkDefaultFont', 10)).pack(side='left')
+        self.clock_label = ttk.Label(clock_frame, text="--:--:--",
+                                     font=('TkDefaultFont', 16, 'bold'),
+                                     foreground='#1976d2')
+        self.clock_label.pack(side='left', padx=10)
+
+        ttk.Label(clock_frame, text="(Start time captured when callsign entered)",
+                 font=('TkDefaultFont', 8), foreground='gray').pack(side='left', padx=10)
 
         # Row 1: Callsign, Frequency, Mode
         row1 = ttk.Frame(entry_frame)
@@ -91,12 +111,16 @@ class EnhancedLoggingTab:
         ttk.Entry(row2, textvariable=self.date_var, width=12).pack(side='left', padx=5)
 
         ttk.Label(row2, text="Time ON:", width=10, anchor='e').pack(side='left', padx=(20, 0))
-        self.time_on_var = tk.StringVar(value=datetime.utcnow().strftime("%H:%M"))
-        ttk.Entry(row2, textvariable=self.time_on_var, width=8).pack(side='left', padx=5)
+        self.time_on_var = tk.StringVar()  # No default - captured when callsign entered
+        self.time_on_entry = ttk.Entry(row2, textvariable=self.time_on_var, width=8,
+                                       state='readonly')
+        self.time_on_entry.pack(side='left', padx=5)
 
         ttk.Label(row2, text="Time OFF:", width=10, anchor='e').pack(side='left', padx=(10, 0))
-        self.time_off_var = tk.StringVar()
-        ttk.Entry(row2, textvariable=self.time_off_var, width=8).pack(side='left', padx=5)
+        self.time_off_var = tk.StringVar()  # Captured when contact logged
+        self.time_off_entry = ttk.Entry(row2, textvariable=self.time_off_var, width=8,
+                                        state='readonly')
+        self.time_off_entry.pack(side='left', padx=5)
 
         ttk.Label(row2, text="Power:", width=6, anchor='e').pack(side='left', padx=(10, 0))
         self.power_var = tk.StringVar(value=self.config.get('default_power', '100'))
@@ -385,6 +409,24 @@ class EnhancedLoggingTab:
         # Double-click to populate form
         self.pota_spots_tree.bind('<Double-1>', self.on_pota_spot_double_click)
 
+    def update_clock(self):
+        """Update the UTC clock display every second"""
+        now = datetime.utcnow()
+        self.clock_label.config(text=now.strftime("%H:%M:%S"))
+        # Schedule next update in 1 second
+        self.frame.after(1000, self.update_clock)
+
+    def on_callsign_keypress(self, event=None):
+        """Capture time_on when first character is entered in callsign field"""
+        callsign = self.callsign_var.get().strip()
+
+        # If callsign has content and time_on hasn't been captured yet
+        if callsign and not self.time_on_captured:
+            current_time = datetime.utcnow().strftime("%H:%M")
+            self.time_on_var.set(current_time)
+            self.time_on_captured = True
+            print(f"Time ON captured: {current_time}")
+
     def on_callsign_changed(self, event=None):
         """Handle callsign field change - auto lookup if enabled"""
         callsign = self.callsign_var.get().strip().upper()
@@ -554,9 +596,10 @@ class EnhancedLoggingTab:
             self.callsign_entry.focus()
             return
 
-        # Auto-fill time off if enabled
-        if self.config.get('logging.auto_time_off', True) and not self.time_off_var.get():
-            self.time_off_var.set(datetime.utcnow().strftime("%H:%M"))
+        # Capture time_off when logging contact
+        current_time = datetime.utcnow().strftime("%H:%M")
+        self.time_off_var.set(current_time)
+        print(f"Time OFF captured: {current_time}")
 
         contact_data = {
             'callsign': callsign,
@@ -640,8 +683,9 @@ class EnhancedLoggingTab:
         """Clear all input fields"""
         self.callsign_var.set('')
         self.date_var.set(datetime.utcnow().strftime("%Y-%m-%d"))
-        self.time_on_var.set(datetime.utcnow().strftime("%H:%M"))
-        self.time_off_var.set('')
+        self.time_on_var.set('')  # Clear time_on (will be captured on next callsign entry)
+        self.time_off_var.set('')  # Clear time_off
+        self.time_on_captured = False  # Reset flag for next contact
         self.freq_var.set('')
         self.band_var.set('')
         self.mode_var.set('')
