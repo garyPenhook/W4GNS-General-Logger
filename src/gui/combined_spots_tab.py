@@ -28,6 +28,10 @@ class CombinedSpotsTab:
         # Do initial POTA fetch
         self.refresh_pota_spots()
 
+        # Start auto-refresh if it was enabled
+        if self.auto_refresh:
+            self.auto_refresh_timer()
+
     def create_widgets(self):
         """Create the combined spots interface with DX on left and POTA on right"""
 
@@ -99,12 +103,17 @@ class CombinedSpotsTab:
         ttk.Button(refresh_row, text="Refresh",
                   command=self.refresh_pota_spots_async).pack(side='left', padx=5)
 
-        self.auto_refresh_var = tk.BooleanVar(value=False)
+        # Load saved auto-refresh state
+        saved_auto = self.config.get('pota_filter.auto_refresh', False)
+        self.auto_refresh_var = tk.BooleanVar(value=saved_auto)
         ttk.Checkbutton(refresh_row, text="Auto",
                        variable=self.auto_refresh_var,
                        command=self.toggle_auto_refresh).pack(side='left', padx=5)
 
-        self.refresh_interval_var = tk.IntVar(value=60)
+        # Load saved refresh interval
+        saved_interval = self.config.get('pota_filter.refresh_interval', 60)
+        self.refresh_interval_var = tk.IntVar(value=saved_interval)
+        self.refresh_interval = saved_interval
         ttk.Spinbox(refresh_row, from_=30, to=300, increment=30,
                    textvariable=self.refresh_interval_var, width=6).pack(side='left')
         ttk.Label(refresh_row, text="sec").pack(side='left', padx=2)
@@ -125,10 +134,12 @@ class CombinedSpotsTab:
         self.pota_band_filters = {}
         bands = ['160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
         for band in bands:
-            var = tk.BooleanVar(value=True)
+            # Load saved filter state or default to True
+            saved_state = self.config.get(f'pota_filter.band.{band}', True)
+            var = tk.BooleanVar(value=saved_state)
             self.pota_band_filters[band] = var
             ttk.Checkbutton(band_row, text=band, variable=var,
-                           command=self.apply_pota_filters).pack(side='left', padx=1)
+                           command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
         # Mode filters (compact)
         mode_row = ttk.Frame(pota_filter)
@@ -139,18 +150,22 @@ class CombinedSpotsTab:
         self.pota_mode_filters = {}
         modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'DIGI']
         for mode in modes:
-            var = tk.BooleanVar(value=True)
+            # Load saved filter state or default to True
+            saved_state = self.config.get(f'pota_filter.mode.{mode}', True)
+            var = tk.BooleanVar(value=saved_state)
             self.pota_mode_filters[mode] = var
             ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.apply_pota_filters).pack(side='left', padx=1)
+                           command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
         # Location filter
         loc_row = ttk.Frame(pota_filter)
         loc_row.pack(fill='x', pady=2)
 
         ttk.Label(loc_row, text="Location:").pack(side='left', padx=2)
-        self.location_filter_var = tk.StringVar()
-        self.location_filter_var.trace('w', lambda *args: self.apply_pota_filters())
+        # Load saved location filter
+        saved_location = self.config.get('pota_filter.location', '')
+        self.location_filter_var = tk.StringVar(value=saved_location)
+        self.location_filter_var.trace('w', lambda *args: self.save_and_apply_pota_filters())
         ttk.Entry(loc_row, textvariable=self.location_filter_var, width=15).pack(side='left', padx=2)
 
         # POTA Spots display
@@ -343,6 +358,21 @@ class CombinedSpotsTab:
 
         return True
 
+    def save_and_apply_pota_filters(self):
+        """Save POTA filter states and apply filters"""
+        # Save band filters
+        for band, var in self.pota_band_filters.items():
+            self.config.set(f'pota_filter.band.{band}', var.get())
+
+        # Save mode filters
+        for mode, var in self.pota_mode_filters.items():
+            self.config.set(f'pota_filter.mode.{mode}', var.get())
+
+        # Save location filter
+        self.config.set('pota_filter.location', self.location_filter_var.get())
+
+        self.apply_pota_filters()
+
     def apply_pota_filters(self):
         """Apply current POTA filters"""
         self._update_pota_spots_display()
@@ -350,6 +380,11 @@ class CombinedSpotsTab:
     def toggle_auto_refresh(self):
         """Toggle POTA auto-refresh"""
         self.auto_refresh = self.auto_refresh_var.get()
+        # Save auto-refresh state
+        self.config.set('pota_filter.auto_refresh', self.auto_refresh)
+        # Save refresh interval
+        self.refresh_interval = self.refresh_interval_var.get()
+        self.config.set('pota_filter.refresh_interval', self.refresh_interval)
         if self.auto_refresh:
             self.auto_refresh_timer()
 

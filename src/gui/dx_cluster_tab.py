@@ -22,7 +22,7 @@ class DXClusterTab:
         # Rate limiting for spots
         self.spot_queue = []
         self.last_spot_time = 0
-        self.min_spot_interval = 0.5  # Minimum 0.5 seconds between spot displays
+        self.min_spot_interval = self.config.get('dx_filter.rate_limit', 0.5)
 
         # Duplicate filtering - track recent spots
         self.recent_spots = {}  # {callsign: timestamp}
@@ -95,10 +95,12 @@ class DXClusterTab:
         self.band_filters = {}
         bands = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m']
         for band in bands:
-            var = tk.BooleanVar(value=True)  # All bands enabled by default
+            # Load saved filter state or default to True
+            saved_state = self.config.get(f'dx_filter.band.{band}', True)
+            var = tk.BooleanVar(value=saved_state)
             self.band_filters[band] = var
             ttk.Checkbutton(band_row, text=band, variable=var,
-                           command=self.apply_filters).pack(side='left', padx=2)
+                           command=self.save_and_apply_filters).pack(side='left', padx=2)
 
         ttk.Button(band_row, text="All Bands",
                   command=lambda: self.toggle_all_filters(self.band_filters, True)).pack(side='left', padx=5)
@@ -114,10 +116,12 @@ class DXClusterTab:
         self.mode_filters = {}
         modes = ['CW', 'SSB', 'RTTY', 'FT8', 'FT4', 'PSK', 'DIGI']
         for mode in modes:
-            var = tk.BooleanVar(value=True)  # All modes enabled by default
+            # Load saved filter state or default to True
+            saved_state = self.config.get(f'dx_filter.mode.{mode}', True)
+            var = tk.BooleanVar(value=saved_state)
             self.mode_filters[mode] = var
             ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.apply_filters).pack(side='left', padx=2)
+                           command=self.save_and_apply_filters).pack(side='left', padx=2)
 
         ttk.Button(mode_row, text="All Modes",
                   command=lambda: self.toggle_all_filters(self.mode_filters, True)).pack(side='left', padx=5)
@@ -140,10 +144,12 @@ class DXClusterTab:
             ('OC', 'Oceania')
         ]
         for code, name in continents:
-            var = tk.BooleanVar(value=True)  # All continents enabled by default
+            # Load saved filter state or default to True
+            saved_state = self.config.get(f'dx_filter.continent.{code}', True)
+            var = tk.BooleanVar(value=saved_state)
             self.continent_filters[code] = var
             ttk.Checkbutton(continent_row, text=code, variable=var,
-                           command=self.apply_filters).pack(side='left', padx=2)
+                           command=self.save_and_apply_filters).pack(side='left', padx=2)
 
         ttk.Button(continent_row, text="All Continents",
                   command=lambda: self.toggle_all_filters(self.continent_filters, True)).pack(side='left', padx=5)
@@ -157,7 +163,9 @@ class DXClusterTab:
         ttk.Label(rate_row, text="Spot Display Rate:").pack(side='left', padx=(0, 5))
         ttk.Label(rate_row, text="Slow").pack(side='left')
 
-        self.rate_limit_var = tk.DoubleVar(value=0.5)
+        # Load saved rate limit or default to 0.5
+        saved_rate = self.config.get('dx_filter.rate_limit', 0.5)
+        self.rate_limit_var = tk.DoubleVar(value=saved_rate)
         rate_scale = ttk.Scale(rate_row, from_=0.1, to=2.0, orient='horizontal',
                               variable=self.rate_limit_var, command=self.update_rate_limit, length=200)
         rate_scale.pack(side='left', padx=5)
@@ -172,9 +180,12 @@ class DXClusterTab:
 
         ttk.Label(dup_row, text="Duplicate Filter:").pack(side='left', padx=(0, 5))
 
-        self.duplicate_filter_var = tk.BooleanVar(value=True)
+        # Load saved duplicate filter state or default to True
+        saved_dup = self.config.get('dx_filter.duplicate_filter', True)
+        self.duplicate_filter_var = tk.BooleanVar(value=saved_dup)
         ttk.Checkbutton(dup_row, text="Hide duplicate spots within 3 minutes",
-                       variable=self.duplicate_filter_var).pack(side='left', padx=2)
+                       variable=self.duplicate_filter_var,
+                       command=self.save_duplicate_filter).pack(side='left', padx=2)
 
         ttk.Button(dup_row, text="Clear Duplicate History",
                   command=self.clear_duplicate_history).pack(side='left', padx=20)
@@ -421,6 +432,22 @@ class DXClusterTab:
         """Enable or disable all filters in a group"""
         for var in filter_dict.values():
             var.set(state)
+        self.save_and_apply_filters()
+
+    def save_and_apply_filters(self):
+        """Save filter states and apply filters"""
+        # Save band filters
+        for band, var in self.band_filters.items():
+            self.config.set(f'dx_filter.band.{band}', var.get())
+
+        # Save mode filters
+        for mode, var in self.mode_filters.items():
+            self.config.set(f'dx_filter.mode.{mode}', var.get())
+
+        # Save continent filters
+        for continent, var in self.continent_filters.items():
+            self.config.set(f'dx_filter.continent.{continent}', var.get())
+
         self.apply_filters()
 
     def apply_filters(self):
@@ -429,10 +456,16 @@ class DXClusterTab:
         # Could be extended to re-filter existing spots in the tree
         pass
 
+    def save_duplicate_filter(self):
+        """Save duplicate filter state"""
+        self.config.set('dx_filter.duplicate_filter', self.duplicate_filter_var.get())
+
     def update_rate_limit(self, value):
         """Update the rate limiting interval"""
         self.min_spot_interval = float(value)
         self.rate_label.config(text=f"({self.min_spot_interval:.1f}s between spots)")
+        # Save to config
+        self.config.set('dx_filter.rate_limit', self.min_spot_interval)
 
     def clear_duplicate_history(self):
         """Clear the duplicate spot history"""
