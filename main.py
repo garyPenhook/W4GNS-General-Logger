@@ -99,6 +99,10 @@ class W4GNSLogger:
         # Wire DX cluster to combined spots tab for DX spot display
         self.dx_cluster_tab.set_logging_tab(self.combined_spots_tab)
 
+        # Wire combined spots tab to logging tab for QSO population
+        self.combined_spots_tab.set_logging_tab(self.logging_tab)
+        self.combined_spots_tab.set_notebook(self.notebook)
+
         # Add tabs to notebook
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")

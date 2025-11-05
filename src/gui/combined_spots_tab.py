@@ -15,6 +15,8 @@ class CombinedSpotsTab:
         self.database = database
         self.config = config
         self.frame = ttk.Frame(parent)
+        self.logging_tab = None  # Reference to logging tab for QSO population
+        self.notebook = None  # Reference to notebook for tab switching
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -218,18 +220,43 @@ class CombinedSpotsTab:
         if not selection:
             return
 
+        if not self.logging_tab:
+            messagebox.showwarning("Not Connected", "Logging tab not available")
+            return
+
         item = self.dx_spots_tree.item(selection[0])
         values = item['values']
 
-        if len(values) >= 5:
-            # This will be handled by the logging tab if we have a reference to it
-            messagebox.showinfo("DX Spot",
-                              f"Callsign: {values[0]}\n"
-                              f"Country: {values[1]}\n"
-                              f"Mode: {values[2]}\n"
-                              f"Band: {values[3]}\n"
-                              f"Frequency: {values[4]}\n"
-                              f"Comment: {values[5]}")
+        if len(values) >= 6:
+            callsign = values[0]
+            mode = values[2]
+            band = values[3]
+            frequency = values[4]
+            comment = values[5]
+
+            # Switch to Log Contacts tab
+            if self.notebook:
+                self.notebook.select(0)  # First tab is Log Contacts
+
+            # Populate the logging form
+            self.logging_tab.callsign_var.set(callsign)
+            self.logging_tab.freq_var.set(frequency)
+            self.logging_tab.mode_var.set(mode)
+            self.logging_tab.band_var.set(band)
+
+            # Add comment to notes if present
+            if comment:
+                current_notes = self.logging_tab.notes_var.get()
+                if current_notes:
+                    self.logging_tab.notes_var.set(f"{current_notes} | DX: {comment}")
+                else:
+                    self.logging_tab.notes_var.set(f"DX: {comment}")
+
+            # Trigger callsign lookup (QRZ)
+            self.logging_tab.on_callsign_changed()
+
+            # Focus on callsign field
+            self.logging_tab.callsign_entry.focus()
 
     # POTA SPOTS METHODS
     def refresh_pota_spots_async(self):
@@ -334,9 +361,13 @@ class CombinedSpotsTab:
             self.parent.after(interval, self.auto_refresh_timer)
 
     def on_pota_spot_double_click(self, event):
-        """Handle double-click on POTA spot - show details"""
+        """Handle double-click on POTA spot - populate entry form in logging tab"""
         selection = self.pota_spots_tree.selection()
         if not selection:
+            return
+
+        if not self.logging_tab:
+            messagebox.showwarning("Not Connected", "Logging tab not available")
             return
 
         item = self.pota_spots_tree.item(selection[0])
@@ -352,41 +383,46 @@ class CombinedSpotsTab:
             time = values[6]
             qsos = values[7]
 
-            # Find full spot details
-            spot_details = None
+            # Find full spot details for park name
+            park_name = ""
             for spot in self.current_pota_spots:
                 if (spot.get('activator') == activator and
                     spot.get('park_ref') == park_ref):
-                    spot_details = spot
+                    park_name = spot.get('park_name', '')
                     break
 
-            # Build detail message
-            details = f"POTA Activator Details\n\n"
-            details += f"Activator: {activator}\n"
-            details += f"Park: {park_ref}\n"
+            # Switch to Log Contacts tab
+            if self.notebook:
+                self.notebook.select(0)  # First tab is Log Contacts
 
-            if spot_details:
-                park_name = spot_details.get('park_name', '')
-                if park_name:
-                    details += f"Park Name: {park_name}\n"
-                grid = spot_details.get('grid', '')
-                if grid:
-                    details += f"Grid: {grid}\n"
-                spotter = spot_details.get('spotter', '')
-                if spotter:
-                    details += f"Spotter: {spotter}\n"
-                comments = spot_details.get('comments', '')
-                if comments:
-                    details += f"Comments: {comments}\n"
+            # Populate the logging form
+            self.logging_tab.callsign_var.set(activator)
+            self.logging_tab.freq_var.set(frequency)
+            self.logging_tab.mode_var.set(mode)
+            self.logging_tab.band_var.set(band)
 
-            details += f"Location: {location}\n"
-            details += f"Frequency: {frequency} MHz\n"
-            details += f"Mode: {mode}\n"
-            details += f"Band: {band}\n"
-            details += f"Time: {time}\n"
-            details += f"QSO Count: {qsos}\n"
+            # Add POTA reference and park name to POTA field and notes
+            self.logging_tab.pota_var.set(park_ref)
 
-            messagebox.showinfo("POTA Spot Details", details)
+            # Build descriptive note
+            pota_note = f"POTA: {park_ref}"
+            if park_name:
+                pota_note += f" ({park_name})"
+            self.logging_tab.notes_var.set(pota_note)
+
+            # Trigger callsign lookup (QRZ)
+            self.logging_tab.on_callsign_changed()
+
+            # Focus on callsign field
+            self.logging_tab.callsign_entry.focus()
+
+    def set_logging_tab(self, logging_tab):
+        """Set reference to logging tab for QSO population"""
+        self.logging_tab = logging_tab
+
+    def set_notebook(self, notebook):
+        """Set reference to notebook for tab switching"""
+        self.notebook = notebook
 
     def get_frame(self):
         """Return the frame widget"""
