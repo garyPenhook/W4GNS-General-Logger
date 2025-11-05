@@ -109,7 +109,15 @@ class Database:
             'sota': 'TEXT',
             'pota': 'TEXT',
             'my_gridsquare': 'TEXT',
-            'comment': 'TEXT'
+            'comment': 'TEXT',
+            # SKCC-specific fields
+            'skcc_number': 'TEXT',           # Remote station's SKCC number (e.g., "12345T")
+            'my_skcc_number': 'TEXT',        # Operator's SKCC number
+            'key_type': 'TEXT',              # STRAIGHT, BUG, or SIDESWIPER (mechanical keys only)
+            'duration_minutes': 'INTEGER',   # For Rag Chew award (minimum 30 minutes)
+            'power_watts': 'REAL',           # For QRP endorsements (≤5W)
+            'distance_nm': 'REAL',           # Distance in nautical miles (for Maritime-mobile validation)
+            'dxcc_entity': 'INTEGER'         # DXCC entity code
         }
 
         for column, data_type in new_columns.items():
@@ -119,6 +127,53 @@ class Database:
                     print(f"Added column: {column}")
                 except sqlite3.OperationalError:
                     pass  # Column already exists
+
+        self.conn.commit()
+
+        # Create SKCC member list tables
+        self._create_skcc_tables(cursor)
+
+    def _create_skcc_tables(self, cursor):
+        """Create SKCC member list tables for Tribune/Senator validation"""
+
+        # Centurion members table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS skcc_centurion_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skcc_number TEXT NOT NULL UNIQUE,
+                callsign TEXT NOT NULL,
+                centurion_date TEXT,
+                other_callsigns TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Tribune members table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS skcc_tribune_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skcc_number TEXT NOT NULL UNIQUE,
+                callsign TEXT NOT NULL,
+                tribune_date TEXT,
+                other_callsigns TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Senator members table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS skcc_senator_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skcc_number TEXT NOT NULL UNIQUE,
+                callsign TEXT NOT NULL,
+                senator_date TEXT,
+                other_callsigns TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
 
         self.conn.commit()
 
@@ -150,8 +205,9 @@ class Database:
                 (callsign, date, time_on, time_off, frequency, band, mode,
                  rst_sent, rst_rcvd, power, name, qth, gridsquare, county, state,
                  country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
-                 my_gridsquare, comment, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 my_gridsquare, comment, notes,
+                 skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, distance_nm, dxcc_entity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 contact_data.get('callsign', ''),
                 contact_data.get('date', ''),
@@ -178,7 +234,15 @@ class Database:
                 contact_data.get('pota', ''),
                 contact_data.get('my_gridsquare', ''),
                 contact_data.get('comment', ''),
-                contact_data.get('notes', '')
+                contact_data.get('notes', ''),
+                # SKCC fields
+                contact_data.get('skcc_number', ''),
+                contact_data.get('my_skcc_number', ''),
+                contact_data.get('key_type', ''),
+                contact_data.get('duration_minutes', None),
+                contact_data.get('power_watts', None),
+                contact_data.get('distance_nm', None),
+                contact_data.get('dxcc_entity', None)
             ))
             self.conn.commit()
             return cursor.lastrowid
