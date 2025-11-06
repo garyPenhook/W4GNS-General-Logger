@@ -23,6 +23,7 @@ from collections import defaultdict
 from src.skcc_awards.base import SKCCAwardBase
 from src.utils.skcc_number import extract_base_skcc_number
 from src.skcc_awards.constants import US_STATES
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +56,22 @@ class SKCCWASAward(SKCCAwardBase):
             database: Database instance for contact queries
         """
         super().__init__(name="SKCC WAS", program_id="SKCC_WAS", database=database)
+        self.roster_manager = get_roster_manager()
+        self.user_join_date = self._get_user_join_date()
 
         # Total states required
         self.total_states = 50
+
+    def _get_user_join_date(self) -> str:
+        """
+        Get user's SKCC join date from config.
+
+        Returns:
+            User's join date in YYYYMMDD format, or empty string if not set
+        """
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -80,6 +94,15 @@ class SKCCWASAward(SKCCAwardBase):
         if not self.validate_common_rules(contact):
             return False
 
+        # Get contact date
+        qso_date = contact.get('qso_date', contact.get('date', ''))
+        if qso_date:
+            qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
+
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
+
         # Must have extractable state from contact
         state = self._get_state_from_contact(contact)
         if not state or state not in US_STATES:
@@ -92,6 +115,22 @@ class SKCCWASAward(SKCCAwardBase):
             base_number = extract_base_skcc_number(skcc_num)
             if not base_number or not base_number.isdigit():
                 return False
+
+        # CRITICAL RULE: "Both operators must hold SKCC membership at time of contact"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
 
         return True
 
