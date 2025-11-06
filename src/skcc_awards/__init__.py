@@ -33,6 +33,7 @@ from .senator import SenatorAward
 from .triple_key import TripleKeyAward
 from .rag_chew import RagChewAward
 from .canadian_maple import CanadianMapleAward
+from .skcc_dx import SKCCDXQAward, SKCCDXCAward
 
 __all__ = [
     'SKCCAwardBase',
@@ -42,4 +43,6 @@ __all__ = [
     'TripleKeyAward',
     'RagChewAward',
     'CanadianMapleAward',
+    'SKCCDXQAward',
+    'SKCCDXCAward',
 ]
