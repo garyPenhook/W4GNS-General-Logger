@@ -48,7 +48,7 @@ class TribuneAward(SKCCAwardBase):
         super().__init__(name="Tribune", program_id="SKCC_TRIBUNE", database=database)
 
         # Get award roster manager for Tribune/Senator validation
-        self.award_rosters = get_award_roster_manager()
+        self.award_rosters = get_award_roster_manager(database=database)
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """

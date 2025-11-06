@@ -33,18 +33,20 @@ class SKCCAwardRosterManager:
         'senator': 'https://www.skccgroup.com/operating_awards/senator/senator_roster.php'
     }
 
-    def __init__(self, cache_dir=None):
+    def __init__(self, cache_dir=None, database=None):
         """
         Initialize award roster manager
 
         Args:
             cache_dir: Directory to cache roster files (default: ~/.skcc_rosters)
+            database: Database instance for storing roster data (optional)
         """
         if cache_dir is None:
             cache_dir = os.path.expanduser('~/.skcc_rosters')
 
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
+        self.database = database
 
         # In-memory roster data: {award_type: {skcc_number: award_date, ...}}
         self.rosters = {
@@ -168,6 +170,7 @@ class SKCCAwardRosterManager:
             True if parsing successful
         """
         roster_data = {}
+        roster_records = []  # For database storage
 
         try:
             # Extract table rows
@@ -191,6 +194,7 @@ class SKCCAwardRosterManager:
                     award_num, callsign_raw, skcc_number, date_str = match
 
                 # Clean up data
+                callsign = callsign_raw.strip().upper()
                 skcc_number = skcc_number.strip()
                 date_str = date_str.strip()
 
@@ -202,6 +206,11 @@ class SKCCAwardRosterManager:
                     # Store by SKCC number
                     if skcc_number.isdigit():
                         roster_data[skcc_number] = date_formatted
+                        roster_records.append({
+                            'skcc_number': skcc_number,
+                            'callsign': callsign,
+                            'award_date': date_formatted
+                        })
 
                 except ValueError as e:
                     logger.debug(f"Could not parse date '{date_str}': {e}")
@@ -211,11 +220,60 @@ class SKCCAwardRosterManager:
             self.rosters[award_type] = roster_data
             self.loaded[award_type] = True
 
+            # Store in database if available
+            if self.database and roster_records:
+                self._save_to_database(award_type, roster_records)
+
             logger.info(f"Parsed {len(roster_data)} {award_type} awards")
             return True
 
         except Exception as e:
             logger.error(f"Error parsing {award_type} roster: {e}")
+            return False
+
+    def _save_to_database(self, award_type: str, records: list) -> bool:
+        """
+        Save roster data to database
+
+        Args:
+            award_type: 'centurion', 'tribune', or 'senator'
+            records: List of dicts with 'skcc_number', 'callsign', 'award_date'
+
+        Returns:
+            True if successful
+        """
+        if not self.database:
+            return False
+
+        try:
+            cursor = self.database.conn.cursor()
+
+            # Map award type to table and date column
+            table_map = {
+                'centurion': ('skcc_centurion_members', 'centurion_date'),
+                'tribune': ('skcc_tribune_members', 'tribune_date'),
+                'senator': ('skcc_senator_members', 'senator_date')
+            }
+
+            table_name, date_column = table_map[award_type]
+
+            # Clear existing data
+            cursor.execute(f'DELETE FROM {table_name}')
+
+            # Insert new data
+            for record in records:
+                cursor.execute(f'''
+                    INSERT INTO {table_name} (skcc_number, callsign, {date_column})
+                    VALUES (?, ?, ?)
+                ''', (record['skcc_number'], record['callsign'], record['award_date']))
+
+            self.database.conn.commit()
+            logger.info(f"Saved {len(records)} {award_type} records to database")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving {award_type} roster to database: {e}")
+            self.database.conn.rollback()
             return False
 
     def get_award_date(self, award_type: str, skcc_number: str) -> Optional[str]:
@@ -330,9 +388,9 @@ class SKCCAwardRosterManager:
 # Singleton instance
 _award_roster_manager = None
 
-def get_award_roster_manager() -> SKCCAwardRosterManager:
+def get_award_roster_manager(database=None) -> SKCCAwardRosterManager:
     """Get singleton instance of award roster manager"""
     global _award_roster_manager
     if _award_roster_manager is None:
-        _award_roster_manager = SKCCAwardRosterManager()
+        _award_roster_manager = SKCCAwardRosterManager(database=database)
     return _award_roster_manager
