@@ -12,7 +12,8 @@ Two variants of SKCC DX awards:
 Common Rules:
 - CW mode exclusively
 - Mechanical key policy: STRAIGHT, BUG, or SIDESWIPER required
-- Both operators must have SKCC membership
+- Both operators must have SKCC membership at time of contact
+- QSO dates must match or exceed both participants' SKCC join dates
 - Must be DX (outside own DXCC entity)
 - Maritime-mobile within 12-nautical-mile limit counts; beyond doesn't count
 - Distance must be logged for /MM stations
@@ -37,6 +38,7 @@ from src.skcc_awards.constants import (
     DXQ_EFFECTIVE_DATE,
     DXC_EFFECTIVE_DATE
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +68,16 @@ class SKCCDXQAward(SKCCAwardBase):
         """
         super().__init__(name="SKCC DXQ", program_id="SKCC_DXQ", database=database)
         self.operator_dxcc_entity = operator_dxcc_entity
+        self.roster_manager = get_roster_manager()
+
+        # Get user's SKCC join date from config
+        self.user_join_date = self._get_user_join_date()
+
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -78,7 +90,8 @@ class SKCCDXQAward(SKCCAwardBase):
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER)
         - Must be DX (different DXCC entity)
         - Maritime-mobile within 12nm counts; beyond doesn't
-        - Both operators must have SKCC membership
+        - Both operators must be SKCC members at time of contact
+        - QSO dates must match or exceed both participants' SKCC join dates
 
         Args:
             contact: Contact record dictionary
@@ -96,13 +109,18 @@ class SKCCDXQAward(SKCCAwardBase):
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
         # Check contact date (must be on/after June 14, 2009)
-        if qso_date and qso_date < DXQ_EFFECTIVE_DATE:
+        if not qso_date or qso_date < DXQ_EFFECTIVE_DATE:
+            logger.debug(f"DXQ contact before effective date (June 14, 2009): {qso_date}")
             return False
+
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
         # Check for DXCC entity
         dxcc_entity = contact.get('dxcc_entity')
         if not dxcc_entity:
-            logger.debug("Missing DXCC entity for DXQ")
+            logger.debug(f"Contact {base_call}: missing DXCC entity for DXQ")
             return False
 
         # Must be DX (different from operator's entity)
@@ -110,27 +128,43 @@ class SKCCDXQAward(SKCCAwardBase):
             return False
 
         # Check maritime-mobile distance if applicable
-        callsign = contact.get('callsign', '').upper()
         if '/MM' in callsign or callsign.endswith('MM'):
             distance_nm = contact.get('distance_nm')
             if distance_nm is None:
-                logger.debug("Missing distance for maritime-mobile station")
+                logger.debug(f"Contact {base_call}: missing distance for maritime-mobile station")
                 return False
 
             try:
                 distance = float(distance_nm)
                 if distance > MARITIME_MOBILE_LIMIT:
-                    logger.debug(f"Maritime-mobile beyond 12nm limit: {distance}nm")
+                    logger.debug(f"Contact {base_call}: maritime-mobile beyond 12nm limit: {distance}nm")
                     return False
             except (ValueError, TypeError):
-                logger.debug(f"Invalid distance format: {distance_nm}")
+                logger.debug(f"Contact {base_call}: invalid distance format: {distance_nm}")
                 return False
+
+        # CRITICAL RULE: "Both parties to the QSO must be SKCC members at the time of the contact"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
 
         # Verify valid SKCC number
         skcc_num = contact.get('skcc_number', '').strip()
         if skcc_num:
             base_number = extract_base_skcc_number(skcc_num)
             if not base_number or not base_number.isdigit():
+                logger.debug(f"Contact {base_call}: invalid SKCC number format: {skcc_num}")
                 return False
 
         return True
@@ -257,6 +291,16 @@ class SKCCDXCAward(SKCCAwardBase):
         """
         super().__init__(name="SKCC DXC", program_id="SKCC_DXC", database=database)
         self.operator_dxcc_entity = operator_dxcc_entity
+        self.roster_manager = get_roster_manager()
+
+        # Get user's SKCC join date from config
+        self.user_join_date = self._get_user_join_date()
+
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -269,7 +313,8 @@ class SKCCDXCAward(SKCCAwardBase):
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER)
         - Must be DX (different DXCC entity)
         - Maritime-mobile within 12nm counts; beyond doesn't
-        - Both operators must have SKCC membership
+        - Both operators must be SKCC members at time of contact
+        - QSO dates must match or exceed both participants' SKCC join dates
 
         Args:
             contact: Contact record dictionary
@@ -287,13 +332,18 @@ class SKCCDXCAward(SKCCAwardBase):
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
         # Check contact date (must be on/after December 19, 2009)
-        if qso_date and qso_date < DXC_EFFECTIVE_DATE:
+        if not qso_date or qso_date < DXC_EFFECTIVE_DATE:
+            logger.debug(f"DXC contact before effective date (Dec 19, 2009): {qso_date}")
             return False
+
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
         # Check for DXCC entity
         dxcc_entity = contact.get('dxcc_entity')
         if not dxcc_entity:
-            logger.debug("Missing DXCC entity for DXC")
+            logger.debug(f"Contact {base_call}: missing DXCC entity for DXC")
             return False
 
         # Must be DX (different from operator's entity)
@@ -301,27 +351,43 @@ class SKCCDXCAward(SKCCAwardBase):
             return False
 
         # Check maritime-mobile distance if applicable
-        callsign = contact.get('callsign', '').upper()
         if '/MM' in callsign or callsign.endswith('MM'):
             distance_nm = contact.get('distance_nm')
             if distance_nm is None:
-                logger.debug("Missing distance for maritime-mobile station")
+                logger.debug(f"Contact {base_call}: missing distance for maritime-mobile station")
                 return False
 
             try:
                 distance = float(distance_nm)
                 if distance > MARITIME_MOBILE_LIMIT:
-                    logger.debug(f"Maritime-mobile beyond 12nm limit: {distance}nm")
+                    logger.debug(f"Contact {base_call}: maritime-mobile beyond 12nm limit: {distance}nm")
                     return False
             except (ValueError, TypeError):
-                logger.debug(f"Invalid distance format: {distance_nm}")
+                logger.debug(f"Contact {base_call}: invalid distance format: {distance_nm}")
                 return False
+
+        # CRITICAL RULE: "Both parties to the QSO must be SKCC members at the time of the contact"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
 
         # Verify valid SKCC number
         skcc_num = contact.get('skcc_number', '').strip()
         if skcc_num:
             base_number = extract_base_skcc_number(skcc_num)
             if not base_number or not base_number.isdigit():
+                logger.debug(f"Contact {base_call}: invalid SKCC number format: {skcc_num}")
                 return False
 
         return True

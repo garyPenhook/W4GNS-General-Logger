@@ -1,19 +1,20 @@
 """
-SKCC WAS Award - Worked All States
+SKCC WAS-T Award - Worked All States (Tribune)
 
-The WAS Award recognizes contacts with SKCC members in all 50 US states.
+The WAS-T Award recognizes contacts with Tribune or Senator SKCC members in all 50 US states.
 An operator must show contacts in which they have exchanged names and SKCC
-numbers with another SKCC member in each of the 50 states.
+numbers with Tribune or Senator members in each of the 50 states.
 
 Rules:
-- Contact SKCC members in all 50 US states
+- Contact Tribune (T) or Senator (S) members in all 50 US states
 - CW mode exclusively
 - Mechanical key policy: straight key, bug, or side swiper only (CRITICAL!)
 - Both operators must hold SKCC membership at time of contact
-- Contacts may be made at any time and on any band (including WARC)
-- No effective date restriction
+- Contacts valid on or after February 1, 2016
+- Contacts may be made on any band (including WARC)
 - Single-band endorsements available
-- WAS-QRP endorsement available (≤5W power)
+- WAS-T-QRP endorsement available (≤5W power)
+- Mobile/portable Tribune/Senator operations count regardless of home state
 """
 
 import logging
@@ -21,11 +22,14 @@ from typing import Dict, List, Any, Set
 from collections import defaultdict
 
 from src.skcc_awards.base import SKCCAwardBase
-from src.utils.skcc_number import extract_base_skcc_number
+from src.utils.skcc_number import extract_base_skcc_number, get_member_type
 from src.skcc_awards.constants import US_STATES
 from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
+
+# WAS-T effective date
+WAST_EFFECTIVE_DATE = "20160201"  # February 1, 2016
 
 # QRP power threshold (watts)
 QRP_THRESHOLD = 5.0
@@ -45,17 +49,17 @@ CALL_AREA_TO_STATES: Dict[str, List[str]] = {
 }
 
 
-class SKCCWASAward(SKCCAwardBase):
-    """SKCC WAS Award - Worked All 50 US States"""
+class SKCCWASTAward(SKCCAwardBase):
+    """SKCC WAS-T Award - Worked All 50 US States (Tribune/Senator)"""
 
     def __init__(self, database):
         """
-        Initialize SKCC WAS award
+        Initialize SKCC WAS-T award
 
         Args:
             database: Database instance for contact queries
         """
-        super().__init__(name="SKCC WAS", program_id="SKCC_WAS", database=database)
+        super().__init__(name="SKCC WAS-T", program_id="SKCC_WAS_T", database=database)
         self.roster_manager = get_roster_manager()
         self.user_join_date = self._get_user_join_date()
 
@@ -75,20 +79,22 @@ class SKCCWASAward(SKCCAwardBase):
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
-        Check if a contact qualifies for SKCC WAS award
+        Check if a contact qualifies for SKCC WAS-T award
 
         Requirements:
         - CW mode only
         - SKCC number present on both sides
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER) - CRITICAL!
         - Remote station must be in one of the 50 US states
+        - Remote station must be Tribune (T) or Senator (S) member
+        - Contact date on or after February 1, 2016
         - Both operators must be SKCC members
 
         Args:
             contact: Contact record dictionary
 
         Returns:
-            True if contact qualifies for SKCC WAS award
+            True if contact qualifies for SKCC WAS-T award
         """
         # Check common SKCC rules (CW mode, mechanical key, SKCC number)
         if not self.validate_common_rules(contact):
@@ -99,22 +105,41 @@ class SKCCWASAward(SKCCAwardBase):
         if qso_date:
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
+        # CRITICAL RULE: Contacts valid on or after February 1, 2016
+        if qso_date and qso_date < WAST_EFFECTIVE_DATE:
+            logger.debug(
+                f"Contact not valid: QSO date {qso_date} before "
+                f"WAS-T effective date {WAST_EFFECTIVE_DATE}"
+            )
+            return False
+
         # Get callsign (remove portable/suffix indicators)
         callsign = contact.get('callsign', '').upper().strip()
         base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
+        # Verify valid SKCC number
+        skcc_num = contact.get('skcc_number', '').strip()
+        if not skcc_num:
+            return False
+
+        base_number = extract_base_skcc_number(skcc_num)
+        if not base_number or not base_number.isdigit():
+            return False
+
+        # CRITICAL RULE: Remote station must be Tribune (T) or Senator (S)
+        member_type = get_member_type(skcc_num)
+        if member_type not in ['T', 'S']:
+            logger.debug(
+                f"Contact {callsign} not valid: SKCC number {skcc_num} is not "
+                f"Tribune or Senator (member type: {member_type})"
+            )
+            return False
+
         # Must have extractable state from contact
         state = self._get_state_from_contact(contact)
         if not state or state not in US_STATES:
-            logger.debug(f"Cannot determine valid US state from contact: {contact.get('callsign')}")
+            logger.debug(f"Cannot determine valid US state from contact: {callsign}")
             return False
-
-        # Verify valid SKCC number
-        skcc_num = contact.get('skcc_number', '').strip()
-        if skcc_num:
-            base_number = extract_base_skcc_number(skcc_num)
-            if not base_number or not base_number.isdigit():
-                return False
 
         # CRITICAL RULE: "Both operators must hold SKCC membership at time of contact"
         # Check if contacted station was SKCC member at time of QSO
@@ -179,10 +204,10 @@ class SKCCWASAward(SKCCAwardBase):
 
     def calculate_progress(self, contacts: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Calculate SKCC WAS award progress
+        Calculate SKCC WAS-T award progress
 
-        Tracks which US states have been worked via contacts with SKCC members
-        from each state.
+        Tracks which US states have been worked via contacts with Tribune/Senator
+        members from each state.
 
         Args:
             contacts: List of contact records
@@ -193,7 +218,7 @@ class SKCCWASAward(SKCCAwardBase):
                 'required': int,             # 50 (all states)
                 'achieved': bool,            # True if all 50 states worked
                 'progress_pct': float,       # Percentage (0-100)
-                'level': str,                # "WAS" or "Not Yet"
+                'level': str,                # "WAS-T" or "Not Yet"
                 'states_worked': list,       # List of worked state codes
                 'states_needed': list,       # List of needed state codes
                 'state_details': dict,       # Per-state contact counts
@@ -242,7 +267,7 @@ class SKCCWASAward(SKCCAwardBase):
 
         # Calculate level and required
         if achieved:
-            level_name = "WAS"
+            level_name = "WAS-T"
         else:
             level_name = "Not Yet"
 
@@ -261,38 +286,41 @@ class SKCCWASAward(SKCCAwardBase):
 
     def get_requirements(self) -> Dict[str, Any]:
         """
-        Return SKCC WAS award requirements
+        Return SKCC WAS-T award requirements
 
         Returns:
             Award requirements dictionary
         """
         return {
-            'name': 'SKCC WAS Award',
-            'description': 'Contact SKCC members in all 50 US states',
-            'base_requirement': 'Contacts with members in all 50 states',
+            'name': 'SKCC WAS-T Award',
+            'description': 'Contact Tribune or Senator members in all 50 US states',
+            'base_requirement': 'Contacts with Tribune/Senator members in all 50 states',
             'modes': ['CW'],
             'bands': ['All'],
-            'effectiveness': 'Any date (no restriction)',
+            'effective_date': 'February 1, 2016 or later',
             'validity_rule': 'Both operators must hold SKCC membership at time of contact',
             'mechanical_key': True,
             'key_types': ['STRAIGHT', 'BUG', 'SIDESWIPER'],
             'states_required': 50,
+            'member_types_required': ['Tribune (T)', 'Senator (S)'],
             'special_rules': [
-                'Contacts may be made at any time and on any band (including WARC)',
+                'CRITICAL: Remote station must be Tribune or Senator member',
+                'Contacts may be made on any band (including WARC)',
                 'Single-band endorsements available (any individual band)',
-                'WAS-QRP endorsement available (≤5W power for all contacts)',
-                'Remote stations do not need to be participating in the award',
+                'WAS-T-QRP endorsement available (≤5W power for all contacts)',
+                'Mobile/portable Tribune/Senator operations count regardless of home state',
+                'Non-Tribune members may apply for this award',
                 'All 50 US states required (AL through WY)',
             ]
         }
 
     def get_endorsements(self) -> List[Dict[str, Any]]:
-        """Return SKCC WAS endorsement levels"""
+        """Return SKCC WAS-T endorsement levels"""
         return [
-            {'level': 'WAS', 'states': 50, 'description': 'All 50 US states'},
-            {'level': 'WAS-160M', 'states': 50, 'description': 'All 50 states on 160M'},
-            {'level': 'WAS-80M', 'states': 50, 'description': 'All 50 states on 80M'},
-            {'level': 'WAS-40M', 'states': 50, 'description': 'All 50 states on 40M'},
-            {'level': 'WAS-20M', 'states': 50, 'description': 'All 50 states on 20M'},
-            {'level': 'WAS-QRP', 'states': 50, 'description': 'All 50 states at QRP (≤5W)'},
+            {'level': 'WAS-T', 'states': 50, 'description': 'All 50 US states (Tribune/Senator)'},
+            {'level': 'WAS-T-160M', 'states': 50, 'description': 'All 50 states on 160M (Tribune/Senator)'},
+            {'level': 'WAS-T-80M', 'states': 50, 'description': 'All 50 states on 80M (Tribune/Senator)'},
+            {'level': 'WAS-T-40M', 'states': 50, 'description': 'All 50 states on 40M (Tribune/Senator)'},
+            {'level': 'WAS-T-20M', 'states': 50, 'description': 'All 50 states on 20M (Tribune/Senator)'},
+            {'level': 'WAS-T-QRP', 'states': 50, 'description': 'All 50 states at QRP (≤5W, Tribune/Senator)'},
         ]

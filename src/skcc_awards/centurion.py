@@ -7,6 +7,7 @@ then in 500-contact increments (Cx15, Cx20, etc.).
 
 Rules:
 - Both operators must hold SKCC membership at time of contact
+- QSO dates must match or exceed both participants' SKCC join dates
 - Exchanges must include SKCC numbers
 - QSOs must be CW mode only
 - Mechanical key policy: Contacts must use straight key, sideswiper (cootie), or bug
@@ -27,6 +28,7 @@ from src.skcc_awards.constants import (
     get_endorsement_level,
     get_next_endorsement_threshold
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,23 @@ class CenturionAward(SKCCAwardBase):
             database: Database instance for contact queries
         """
         super().__init__(name="Centurion", program_id="SKCC_CENTURION", database=database)
+        self.roster_manager = get_roster_manager()
+
+        # Get user's SKCC join date from database config (if set)
+        # This should be in YYYYMMDD format
+        self.user_join_date = self._get_user_join_date()
+
+    def _get_user_join_date(self) -> str:
+        """
+        Get user's SKCC join date from config.
+
+        Returns:
+            User's join date in YYYYMMDD format, or empty string if not set
+        """
+        # Access config through database if available
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -53,6 +72,7 @@ class CenturionAward(SKCCAwardBase):
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER)
         - Club calls and special event calls excluded after December 1, 2009
         - Both operators must hold SKCC membership at time of contact
+        - QSO dates must match or exceed both participants' SKCC join dates
 
         Args:
             contact: Contact record dictionary
@@ -71,15 +91,12 @@ class CenturionAward(SKCCAwardBase):
         if qso_date:
             qso_date = qso_date.replace('-', '')
 
-        # CRITICAL RULE: Club calls and special event calls don't count after Dec 1, 2009
-        # "Club calls (K9SKC) and special-event callsigns cannot be used for credit
-        # after December 1, 2009. Individual operator call signs are acceptable if
-        # not previously used."
-        if qso_date and qso_date >= CENTURION_SPECIAL_EVENT_CUTOFF:
-            callsign = contact.get('callsign', '').upper().strip()
-            # Remove /portable or other suffix indicators
-            base_call = callsign.split('/')[0] if '/' in callsign else callsign
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
+        # CRITICAL RULE: Club calls and special event calls don't count after Dec 1, 2009
+        if qso_date and qso_date >= CENTURION_SPECIAL_EVENT_CUTOFF:
             if base_call in SPECIAL_EVENT_CALLS:
                 logger.debug(
                     f"Special-event call filtered after Dec 1, 2009: {callsign} "
@@ -93,6 +110,25 @@ class CenturionAward(SKCCAwardBase):
             base_number = extract_base_skcc_number(skcc_num)
             if not base_number or not base_number.isdigit():
                 logger.debug(f"Invalid SKCC number format: {skcc_num}")
+                return False
+
+        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date} "
+                f"(join date: {self.roster_manager.get_join_date(base_call)})"
+            )
+            return False
+
+        # CRITICAL RULE: "QSO dates must match or exceed both participants' SKCC join dates"
+        # Check if QSO happened on or after user's join date
+        if self.user_join_date and qso_date:
+            if qso_date < self.user_join_date:
+                logger.debug(
+                    f"Contact {base_call} not valid: QSO date {qso_date} before "
+                    f"user join date {self.user_join_date}"
+                )
                 return False
 
         return True

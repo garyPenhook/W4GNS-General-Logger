@@ -10,7 +10,8 @@ Rules:
 - Points = sum of highest SKCC numbers per unique prefix
 - CW mode exclusively
 - Mechanical key policy: STRAIGHT, BUG, or SIDESWIPER required
-- Both operators must have SKCC membership
+- Both operators must have SKCC membership at time of contact
+- QSO dates must match or exceed both participants' SKCC join dates
 - Contacts valid from January 1, 2013 onwards
 - Club calls (K9SKC) and special-event calls don't qualify
 - Prefix = letters and numbers up to and including last number on left side
@@ -42,6 +43,7 @@ from src.skcc_awards.constants import (
     PFX_EFFECTIVE_DATE,
     SPECIAL_EVENT_CALLS
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +75,16 @@ class PFXAward(SKCCAwardBase):
             database: Database instance for contact queries
         """
         super().__init__(name="PFX", program_id="SKCC_PFX", database=database)
+        self.roster_manager = get_roster_manager()
+
+        # Get user's SKCC join date from config
+        self.user_join_date = self._get_user_join_date()
+
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def _extract_prefix(self, callsign: str) -> str:
         """
@@ -156,6 +168,22 @@ class PFXAward(SKCCAwardBase):
         prefix = self._extract_prefix(callsign)
         if not prefix:
             logger.debug(f"Cannot extract prefix from callsign: {callsign}")
+            return False
+
+        # CRITICAL RULE: "Both stations must be members of the SKCC at time of the contact"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
             return False
 
         # Verify valid SKCC number

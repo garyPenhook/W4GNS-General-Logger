@@ -7,8 +7,9 @@ who are Tribunes or Senators, AFTER achieving Tribune x8 status.
 Rules:
 - Must achieve Tribune x8 first (400+ Tribune/Senator contacts)
 - Only contacts AFTER Tribune x8 achievement count toward Senator
-- Contact 200+ additional Tribunes/Senators (from official list)
-- Both operators must hold appropriate SKCC membership at time of contact
+- Contact 200+ additional Tribunes/Senators (ONLY T or S suffix, NOT C)
+- Both parties must be SKCC members at time of contact (QSO date >= join dates)
+- Both parties must hold Centurion status at time of contact
 - Exchanges must include SKCC numbers
 - QSOs must be CW mode only
 - Mechanical key policy: Contact must use mechanical key (STRAIGHT, BUG, or SIDESWIPER)
@@ -22,7 +23,7 @@ from typing import Dict, List, Any, Set, Optional
 from datetime import datetime
 
 from src.skcc_awards.base import SKCCAwardBase
-from src.utils.skcc_number import extract_base_skcc_number
+from src.utils.skcc_number import extract_base_skcc_number, get_member_type
 from src.skcc_awards.constants import (
     SENATOR_ENDORSEMENTS,
     SENATOR_EFFECTIVE_DATE,
@@ -30,6 +31,7 @@ from src.skcc_awards.constants import (
     get_endorsement_level,
     get_next_endorsement_threshold
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -45,31 +47,30 @@ class SenatorAward(SKCCAwardBase):
             database: Database instance for contact queries and member list lookups
         """
         super().__init__(name="Senator", program_id="SKCC_SENATOR", database=database)
+        self.roster_manager = get_roster_manager()
 
-        # Cache Tribune and Senator member lists for validation
-        self._load_member_lists()
+        # Get user's critical dates from config
+        self.user_join_date = self._get_user_join_date()
+        self.user_centurion_date = self._get_user_centurion_date()
+        self.user_tribune_x8_date = self._get_user_tribune_x8_date()
 
-    def _load_member_lists(self):
-        """Load Tribune and Senator member lists from database"""
-        try:
-            # Get Tribune members
-            cursor = self.database.conn.cursor()
-            cursor.execute("SELECT skcc_number FROM skcc_tribune_members")
-            self._tribune_numbers = {row[0] for row in cursor.fetchall()}
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
-            # Get Senator members
-            cursor.execute("SELECT skcc_number FROM skcc_senator_members")
-            self._senator_numbers = {row[0] for row in cursor.fetchall()}
+    def _get_user_centurion_date(self) -> str:
+        """Get user's Centurion achievement date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.centurion_date', '')
+        return ''
 
-            # Combined list of valid members
-            self._all_valid_members = self._tribune_numbers | self._senator_numbers
-
-            logger.info(f"Loaded {len(self._tribune_numbers)} Tribune and {len(self._senator_numbers)} Senator members")
-        except Exception as e:
-            logger.warning(f"Could not load member lists: {e}. Tribune/Senator validation disabled.")
-            self._tribune_numbers = set()
-            self._senator_numbers = set()
-            self._all_valid_members = set()
+    def _get_user_tribune_x8_date(self) -> str:
+        """Get user's Tribune x8 achievement date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.tribune_x8_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -81,8 +82,10 @@ class SenatorAward(SKCCAwardBase):
         - Contact date on or after August 1, 2013
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER)
         - Club calls excluded
-        - Remote station must be Tribune/Senator (checked via list if available)
-        - Both operators must hold appropriate SKCC membership at time of contact
+        - Remote station must have Tribune/Senator status (T or S suffix ONLY, NOT C)
+        - Both parties must be SKCC members at time of contact
+        - Both parties must hold Centurion status at time of contact
+        - QSO date must be on/after user's Tribune x8 achievement date
 
         Args:
             contact: Contact record dictionary
@@ -100,13 +103,15 @@ class SenatorAward(SKCCAwardBase):
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
         # Check contact date (must be on/after August 1, 2013)
-        if qso_date and qso_date < SENATOR_EFFECTIVE_DATE:
+        if not qso_date or qso_date < SENATOR_EFFECTIVE_DATE:
+            logger.debug(f"Contact before Senator effective date (Aug 1, 2013): {qso_date}")
             return False
 
-        # CRITICAL RULE: Club calls don't qualify for Senator
+        # Get callsign (remove portable/suffix indicators)
         callsign = contact.get('callsign', '').upper().strip()
         base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
+        # CRITICAL RULE: Club calls don't qualify for Senator
         if base_call in SPECIAL_EVENT_CALLS:
             logger.debug(
                 f"Club/special-event call filtered for Senator: {callsign} "
@@ -114,13 +119,57 @@ class SenatorAward(SKCCAwardBase):
             )
             return False
 
-        # Remote station must be Tribune/Senator (from member lists if available)
-        # If member lists are not loaded, we accept any SKCC member
-        if self._all_valid_members:
-            skcc_num = contact.get('skcc_number', '')
-            base_number = extract_base_skcc_number(skcc_num)
+        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
 
-            if not base_number or base_number not in self._all_valid_members:
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must hold Centurion status at time of QSO
+        if self.user_centurion_date and qso_date < self.user_centurion_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user Centurion date {self.user_centurion_date}"
+            )
+            return False
+
+        # CRITICAL RULE: Remote station must hold Tribune/Senator status (T or S ONLY, NOT C)
+        # "Senator applications require contacts exclusively with Tribunes or Senators only"
+        skcc_num = contact.get('skcc_number', '').strip()
+        if not skcc_num:
+            logger.debug(f"Contact {base_call} missing SKCC number")
+            return False
+
+        # Check if remote station has Tribune/Senator designation
+        member_type = get_member_type(skcc_num)
+        if member_type not in ['T', 'S']:
+            # Also check roster for current status
+            roster_info = self.roster_manager.lookup_callsign(base_call)
+            if roster_info:
+                roster_skcc_num = roster_info.get('skcc_number', '')
+                roster_type = get_member_type(roster_skcc_num)
+                if roster_type not in ['T', 'S']:
+                    logger.debug(
+                        f"Contact {base_call} not valid: no Tribune/Senator status "
+                        f"(SKCC#: {skcc_num}, roster: {roster_skcc_num}). "
+                        f"Senator requires T or S suffix, NOT C."
+                    )
+                    return False
+            else:
+                logger.debug(
+                    f"Contact {base_call} not valid: no Tribune/Senator status "
+                    f"and not in roster. Senator requires T or S suffix."
+                )
                 return False
 
         return True
@@ -184,9 +233,11 @@ class SenatorAward(SKCCAwardBase):
                 'total_tribune_contacts': int  # All Tribune contacts (including pre-x8)
             }
         """
-        # First, find when Tribune x8 was achieved
-        tribune_x8_date = self._find_tribune_x8_date(contacts)
-        is_tribune_x8 = tribune_x8_date is not None
+        # First, check if user has manually set Tribune x8 date, otherwise auto-calculate
+        tribune_x8_date = self.user_tribune_x8_date
+        if not tribune_x8_date:
+            tribune_x8_date = self._find_tribune_x8_date(contacts)
+        is_tribune_x8 = tribune_x8_date is not None and tribune_x8_date != ''
 
         # Count total Tribune contacts for context
         total_tribune_members = set()

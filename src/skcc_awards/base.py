@@ -126,5 +126,62 @@ class SKCCAwardBase(ABC):
 
         return True
 
+    def export_qualifying_contacts_to_adif(
+        self,
+        contacts: List[Dict[str, Any]],
+        filename: str,
+        include_award_info: bool = True
+    ) -> int:
+        """
+        Export qualifying contacts for this award to ADIF file.
+
+        This is used for submitting award applications to SKCC awards managers.
+
+        Args:
+            contacts: List of all contact records from database
+            filename: Output filename for ADIF file
+            include_award_info: If True, add award name to each contact's comment field
+
+        Returns:
+            Number of qualifying contacts exported
+
+        Raises:
+            ValueError: If no qualifying contacts found
+            IOError: If file cannot be written
+        """
+        import os
+
+        # Filter for qualifying contacts only
+        qualifying = [c for c in contacts if self.validate(c)]
+
+        if not qualifying:
+            raise ValueError(f"No qualifying contacts found for {self.name} award")
+
+        # Add award information to comments if requested
+        if include_award_info:
+            for contact in qualifying:
+                existing_comment = contact.get('comment', contact.get('comments', ''))
+                award_note = f"[{self.name} Award]"
+
+                if existing_comment:
+                    if award_note not in existing_comment:
+                        contact['comment'] = f"{existing_comment} {award_note}"
+                else:
+                    contact['comment'] = award_note
+
+        # Import ADIF export function
+        from src.adif import export_contacts_to_adif
+
+        # Export to ADIF file
+        try:
+            export_contacts_to_adif(
+                qualifying,
+                filename,
+                program_name=f"W4GNS General Logger - {self.name} Award"
+            )
+            return len(qualifying)
+        except Exception as e:
+            raise IOError(f"Failed to export {self.name} award contacts: {e}")
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}(id={self.program_id}, name={self.name})>"

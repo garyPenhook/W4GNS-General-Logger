@@ -42,7 +42,7 @@ class SKCCAwardsTab:
         self.update_roster_status()
         self.refresh_awards()
 
-        # Auto-download roster if not present or old (>30 days)
+        # CRITICAL: Auto-download roster on EVERY startup for accurate award validation
         self.auto_download_roster_if_needed()
 
     def create_widgets(self):
@@ -77,6 +77,71 @@ class SKCCAwardsTab:
         ttk.Label(roster_frame,
                  text="The membership roster is used to identify SKCC members and their numbers for award tracking.",
                  font=('', 9, 'italic'), foreground='gray').pack(anchor='w', pady=(5, 0))
+
+        # User's SKCC Join Date section
+        user_info_frame = ttk.LabelFrame(self.frame, text="Your SKCC Information", padding=10)
+        user_info_frame.pack(fill='x', padx=10, pady=5)
+
+        # SKCC Join Date
+        join_date_row = ttk.Frame(user_info_frame)
+        join_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(join_date_row, text="SKCC Join Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(join_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.join_date_var = tk.StringVar(value=self.config.get('skcc.join_date', ''))
+        self.join_date_entry = ttk.Entry(join_date_row, textvariable=self.join_date_var, width=12)
+        self.join_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(join_date_row, text="Save",
+                  command=self.save_join_date).pack(side='left', padx=5)
+
+        self.join_date_status = ttk.Label(join_date_row, text="", font=('', 9))
+        self.join_date_status.pack(side='left', padx=10)
+
+        # Centurion Achievement Date
+        centurion_date_row = ttk.Frame(user_info_frame)
+        centurion_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(centurion_date_row, text="Centurion Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(centurion_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.centurion_date_var = tk.StringVar(value=self.config.get('skcc.centurion_date', ''))
+        self.centurion_date_entry = ttk.Entry(centurion_date_row, textvariable=self.centurion_date_var, width=12)
+        self.centurion_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(centurion_date_row, text="Save",
+                  command=self.save_centurion_date).pack(side='left', padx=5)
+
+        self.centurion_date_status = ttk.Label(centurion_date_row, text="", font=('', 9))
+        self.centurion_date_status.pack(side='left', padx=10)
+
+        # Tribune x8 Achievement Date
+        tribune_x8_date_row = ttk.Frame(user_info_frame)
+        tribune_x8_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(tribune_x8_date_row, text="Tribune x8 Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(tribune_x8_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.tribune_x8_date_var = tk.StringVar(value=self.config.get('skcc.tribune_x8_date', ''))
+        self.tribune_x8_date_entry = ttk.Entry(tribune_x8_date_row, textvariable=self.tribune_x8_date_var, width=12)
+        self.tribune_x8_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(tribune_x8_date_row, text="Save",
+                  command=self.save_tribune_x8_date).pack(side='left', padx=5)
+
+        self.tribune_x8_date_status = ttk.Label(tribune_x8_date_row, text="", font=('', 9))
+        self.tribune_x8_date_status.pack(side='left', padx=10)
+
+        ttk.Label(user_info_frame,
+                 text="⚠️ Critical: Join date required for all awards.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w', pady=(5, 0))
+        ttk.Label(user_info_frame,
+                 text="Centurion date required for Tribune/Senator. Tribune x8 date required for Senator.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
+        ttk.Label(user_info_frame,
+                 text="QSOs before these dates will not count toward respective awards.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
 
         # Create notebook for different awards
         self.notebook = ttk.Notebook(self.frame)
@@ -459,6 +524,120 @@ class SKCCAwardsTab:
 
     # SKCC Roster Management Methods
 
+    def save_join_date(self):
+        """Save user's SKCC join date to config"""
+        join_date = self.join_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if join_date and (len(join_date) != 8 or not join_date.isdigit()):
+            self.join_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.join_date', join_date)
+
+        # Update status
+        if join_date:
+            self.join_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.join_date_status.config(
+                text="⚠️ Join date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.join_date_status.config(text=""))
+
+    def save_centurion_date(self):
+        """Save user's Centurion achievement date to config"""
+        centurion_date = self.centurion_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if centurion_date and (len(centurion_date) != 8 or not centurion_date.isdigit()):
+            self.centurion_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Validate it's not before join date
+        join_date = self.config.get('skcc.join_date', '')
+        if centurion_date and join_date and centurion_date < join_date:
+            self.centurion_date_status.config(
+                text="❌ Cannot be before join date",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.centurion_date', centurion_date)
+
+        # Update status
+        if centurion_date:
+            self.centurion_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.centurion_date_status.config(
+                text="⚠️ Centurion date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.centurion_date_status.config(text=""))
+
+    def save_tribune_x8_date(self):
+        """Save user's Tribune x8 achievement date to config"""
+        tribune_x8_date = self.tribune_x8_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if tribune_x8_date and (len(tribune_x8_date) != 8 or not tribune_x8_date.isdigit()):
+            self.tribune_x8_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Validate it's not before Centurion date
+        centurion_date = self.config.get('skcc.centurion_date', '')
+        if tribune_x8_date and centurion_date and tribune_x8_date < centurion_date:
+            self.tribune_x8_date_status.config(
+                text="❌ Cannot be before Centurion date",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.tribune_x8_date', tribune_x8_date)
+
+        # Update status
+        if tribune_x8_date:
+            self.tribune_x8_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.tribune_x8_date_status.config(
+                text="⚠️ Tribune x8 date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.tribune_x8_date_status.config(text=""))
+
     def update_roster_status(self):
         """Update the roster status label"""
         if self.roster_manager.has_local_roster():
@@ -495,33 +674,28 @@ class SKCCAwardsTab:
         self.roster_manager.download_roster_async(progress_callback, completion_callback)
 
     def auto_download_roster_if_needed(self):
-        """Auto-download roster if it's missing or very old"""
-        # Check if roster exists
-        if not self.roster_manager.has_local_roster():
-            # No roster exists - download it
-            self.roster_status_label.config(text="Auto-downloading roster...", foreground='blue')
+        """
+        Auto-download roster on EVERY startup.
 
-            def progress_callback(msg):
-                self.parent.after(0, lambda: self.roster_status_label.config(text=msg))
+        CRITICAL: The roster MUST be updated on every startup to ensure contacts
+        are validated with current membership data and member status (C/T/S suffixes)
+        at the time of QSO. This is essential for accurate award validation since:
+        - Member status can change over time
+        - Join dates are critical for validation
+        - Awards require both parties to be members at time of contact
+        """
+        # ALWAYS download roster on startup for accurate award validation
+        self.roster_status_label.config(text="Updating SKCC roster...", foreground='blue')
 
-            def completion_callback(success):
-                self.parent.after(0, self.update_roster_status)
+        def progress_callback(msg):
+            # Update status label with progress
+            self.parent.after(0, lambda: self.roster_status_label.config(text=msg))
 
-            self.roster_manager.download_roster_async(progress_callback, completion_callback)
-        else:
-            # Check if roster is old (>30 days)
-            age_str = self.roster_manager.get_roster_age()
-            if age_str and 'days' in age_str:
-                try:
-                    days = int(age_str.split()[0])
-                    if days > 30:
-                        # Roster is old - auto-download in background
-                        def progress_callback(msg):
-                            pass  # Silent background update
+        def completion_callback(success):
+            # Update roster status display
+            self.parent.after(0, self.update_roster_status)
+            if success:
+                print(f"✓ SKCC roster updated: {self.roster_manager.get_member_count():,} members")
 
-                        def completion_callback(success):
-                            self.parent.after(0, self.update_roster_status)
-
-                        self.roster_manager.download_roster_async(progress_callback, completion_callback)
-                except:
-                    pass
+        # Download roster asynchronously so it doesn't block UI startup
+        self.roster_manager.download_roster_async(progress_callback, completion_callback)
