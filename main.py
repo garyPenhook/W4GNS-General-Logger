@@ -103,7 +103,7 @@ class W4GNSLogger:
         self.awards_tab = AwardsTab(self.notebook, self.database, self.config)
         self.skcc_awards_tab = SKCCAwardsTab(self.notebook, self.database, self.config)
         self.space_weather_tab = SpaceWeatherTab(self.notebook, self.database, self.config)
-        self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager)
+        self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager, self.database)
 
         # Wire DX cluster to logging tab for DX spot display
         self.dx_cluster_tab.set_logging_tab(self.logging_tab)

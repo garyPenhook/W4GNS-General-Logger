@@ -8,10 +8,11 @@ from src.qrz import test_qrz_login
 
 
 class SettingsTab:
-    def __init__(self, parent, config, theme_manager=None):
+    def __init__(self, parent, config, theme_manager=None, database=None):
         self.parent = parent
         self.config = config
         self.theme_manager = theme_manager
+        self.database = database
         self.frame = ttk.Frame(parent)
         self.create_widgets()
 
@@ -443,21 +444,13 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             from datetime import datetime
             import os
 
-            # Get the main app database
-            # We need to access this from parent chain
-            app_window = self.parent.winfo_toplevel()
-
-            # Find the main app instance
-            for widget in app_window.winfo_children():
-                if hasattr(widget, 'master') and hasattr(widget.master, 'database'):
-                    database = widget.master.database
-                    break
-            else:
+            # Check if database is available
+            if not self.database:
                 messagebox.showerror("Error", "Could not access database")
                 return
 
             # Get all contacts
-            contacts = database.get_all_contacts(limit=999999)
+            contacts = self.database.get_all_contacts(limit=999999)
 
             if not contacts:
                 messagebox.showinfo("No Contacts", "No contacts to backup.")
@@ -541,16 +534,8 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
                 )
                 return
 
-            # Get database instance
-            app_window = self.parent.winfo_toplevel()
-            database = None
-
-            for widget in app_window.winfo_children():
-                if hasattr(widget, 'master') and hasattr(widget.master, 'database'):
-                    database = widget.master.database
-                    break
-
-            if not database:
+            # Check if database is available
+            if not self.database:
                 messagebox.showerror("Error", "Could not access database")
                 return
 
@@ -558,8 +543,8 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             import shutil
             import os
 
-            db_path = database.db_path
-            database.close()
+            db_path = self.database.db_path
+            self.database.close()
 
             # Create a backup of the current database before replacing
             backup_current = db_path + ".before_restore"
