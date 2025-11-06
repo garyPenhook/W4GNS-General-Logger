@@ -42,16 +42,22 @@ class QRZSession:
                 url = self.base_url
                 data = urllib.parse.urlencode(params).encode('utf-8')
                 request = urllib.request.Request(url, data=data, method='POST')
+                print(f"QRZ Login: Using POST to {url}")
             else:
-                # GET method (default)
+                # GET method (default) - mask password in logs
                 url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
+                safe_url = f"{self.base_url}?username={self.username}&password=***&agent=W4GNS-General-Logger-1.0"
+                print(f"QRZ Login: Using GET to {safe_url}")
                 request = urllib.request.Request(url)
 
-            # Add proper User-Agent header
+            # Add proper User-Agent header and Content-Type for POST
             request.add_header('User-Agent', 'W4GNS-General-Logger/1.0')
+            if self.use_post:
+                request.add_header('Content-Type', 'application/x-www-form-urlencoded')
 
             with urllib.request.urlopen(request, timeout=10) as response:
                 xml_data = response.read().decode('utf-8')
+                print(f"QRZ Response received: {len(xml_data)} bytes")
 
             root = ET.fromstring(xml_data)
 
@@ -93,7 +99,21 @@ class QRZSession:
 
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8', errors='ignore')
-            return False, f"HTTP Error {e.code}: {e.reason}\n\nResponse:\n{error_body[:300]}"
+            error_msg = f"HTTP Error {e.code}: {e.reason}\n\n"
+
+            if e.code == 500:
+                error_msg += "QRZ server returned Internal Server Error (500).\n\n"
+                error_msg += "Possible causes:\n"
+                error_msg += "• QRZ.com may be experiencing server issues\n"
+                error_msg += "• Try again in a few minutes\n"
+                error_msg += "• Try using POST method instead of GET\n"
+                error_msg += "• Check QRZ.com website status\n\n"
+
+            if error_body:
+                error_msg += f"Response body:\n{error_body[:500]}"
+
+            print(f"QRZ HTTP Error {e.code}: {error_body[:200]}")
+            return False, error_msg
         except urllib.error.URLError as e:
             return False, f"Network error: {str(e)}"
         except ET.ParseError as e:
