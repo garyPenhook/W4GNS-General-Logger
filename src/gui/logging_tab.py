@@ -30,6 +30,9 @@ class LoggingTab:
         self.callsign_entry = ttk.Entry(row1, textvariable=self.callsign_var, width=15)
         self.callsign_entry.pack(side='left', padx=5)
 
+        # Add trace to callsign entry for auto-lookup
+        self.callsign_var.trace_add('write', self.on_callsign_changed)
+
         ttk.Label(row1, text="Date:").pack(side='left', padx=(20, 0))
         self.date_var = tk.StringVar(value=datetime.utcnow().strftime("%Y-%m-%d"))
         ttk.Entry(row1, textvariable=self.date_var, width=12).pack(side='left', padx=5)
@@ -87,13 +90,24 @@ class LoggingTab:
         self.grid_var = tk.StringVar()
         ttk.Entry(row4, textvariable=self.grid_var, width=10).pack(side='left', padx=5)
 
-        # Row 5: Notes
+        # Row 5: SKCC Number
         row5 = ttk.Frame(input_frame)
         row5.pack(fill='x', pady=2)
 
-        ttk.Label(row5, text="Notes:").pack(side='left')
+        ttk.Label(row5, text="SKCC #:").pack(side='left')
+        self.skcc_number_var = tk.StringVar()
+        ttk.Entry(row5, textvariable=self.skcc_number_var, width=15).pack(side='left', padx=5)
+
+        self.skcc_status_label = ttk.Label(row5, text="", foreground='gray', font=('', 9, 'italic'))
+        self.skcc_status_label.pack(side='left', padx=10)
+
+        # Row 6: Notes
+        row6 = ttk.Frame(input_frame)
+        row6.pack(fill='x', pady=2)
+
+        ttk.Label(row6, text="Notes:").pack(side='left')
         self.notes_var = tk.StringVar()
-        ttk.Entry(row5, textvariable=self.notes_var, width=60).pack(side='left', padx=5, fill='x', expand=True)
+        ttk.Entry(row6, textvariable=self.notes_var, width=60).pack(side='left', padx=5, fill='x', expand=True)
 
         # Button row
         btn_row = ttk.Frame(input_frame)
@@ -124,6 +138,65 @@ class LoggingTab:
         # Load existing contacts
         self.refresh_log()
 
+    def on_callsign_changed(self, *args):
+        """
+        Callback when callsign entry changes.
+        Automatically looks up and fills in SKCC number from previous contacts.
+        """
+        callsign = self.callsign_var.get().strip().upper()
+
+        if len(callsign) < 3:
+            # Clear SKCC field and status if callsign too short
+            self.skcc_number_var.set('')
+            self.skcc_status_label.config(text='')
+            return
+
+        # Lookup SKCC number from previous contacts
+        skcc_number = self.lookup_skcc_number(callsign)
+
+        if skcc_number:
+            self.skcc_number_var.set(skcc_number)
+            self.skcc_status_label.config(text='(from previous contact)', foreground='green')
+        else:
+            # Only clear if user hasn't manually entered a number
+            if not self.skcc_number_var.get():
+                self.skcc_status_label.config(text='(no previous SKCC #)', foreground='gray')
+
+    def lookup_skcc_number(self, callsign):
+        """
+        Look up SKCC number from previous contacts in database.
+
+        Args:
+            callsign: Callsign to search for
+
+        Returns:
+            SKCC number if found, None otherwise
+        """
+        if not callsign:
+            return None
+
+        try:
+            # Get all contacts for this callsign
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT skcc_number
+                FROM contacts
+                WHERE UPPER(callsign) = ?
+                  AND skcc_number IS NOT NULL
+                  AND skcc_number != ''
+                ORDER BY date DESC, time_on DESC
+                LIMIT 1
+            ''', (callsign.upper(),))
+
+            result = cursor.fetchone()
+            if result and result[0]:
+                return result[0]
+
+        except Exception as e:
+            print(f"Error looking up SKCC number: {e}")
+
+        return None
+
     def log_contact(self):
         """Save contact to database"""
         callsign = self.callsign_var.get().strip().upper()
@@ -144,7 +217,8 @@ class LoggingTab:
             'name': self.name_var.get(),
             'qth': self.qth_var.get(),
             'gridsquare': self.grid_var.get(),
-            'notes': self.notes_var.get()
+            'notes': self.notes_var.get(),
+            'skcc_number': self.skcc_number_var.get().strip()
         }
 
         try:
@@ -169,6 +243,8 @@ class LoggingTab:
         self.qth_var.set('')
         self.grid_var.set('')
         self.notes_var.set('')
+        self.skcc_number_var.set('')
+        self.skcc_status_label.config(text='')
         self.callsign_entry.focus()
 
     def refresh_log(self):
