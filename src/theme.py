@@ -24,7 +24,13 @@ THEMES = {
         'border': '#cccccc',
         'highlight': '#0078d7',
         'console_bg': '#ffffff',
-        'console_fg': '#000000'
+        'console_fg': '#000000',
+        # Semantic colors
+        'success': '#008000',      # Green for success/achieved
+        'error': '#c00000',        # Red for errors/not achieved
+        'warning': '#ff8c00',      # Orange for warnings
+        'info': '#0078d7',         # Blue for info
+        'muted': '#808080'         # Gray for muted/disabled text
     },
     'dark': {
         'bg': '#2b2b2b',
@@ -41,7 +47,13 @@ THEMES = {
         'border': '#555555',
         'highlight': '#1565c0',
         'console_bg': '#1e1e1e',
-        'console_fg': '#a9b7c6'
+        'console_fg': '#a9b7c6',
+        # Semantic colors - adjusted for dark mode readability
+        'success': '#4caf50',      # Lighter green for dark bg
+        'error': '#ef5350',        # Lighter red for dark bg
+        'warning': '#ffa726',      # Lighter orange for dark bg
+        'info': '#42a5f5',         # Lighter blue for dark bg
+        'muted': '#9e9e9e'         # Lighter gray for dark bg
     }
 }
 
@@ -221,6 +233,19 @@ class ThemeManager:
     def get_current_theme(self):
         """Get the current theme name"""
         return self.current_theme
+
+    def get_color(self, color_name):
+        """
+        Get a theme-aware color value.
+
+        Args:
+            color_name: Name of the color (e.g., 'success', 'error', 'warning', 'info', 'muted')
+
+        Returns:
+            Hex color string appropriate for current theme
+        """
+        theme = THEMES.get(self.current_theme, THEMES['light'])
+        return theme.get(color_name, theme['fg'])
 
 
 def get_theme_colors(theme_name='light'):
