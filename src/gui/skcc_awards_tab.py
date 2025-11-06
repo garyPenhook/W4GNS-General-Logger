@@ -24,7 +24,7 @@ class SKCCAwardsTab:
 
         # Initialize roster managers
         self.roster_manager = get_roster_manager()
-        self.award_rosters = get_award_roster_manager()
+        self.award_rosters = get_award_roster_manager(database=self.database)
 
         # Initialize award instances
         self.awards = {

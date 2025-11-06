@@ -51,7 +51,7 @@ class SenatorAward(SKCCAwardBase):
         self.roster_manager = get_roster_manager()
 
         # Get award roster manager for Tribune/Senator validation
-        self.award_rosters = get_award_roster_manager()
+        self.award_rosters = get_award_roster_manager(database=database)
 
         # Get user's critical dates from config
         self.user_join_date = self._get_user_join_date()
