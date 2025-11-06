@@ -9,6 +9,8 @@ import threading
 from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
+from src.skcc_roster import SKCCRosterManager
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
 
 
 class EnhancedLoggingTab:
@@ -18,6 +20,9 @@ class EnhancedLoggingTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.qrz_session = None
+
+        # SKCC roster manager for member lookup
+        self.skcc_roster = SKCCRosterManager()
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -65,11 +70,11 @@ class EnhancedLoggingTab:
         ttk.Label(clock_frame, text="UTC Time:", font=('TkDefaultFont', 10)).pack(side='left')
         self.clock_label = ttk.Label(clock_frame, text="--:--:--",
                                      font=('TkDefaultFont', 16, 'bold'),
-                                     foreground='#1976d2')
+                                     foreground=get_info_color(self.config))
         self.clock_label.pack(side='left', padx=10)
 
         ttk.Label(clock_frame, text="(Start time captured when callsign entered)",
-                 font=('TkDefaultFont', 8), foreground='gray').pack(side='left', padx=10)
+                 font=('TkDefaultFont', 8), foreground=get_muted_color(self.config)).pack(side='left', padx=10)
 
         # Row 1: Callsign, Frequency, Mode
         row1 = ttk.Frame(entry_frame)
@@ -206,7 +211,7 @@ class EnhancedLoggingTab:
         ttk.Label(skcc_row, text="SKCC#:", width=12, anchor='e').pack(side='left')
         self.skcc_number_var = tk.StringVar()
         ttk.Entry(skcc_row, textvariable=self.skcc_number_var, width=12).pack(side='left', padx=5)
-        ttk.Label(skcc_row, text="(Their SKCC number)", font=('', 8), foreground='gray').pack(side='left')
+        ttk.Label(skcc_row, text="(Their SKCC number)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
 
         ttk.Label(skcc_row, text="My SKCC#:", width=12, anchor='e').pack(side='left', padx=(20, 0))
         self.my_skcc_number_var = tk.StringVar(value=self.config.get('my_skcc_number', ''))
@@ -221,7 +226,7 @@ class EnhancedLoggingTab:
         ttk.Label(skcc_row, text="Duration (min):", width=14, anchor='e').pack(side='left', padx=(20, 0))
         self.duration_var = tk.StringVar()
         ttk.Entry(skcc_row, textvariable=self.duration_var, width=8).pack(side='left', padx=5)
-        ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground='gray').pack(side='left')
+        ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
 
         # Row 6: Notes/Comments
         row6 = ttk.Frame(entry_frame)
@@ -246,7 +251,7 @@ class EnhancedLoggingTab:
                                             command=self.upload_to_qrz, state='disabled')
             self.qrz_upload_btn.pack(side='left', padx=5)
 
-        self.dupe_label = ttk.Label(btn_row, text="", foreground="red", font=('', 10, 'bold'))
+        self.dupe_label = ttk.Label(btn_row, text="", foreground=get_error_color(self.config), font=('', 10, 'bold'))
         self.dupe_label.pack(side='left', padx=20)
 
         # Keyboard shortcuts
@@ -272,7 +277,7 @@ class EnhancedLoggingTab:
 
         dx_info = ttk.Label(dx_header,
                            text="Connect to a DX Cluster in the 'DX Clusters' tab to see spots here",
-                           foreground="blue")
+                           foreground=get_info_color(self.config))
         dx_info.pack()
 
         # DX Spots display
@@ -342,7 +347,7 @@ class EnhancedLoggingTab:
                    textvariable=self.refresh_interval_var, width=6).pack(side='left')
         ttk.Label(refresh_row, text="sec").pack(side='left', padx=2)
 
-        self.pota_status_label = ttk.Label(refresh_row, text="Ready", foreground="blue")
+        self.pota_status_label = ttk.Label(refresh_row, text="Ready", foreground=get_info_color(self.config))
         self.pota_status_label.pack(side='left', padx=10)
 
         # POTA Filters
@@ -467,7 +472,15 @@ class EnhancedLoggingTab:
         if self.config.get('logging.warn_duplicates', True):
             self.check_duplicate()
 
-        # Auto-lookup if enabled
+        # Always check SKCC roster for SKCC number (regardless of auto-lookup setting)
+        if len(callsign) >= 3:  # Only lookup if 3+ characters entered
+            skcc_number, source = self.lookup_skcc_number(callsign)
+            if skcc_number:
+                self.skcc_number_var.set(skcc_number)
+                source_text = "SKCC roster" if source == 'roster' else "previous contact"
+                print(f"SKCC #{skcc_number} auto-filled for {callsign} (from {source_text})")
+
+        # Auto-lookup QRZ/DXCC if enabled
         if self.config.get('logging.auto_lookup', True):
             self.lookup_callsign(auto=True)
 
@@ -614,6 +627,54 @@ class EnhancedLoggingTab:
         except Exception as e:
             if not auto:
                 messagebox.showerror("Lookup Error", f"Error looking up callsign: {str(e)}")
+
+        # Always check SKCC roster/database for SKCC number
+        skcc_number, source = self.lookup_skcc_number(callsign)
+        if skcc_number:
+            self.skcc_number_var.set(skcc_number)
+            source_text = "SKCC roster" if source == 'roster' else "previous contact"
+            print(f"SKCC #{skcc_number} found for {callsign} (from {source_text})")
+
+    def lookup_skcc_number(self, callsign):
+        """
+        Look up SKCC number from both roster and previous contacts.
+
+        Args:
+            callsign: Callsign to lookup
+
+        Returns:
+            tuple: (skcc_number, source) where source is 'roster' or 'previous' or None
+        """
+        if not callsign:
+            return None, None
+
+        callsign = callsign.upper()
+
+        # First check SKCC roster
+        member_info = self.skcc_roster.lookup_callsign(callsign)
+        if member_info and member_info.get('skcc'):
+            return member_info['skcc'], 'roster'
+
+        # If not in roster, check previous contacts
+        try:
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT skcc_number
+                FROM contacts
+                WHERE UPPER(callsign) = ?
+                  AND skcc_number IS NOT NULL
+                  AND skcc_number != ''
+                ORDER BY date DESC, time_on DESC
+                LIMIT 1
+            ''', (callsign,))
+
+            result = cursor.fetchone()
+            if result and result[0]:
+                return result[0], 'previous'
+        except Exception as e:
+            print(f"Error looking up SKCC number from database: {e}")
+
+        return None, None
 
     def log_contact(self):
         """Save contact to database"""
@@ -805,7 +866,7 @@ class EnhancedLoggingTab:
     # POTA SPOTS METHODS
     def refresh_pota_spots_async(self):
         """Refresh POTA spots in background thread"""
-        self.pota_status_label.config(text="Fetching...", foreground="orange")
+        self.pota_status_label.config(text="Fetching...", foreground=get_warning_color(self.config))
         thread = threading.Thread(target=self.refresh_pota_spots, daemon=True)
         thread.start()
 
@@ -819,10 +880,10 @@ class EnhancedLoggingTab:
             self.parent.after(0, self._update_pota_spots_display)
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text=f"{len(spots)} spots - {datetime.now().strftime('%H:%M:%S')}",
-                foreground="green"))
+                foreground=get_success_color(self.config)))
         except Exception as e:
             self.parent.after(0, lambda: self.pota_status_label.config(
-                text=f"Error", foreground="red"))
+                text=f"Error", foreground=get_error_color(self.config)))
 
     def _update_pota_spots_display(self):
         """Update POTA spots display with filtered spots"""

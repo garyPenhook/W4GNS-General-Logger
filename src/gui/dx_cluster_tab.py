@@ -8,6 +8,7 @@ import time
 from src.dx_clusters import DX_CLUSTERS, get_cluster_by_callsign
 from src.dx_client import DXClusterClient
 from src.dxcc import get_continent_from_callsign, get_country_from_callsign
+from src.theme_colors import get_success_color, get_error_color, get_info_color
 
 
 class DXClusterTab:
@@ -68,14 +69,14 @@ class DXClusterTab:
         self.connect_btn = ttk.Button(info_row, text="Connect", command=self.toggle_connection)
         self.connect_btn.pack(side='left', padx=20)
 
-        self.status_label = ttk.Label(info_row, text="Disconnected", foreground="red")
+        self.status_label = ttk.Label(info_row, text="Disconnected", foreground=get_error_color(self.config))
         self.status_label.pack(side='left', padx=10)
 
         # Cluster info display
         info_display = ttk.Frame(control_frame)
         info_display.pack(fill='x', pady=5)
 
-        self.cluster_info_label = ttk.Label(info_display, text="", foreground="blue")
+        self.cluster_info_label = ttk.Label(info_display, text="", foreground=get_info_color(self.config))
         self.cluster_info_label.pack(side='left')
         self.update_cluster_info()
 
@@ -303,7 +304,7 @@ class DXClusterTab:
             self.client.set_spot_callback(self.on_spot_received)
 
             if self.client.connect():
-                self.status_label.config(text="Connected", foreground="green")
+                self.status_label.config(text="Connected", foreground=get_success_color(self.config))
                 self.connect_btn.config(text="Disconnect")
                 self.append_console(f"Connected to {cluster['callsign']}")
 
@@ -323,7 +324,7 @@ class DXClusterTab:
             self.client.disconnect()
             self.client = None
 
-        self.status_label.config(text="Disconnected", foreground="red")
+        self.status_label.config(text="Disconnected", foreground=get_error_color(self.config))
         self.connect_btn.config(text="Connect")
         self.append_console("Disconnected")
 
