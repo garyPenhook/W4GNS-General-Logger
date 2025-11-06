@@ -13,6 +13,7 @@ Awards Implemented:
 - SKCC DXQ: QSO-based DX contacts
 - SKCC DXC: Country-based DX contacts
 - PFX: 500,000 points from prefixes
+- QRP MPW: Miles per watt achievement (1,000/1,500/2,000 MPW)
 - SKCC WAS: All 50 US states
 - SKCC WAC: All 6 continents
 
@@ -35,6 +36,7 @@ from .rag_chew import RagChewAward
 from .canadian_maple import CanadianMapleAward
 from .skcc_dx import SKCCDXQAward, SKCCDXCAward
 from .pfx import PFXAward
+from .qrp_mpw import QRPMPWAward
 from .was import SKCCWASAward
 from .wac import SKCCWACAward
 
@@ -49,6 +51,7 @@ __all__ = [
     'SKCCDXQAward',
     'SKCCDXCAward',
     'PFXAward',
+    'QRPMPWAward',
     'SKCCWASAward',
     'SKCCWACAward',
 ]
