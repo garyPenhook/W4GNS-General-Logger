@@ -75,7 +75,15 @@ class ADIFParser:
                 'POTA_REF': 'pota',
                 'MY_GRIDSQUARE': 'my_gridsquare',
                 'COMMENT': 'comment',
-                'NOTES': 'notes'
+                'NOTES': 'notes',
+                # SKCC-specific fields (user-defined ADIF fields with APP_ prefix)
+                'APP_SKCC_NUMBER': 'skcc_number',
+                'APP_SKCC_MY_NUMBER': 'my_skcc_number',
+                'APP_SKCC_KEY_TYPE': 'key_type',
+                'APP_SKCC_DURATION': 'duration_minutes',
+                'APP_SKCC_DISTANCE': 'distance_nm',
+                'APP_SKCC_POWER': 'power_watts',
+                'DXCC_ENTITY': 'dxcc_entity'
             }
 
             if field_name in field_map:
@@ -153,7 +161,15 @@ class ADIFGenerator:
             'pota': 'POTA_REF',
             'my_gridsquare': 'MY_GRIDSQUARE',
             'comment': 'COMMENT',
-            'notes': 'NOTES'
+            'notes': 'NOTES',
+            # SKCC-specific fields (user-defined ADIF fields)
+            'skcc_number': 'APP_SKCC_NUMBER',
+            'my_skcc_number': 'APP_SKCC_MY_NUMBER',
+            'key_type': 'APP_SKCC_KEY_TYPE',
+            'duration_minutes': 'APP_SKCC_DURATION',
+            'distance_nm': 'APP_SKCC_DISTANCE',
+            'power_watts': 'APP_SKCC_POWER',
+            'dxcc_entity': 'DXCC_ENTITY'
         }
 
         for db_field, adif_field in field_map.items():

@@ -195,33 +195,53 @@ class W4GNSLogger:
             if not response:
                 return
 
-            # Import each contact with duplicate checking
-            imported_count = 0
-            duplicate_count = 0
-            error_count = 0
+            # Create progress dialog
+            progress_window = tk.Toplevel(self.root)
+            progress_window.title("Importing Contacts")
+            progress_window.geometry("400x150")
+            progress_window.transient(self.root)
+            progress_window.grab_set()
 
-            for contact in contacts:
-                try:
-                    # Check for duplicates within 10-minute window
-                    callsign = contact.get('callsign', '')
-                    date = contact.get('date', '')
-                    time_on = contact.get('time_on', '')
+            progress_frame = ttk.Frame(progress_window, padding=20)
+            progress_frame.pack(fill='both', expand=True)
 
-                    if callsign and date and time_on:
-                        duplicate = self.database.check_duplicate_within_time_window(
-                            callsign, date, time_on, window_minutes=10
-                        )
-                        if duplicate:
-                            duplicate_count += 1
-                            print(f"Skipping duplicate: {callsign} on {date} at {time_on}")
-                            continue
+            progress_label = ttk.Label(progress_frame, text="Preparing import...", wraplength=350)
+            progress_label.pack(pady=10)
 
-                    # Not a duplicate, add it
-                    self.database.add_contact(contact)
-                    imported_count += 1
-                except Exception as e:
-                    error_count += 1
-                    print(f"Error importing contact: {e}")
+            progress_bar = ttk.Progressbar(progress_frame, length=350, mode='determinate')
+            progress_bar.pack(pady=10)
+
+            progress_detail = ttk.Label(progress_frame, text="", font=('', 9))
+            progress_detail.pack()
+
+            # Progress callback for batch import
+            def update_progress(current, total, message):
+                progress_bar['maximum'] = total
+                progress_bar['value'] = current
+                progress_label.config(text=message)
+                progress_detail.config(text=f"{current} / {total}")
+                progress_window.update()
+
+            # Use fast batch import method
+            try:
+                result = self.database.add_contacts_batch(
+                    contacts,
+                    skip_duplicates=True,
+                    window_minutes=10,
+                    progress_callback=update_progress
+                )
+
+                imported_count = result['imported']
+                duplicate_count = result['duplicates']
+                error_count = result['errors']
+                error_details = result.get('error_details', [])
+
+            except Exception as e:
+                progress_window.destroy()
+                raise e
+
+            # Close progress window
+            progress_window.destroy()
 
             # Refresh the contacts log display
             self.contacts_tab.refresh_log()
@@ -233,9 +253,11 @@ class W4GNSLogger:
             # Show results
             result_message = f"Successfully imported {imported_count} contacts"
             if duplicate_count > 0:
-                result_message += f"\nSkipped {duplicate_count} duplicates (within 10 minutes)"
+                result_message += f"\nSkipped {duplicate_count} duplicates"
             if error_count > 0:
                 result_message += f"\nFailed to import {error_count} contacts"
+                if error_details:
+                    result_message += f"\n\nFirst errors:\n" + "\n".join(error_details[:5])
 
             if error_count == 0:
                 messagebox.showinfo("Import Successful", result_message)
