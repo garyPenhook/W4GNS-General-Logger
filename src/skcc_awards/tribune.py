@@ -33,6 +33,7 @@ from src.skcc_awards.constants import (
     get_next_endorsement_threshold
 )
 from src.skcc_roster import get_roster_manager
+from src.skcc_award_rosters import get_award_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,13 @@ class TribuneAward(SKCCAwardBase):
         Initialize Tribune award
 
         Args:
-            database: Database instance for contact queries and member list lookups
+            database: Database instance for contact queries
         """
         super().__init__(name="Tribune", program_id="SKCC_TRIBUNE", database=database)
         self.roster_manager = get_roster_manager()
+
+        # Get award roster manager for Tribune/Senator validation
+        self.award_rosters = get_award_roster_manager()
 
         # Get user's critical dates from config
         self.user_join_date = self._get_user_join_date()
@@ -114,6 +118,7 @@ class TribuneAward(SKCCAwardBase):
                 )
                 return False
 
+<<<<<<< HEAD
         # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
         # Check if contacted station was SKCC member at time of QSO
         if not self.roster_manager.was_member_on_date(base_call, qso_date):
@@ -130,32 +135,20 @@ class TribuneAward(SKCCAwardBase):
             )
             return False
 
-        # CRITICAL RULE: Remote station must hold Centurion status (C, T, or S)
+        # CRITICAL RULE: Remote station must have been Tribune or Senator at time of QSO
+        # This is validated against the official SKCC award rosters
         skcc_num = contact.get('skcc_number', '').strip()
         if not skcc_num:
             logger.debug(f"Contact {base_call} missing SKCC number")
             return False
 
-        # Check if remote station has Centurion/Tribune/Senator designation
-        member_type = get_member_type(skcc_num)
-        if member_type not in ['C', 'T', 'S']:
-            # Also check roster for current status
-            roster_info = self.roster_manager.lookup_callsign(base_call)
-            if roster_info:
-                roster_skcc_num = roster_info.get('skcc_number', '')
-                roster_type = get_member_type(roster_skcc_num)
-                if roster_type not in ['C', 'T', 'S']:
-                    logger.debug(
-                        f"Contact {base_call} not valid: no Centurion/Tribune/Senator "
-                        f"status (SKCC#: {skcc_num}, roster: {roster_skcc_num})"
-                    )
-                    return False
-            else:
-                logger.debug(
-                    f"Contact {base_call} not valid: no Centurion/Tribune/Senator status "
-                    f"and not in roster"
-                )
-                return False
+        # Check if the contacted station was Tribune or Senator at time of QSO
+        if not self.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date):
+            logger.debug(
+                f"Contact {callsign} with SKCC#{skcc_num} not valid: "
+                f"was not Tribune/Senator on {qso_date}"
+            )
+            return False
 
         # CRITICAL RULE: "The QSO date must be on or after both participants' Centurion Award date"
         # Check user's Centurion achievement date
