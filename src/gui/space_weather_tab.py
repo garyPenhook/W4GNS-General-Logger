@@ -8,6 +8,7 @@ from tkinter import ttk
 from datetime import datetime
 import threading
 from src.space_weather import SpaceWeatherClient
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_muted_color
 
 
 class SpaceWeatherTab:
@@ -132,7 +133,7 @@ class SpaceWeatherTab:
         # Data source attribution
         source_label = ttk.Label(main_container,
                                 text="Data from HamQSL.com (N0NBH) and NOAA Space Weather Prediction Center",
-                                font=('TkDefaultFont', 8), foreground='gray')
+                                font=('TkDefaultFont', 8), foreground=get_muted_color(self.config))
         source_label.pack(pady=(10, 0))
 
     def create_metric_display(self, parent, title, description, min_val, max_val, is_text=False):
@@ -143,7 +144,7 @@ class SpaceWeatherTab:
 
         # Description
         desc_label = ttk.Label(frame, text=description, font=('TkDefaultFont', 8),
-                              foreground='gray')
+                              foreground=get_muted_color(self.config))
         desc_label.pack(anchor='w')
 
         # Value and interpretation container

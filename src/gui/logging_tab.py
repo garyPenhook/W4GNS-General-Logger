@@ -5,6 +5,7 @@ Logging Tab - Main contact logging interface
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+from src.theme_colors import get_success_color, get_muted_color
 
 
 class LoggingTab:
@@ -117,7 +118,7 @@ class LoggingTab:
         self.skcc_number_var = tk.StringVar()
         ttk.Entry(row5, textvariable=self.skcc_number_var, width=15).pack(side='left', padx=5)
 
-        self.skcc_status_label = ttk.Label(row5, text="", foreground='gray', font=('', 9, 'italic'))
+        self.skcc_status_label = ttk.Label(row5, text="", foreground=get_muted_color(self.config), font=('', 9, 'italic'))
         self.skcc_status_label.pack(side='left', padx=10)
 
         # Row 6: Notes
@@ -177,11 +178,11 @@ class LoggingTab:
 
         if skcc_number:
             self.skcc_number_var.set(skcc_number)
-            self.skcc_status_label.config(text='(from previous contact)', foreground='green')
+            self.skcc_status_label.config(text='(from previous contact)', foreground=get_success_color(self.config))
         else:
             # Only clear if user hasn't manually entered a number
             if not self.skcc_number_var.get():
-                self.skcc_status_label.config(text='(no previous SKCC #)', foreground='gray')
+                self.skcc_status_label.config(text='(no previous SKCC #)', foreground=get_muted_color(self.config))
 
         # Display previous QSOs
         self.display_previous_qsos(callsign)
@@ -278,8 +279,8 @@ class LoggingTab:
 
             # Configure text tags for formatting
             self.previous_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
-            self.previous_qsos_text.tag_config('summary', font=('Courier', 9, 'italic'), foreground='gray')
-            self.previous_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground='gray')
+            self.previous_qsos_text.tag_config('summary', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
+            self.previous_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
 
         except Exception as e:
             print(f"Error displaying previous QSOs: {e}")

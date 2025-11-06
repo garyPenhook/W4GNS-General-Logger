@@ -13,6 +13,7 @@ from src.skcc_awards import (
 )
 from src.skcc_roster import get_roster_manager
 from src.skcc_award_rosters import get_award_roster_manager
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
 
 
 class SKCCAwardsTab:
@@ -62,7 +63,7 @@ class SKCCAwardsTab:
         ttk.Label(header_frame, text="SKCC Awards Progress",
                  font=('', 14, 'bold')).pack(side='left')
         ttk.Label(header_frame, text="(Straight Key Century Club)",
-                 font=('', 10), foreground='gray').pack(side='left', padx=10)
+                 font=('', 10), foreground=get_muted_color(self.config)).pack(side='left', padx=10)
 
         ttk.Button(header_frame, text="🔍 Run Diagnostic",
                   command=self.run_diagnostic).pack(side='right', padx=2)
@@ -89,7 +90,7 @@ class SKCCAwardsTab:
 
         ttk.Label(roster_frame,
                  text="Rosters are downloaded automatically on startup for accurate award validation.",
-                 font=('', 9, 'italic'), foreground='gray').pack(anchor='w', pady=(5, 0))
+                 font=('', 9, 'italic'), foreground=get_muted_color(self.config)).pack(anchor='w', pady=(5, 0))
 
         # User's SKCC Information section
         user_info_frame = ttk.LabelFrame(self.frame, text="Your SKCC Information", padding=10)
@@ -100,7 +101,7 @@ class SKCCAwardsTab:
         join_date_row.pack(fill='x', pady=2)
 
         ttk.Label(join_date_row, text="SKCC Join Date:", font=('', 10, 'bold'), width=20).pack(side='left')
-        ttk.Label(join_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+        ttk.Label(join_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
 
         self.join_date_var = tk.StringVar(value=self.config.get('skcc.join_date', ''))
         self.join_date_entry = ttk.Entry(join_date_row, textvariable=self.join_date_var, width=12)
@@ -117,7 +118,7 @@ class SKCCAwardsTab:
         centurion_date_row.pack(fill='x', pady=2)
 
         ttk.Label(centurion_date_row, text="Centurion Date:", font=('', 10, 'bold'), width=20).pack(side='left')
-        ttk.Label(centurion_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+        ttk.Label(centurion_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
 
         self.centurion_date_var = tk.StringVar(value=self.config.get('skcc.centurion_date', ''))
         self.centurion_date_entry = ttk.Entry(centurion_date_row, textvariable=self.centurion_date_var, width=12)
@@ -134,7 +135,7 @@ class SKCCAwardsTab:
         tribune_x8_date_row.pack(fill='x', pady=2)
 
         ttk.Label(tribune_x8_date_row, text="Tribune x8 Date:", font=('', 10, 'bold'), width=20).pack(side='left')
-        ttk.Label(tribune_x8_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+        ttk.Label(tribune_x8_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
 
         self.tribune_x8_date_var = tk.StringVar(value=self.config.get('skcc.tribune_x8_date', ''))
         self.tribune_x8_date_entry = ttk.Entry(tribune_x8_date_row, textvariable=self.tribune_x8_date_var, width=12)
@@ -148,13 +149,13 @@ class SKCCAwardsTab:
 
         ttk.Label(user_info_frame,
                  text="⚠️ Critical: Join date required for all awards.",
-                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w', pady=(5, 0))
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w', pady=(5, 0))
         ttk.Label(user_info_frame,
                  text="Centurion date required for Tribune/Senator. Tribune x8 date required for Senator.",
-                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w')
         ttk.Label(user_info_frame,
                  text="QSOs before these dates will not count toward respective awards.",
-                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w')
 
         # Create notebook for different awards
         self.notebook = ttk.Notebook(self.frame)
@@ -189,7 +190,7 @@ class SKCCAwardsTab:
         self.centurion_bar = ttk.Progressbar(centurion_frame, length=400, mode='determinate')
         self.centurion_bar.pack(fill='x', pady=2)
 
-        self.centurion_endorsement = ttk.Label(centurion_frame, text="", foreground='blue')
+        self.centurion_endorsement = ttk.Label(centurion_frame, text="", foreground=get_info_color(self.config))
         self.centurion_endorsement.pack(anchor='w')
 
         # Tribune
@@ -205,7 +206,7 @@ class SKCCAwardsTab:
         self.tribune_bar = ttk.Progressbar(tribune_frame, length=400, mode='determinate')
         self.tribune_bar.pack(fill='x', pady=2)
 
-        self.tribune_endorsement = ttk.Label(tribune_frame, text="", foreground='blue')
+        self.tribune_endorsement = ttk.Label(tribune_frame, text="", foreground=get_info_color(self.config))
         self.tribune_endorsement.pack(anchor='w')
 
         # Senator
@@ -221,7 +222,7 @@ class SKCCAwardsTab:
         self.senator_bar = ttk.Progressbar(senator_frame, length=400, mode='determinate')
         self.senator_bar.pack(fill='x', pady=2)
 
-        self.senator_endorsement = ttk.Label(senator_frame, text="", foreground='blue')
+        self.senator_endorsement = ttk.Label(senator_frame, text="", foreground=get_info_color(self.config))
         self.senator_endorsement.pack(anchor='w')
 
     def create_specialty_awards_display(self):
@@ -454,7 +455,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
         self.centurion_progress.config(
             text=f"{status} - {current} of {required} members ({pct:.1f}%)",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.centurion_bar['value'] = pct
         self.centurion_endorsement.config(text=f"Current Level: {endorsement}")
@@ -471,7 +472,7 @@ class SKCCAwardsTab:
 
         self.tribune_progress.config(
             text=f"{prereq_status} Centurion | {status} - {current} of {required} Tribune/Senator members ({pct:.1f}%)",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.tribune_bar['value'] = pct
         self.tribune_endorsement.config(text=f"Current Level: {endorsement}")
@@ -488,7 +489,7 @@ class SKCCAwardsTab:
 
         self.senator_progress.config(
             text=f"{prereq_status} Tribune x8 | {status} - {current} of {required} post-x8 contacts ({pct:.1f}%)",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.senator_bar['value'] = pct
         self.senator_endorsement.config(text=f"Current Level: {endorsement}")
@@ -504,7 +505,7 @@ class SKCCAwardsTab:
 
         self.triple_key_progress.config(
             text=f"{status} - Minimum: {progress['current']} of 100",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.triple_key_details.config(
             text=f"Straight: {straight}/100 | Bug: {bug}/100 | Sideswiper: {sideswiper}/100 | Level: {progress['endorsement']}"
@@ -520,7 +521,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.rag_chew_progress.config(
             text=f"{status} - {current} of {required} minutes ({pct:.1f}%) - Level: {endorsement}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.rag_chew_bar['value'] = pct
 
@@ -534,7 +535,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.pfx_progress.config(
             text=f"{status} - {current:,} of {required:,} points ({pct:.1f}%) - Level: {endorsement}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.pfx_bar['value'] = pct
 
@@ -550,7 +551,7 @@ class SKCCAwardsTab:
 
         self.maple_progress.config(
             text=f"Highest Achieved: {highest} | {levels_text}",
-            foreground='green' if highest != "Not Yet" else 'black'
+            foreground=get_success_color(self.config) if highest != "Not Yet" else 'black'
         )
 
     def update_was_display(self, progress):
@@ -563,7 +564,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.was_progress.config(
             text=f"{status} - {current} of {required} states ({pct:.1f}%) - {level}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.was_bar['value'] = pct
 
@@ -577,7 +578,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.wac_progress.config(
             text=f"{status} - {current} of {required} continents ({pct:.1f}%) - {level}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.wac_bar['value'] = pct
 
@@ -589,7 +590,7 @@ class SKCCAwardsTab:
 
         self.dxq_progress.config(
             text=f"{entities} entities worked, {qsos} total QSOs - Level: {level}",
-            foreground='green' if level != "Not Yet" else 'black'
+            foreground=get_success_color(self.config) if level != "Not Yet" else 'black'
         )
 
     def update_dxc_display(self, progress):
@@ -599,7 +600,7 @@ class SKCCAwardsTab:
 
         self.dxc_progress.config(
             text=f"{entities} entities worked (each counts once) - Level: {level}",
-            foreground='green' if level != "Not Yet" else 'black'
+            foreground=get_success_color(self.config) if level != "Not Yet" else 'black'
         )
 
     def update_marathon_display(self, progress):
@@ -614,7 +615,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.marathon_progress.config(
             text=f"{status} - {current} of {required} marathons ({pct:.1f}%)",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.marathon_bar['value'] = pct
         self.marathon_details.config(
@@ -632,7 +633,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if current_level != "Not Yet" else "In Progress"
         self.qrp_mpw_progress.config(
             text=f"{status} - Best: {max_mpw:.1f} MPW - Level: {current_level}",
-            foreground='green' if current_level != "Not Yet" else 'black'
+            foreground=get_success_color(self.config) if current_level != "Not Yet" else 'black'
         )
         self.qrp_mpw_details.config(
             text=f"≥1,000 MPW: {count_1000} | ≥1,500 MPW: {count_1500} | ≥2,000 MPW: {count_2000}"
@@ -648,7 +649,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.was_t_progress.config(
             text=f"{status} - {current} of {required} states ({pct:.1f}%) - {level}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.was_t_bar['value'] = pct
 
@@ -662,7 +663,7 @@ class SKCCAwardsTab:
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.was_s_progress.config(
             text=f"{status} - {current} of {required} states ({pct:.1f}%) - {level}",
-            foreground='green' if progress['achieved'] else 'black'
+            foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.was_s_bar['value'] = pct
 
@@ -776,7 +777,7 @@ class SKCCAwardsTab:
         if join_date and (len(join_date) != 8 or not join_date.isdigit()):
             self.join_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -787,14 +788,14 @@ class SKCCAwardsTab:
         if join_date:
             self.join_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.join_date_status.config(
                 text="⚠️ Join date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -808,7 +809,7 @@ class SKCCAwardsTab:
         if centurion_date and (len(centurion_date) != 8 or not centurion_date.isdigit()):
             self.centurion_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -817,7 +818,7 @@ class SKCCAwardsTab:
         if centurion_date and join_date and centurion_date < join_date:
             self.centurion_date_status.config(
                 text="❌ Cannot be before join date",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -828,14 +829,14 @@ class SKCCAwardsTab:
         if centurion_date:
             self.centurion_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.centurion_date_status.config(
                 text="⚠️ Centurion date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -849,7 +850,7 @@ class SKCCAwardsTab:
         if tribune_x8_date and (len(tribune_x8_date) != 8 or not tribune_x8_date.isdigit()):
             self.tribune_x8_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -858,7 +859,7 @@ class SKCCAwardsTab:
         if tribune_x8_date and centurion_date and tribune_x8_date < centurion_date:
             self.tribune_x8_date_status.config(
                 text="❌ Cannot be before Centurion date",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -869,14 +870,14 @@ class SKCCAwardsTab:
         if tribune_x8_date:
             self.tribune_x8_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.tribune_x8_date_status.config(
                 text="⚠️ Tribune x8 date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -892,12 +893,12 @@ class SKCCAwardsTab:
             age = self.roster_manager.get_roster_age()
             self.roster_status_label.config(
                 text=f"{count:,} members | Updated: {age}",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
         else:
             self.roster_status_label.config(
                 text="Not downloaded",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Award rosters status
@@ -909,12 +910,12 @@ class SKCCAwardsTab:
         if centurion_count > 0 and tribune_count > 0 and senator_count > 0:
             self.award_roster_status_label.config(
                 text=f"C:{centurion_count:,} T:{tribune_count:,} S:{senator_count:,}",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
         else:
             self.award_roster_status_label.config(
                 text="Not downloaded",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
     def auto_download_rosters_on_startup(self):
@@ -935,7 +936,7 @@ class SKCCAwardsTab:
             try:
                 self.parent.after(0, lambda: self.roster_status_label.config(
                     text="Downloading membership roster...",
-                    foreground='blue'
+                    foreground=get_info_color(self.config)
                 ))
 
                 # Download membership roster
@@ -949,7 +950,7 @@ class SKCCAwardsTab:
                 print(f"Error downloading membership roster: {e}")
                 self.parent.after(0, lambda: self.roster_status_label.config(
                     text="Download failed",
-                    foreground='red'
+                    foreground=get_error_color(self.config)
                 ))
 
         def download_award_rosters():
@@ -957,7 +958,7 @@ class SKCCAwardsTab:
             try:
                 self.parent.after(0, lambda: self.award_roster_status_label.config(
                     text="Downloading award rosters...",
-                    foreground='blue'
+                    foreground=get_info_color(self.config)
                 ))
 
                 # Download Centurion, Tribune, and Senator rosters
@@ -979,7 +980,7 @@ class SKCCAwardsTab:
                 print(f"Error downloading award rosters: {e}")
                 self.parent.after(0, lambda: self.award_roster_status_label.config(
                     text="Download failed",
-                    foreground='red'
+                    foreground=get_error_color(self.config)
                 ))
 
         # Start both downloads in parallel background threads
@@ -1003,7 +1004,7 @@ class SKCCAwardsTab:
         if join_date and (len(join_date) != 8 or not join_date.isdigit()):
             self.join_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -1014,14 +1015,14 @@ class SKCCAwardsTab:
         if join_date:
             self.join_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.join_date_status.config(
                 text="⚠️ Join date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -1035,7 +1036,7 @@ class SKCCAwardsTab:
         if centurion_date and (len(centurion_date) != 8 or not centurion_date.isdigit()):
             self.centurion_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -1044,7 +1045,7 @@ class SKCCAwardsTab:
         if centurion_date and join_date and centurion_date < join_date:
             self.centurion_date_status.config(
                 text="❌ Cannot be before join date",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -1055,14 +1056,14 @@ class SKCCAwardsTab:
         if centurion_date:
             self.centurion_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.centurion_date_status.config(
                 text="⚠️ Centurion date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -1076,7 +1077,7 @@ class SKCCAwardsTab:
         if tribune_x8_date and (len(tribune_x8_date) != 8 or not tribune_x8_date.isdigit()):
             self.tribune_x8_date_status.config(
                 text="❌ Invalid format (use YYYYMMDD)",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -1085,7 +1086,7 @@ class SKCCAwardsTab:
         if tribune_x8_date and centurion_date and tribune_x8_date < centurion_date:
             self.tribune_x8_date_status.config(
                 text="❌ Cannot be before Centurion date",
-                foreground='red'
+                foreground=get_error_color(self.config)
             )
             return
 
@@ -1096,14 +1097,14 @@ class SKCCAwardsTab:
         if tribune_x8_date:
             self.tribune_x8_date_status.config(
                 text="✅ Saved",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
             # Refresh awards to apply new validation
             self.refresh_awards()
         else:
             self.tribune_x8_date_status.config(
                 text="⚠️ Tribune x8 date cleared",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
         # Clear status after 3 seconds
@@ -1116,17 +1117,17 @@ class SKCCAwardsTab:
             age = self.roster_manager.get_roster_age()
             self.roster_status_label.config(
                 text=f"{count:,} members | Downloaded: {age}",
-                foreground='green'
+                foreground=get_success_color(self.config)
             )
         else:
             self.roster_status_label.config(
                 text="Not downloaded - Click 'Download Roster' to download",
-                foreground='orange'
+                foreground=get_warning_color(self.config)
             )
 
     def download_roster_manual(self):
         """Manually triggered roster download"""
-        self.roster_status_label.config(text="Downloading...", foreground='blue')
+        self.roster_status_label.config(text="Downloading...", foreground=get_info_color(self.config))
 
         def progress_callback(msg):
             # Update UI in main thread
@@ -1156,7 +1157,7 @@ class SKCCAwardsTab:
         - Awards require both parties to be members at time of contact
         """
         # ALWAYS download roster on startup for accurate award validation
-        self.roster_status_label.config(text="Updating SKCC roster...", foreground='blue')
+        self.roster_status_label.config(text="Updating SKCC roster...", foreground=get_info_color(self.config))
 
         def progress_callback(msg):
             # Update status label with progress

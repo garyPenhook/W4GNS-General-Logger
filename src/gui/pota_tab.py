@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 import threading
 from src.pota_client import POTAClient
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
 
 
 class POTATab:
@@ -48,7 +49,7 @@ class POTATab:
                    textvariable=self.refresh_interval_var, width=8).pack(side='left')
         ttk.Label(refresh_row, text="seconds").pack(side='left', padx=5)
 
-        self.status_label = ttk.Label(refresh_row, text="Ready", foreground="blue")
+        self.status_label = ttk.Label(refresh_row, text="Ready", foreground=get_info_color(self.config))
         self.status_label.pack(side='left', padx=20)
 
         # Filter frame
@@ -150,12 +151,12 @@ class POTATab:
         info_row = ttk.Frame(self.frame)
         info_row.pack(fill='x', padx=10, pady=5)
         self.info_label = ttk.Label(info_row, text="Double-click a spot to view park details",
-                                    foreground="gray")
+                                    foreground=get_muted_color(self.config))
         self.info_label.pack(side='left')
 
     def refresh_spots_async(self):
         """Refresh spots in a background thread to avoid blocking UI"""
-        self.status_label.config(text="Fetching spots...", foreground="orange")
+        self.status_label.config(text="Fetching spots...", foreground=get_warning_color(self.config))
         thread = threading.Thread(target=self.refresh_spots, daemon=True)
         thread.start()
 
@@ -169,10 +170,10 @@ class POTATab:
             self.parent.after(0, self._update_spots_display)
             self.parent.after(0, lambda: self.status_label.config(
                 text=f"Last updated: {datetime.now().strftime('%H:%M:%S')} - {len(spots)} spots",
-                foreground="green"))
+                foreground=get_success_color(self.config)))
         except Exception as e:
             self.parent.after(0, lambda: self.status_label.config(
-                text=f"Error: {str(e)}", foreground="red"))
+                text=f"Error: {str(e)}", foreground=get_error_color(self.config)))
             self.parent.after(0, lambda: messagebox.showerror(
                 "POTA API Error", f"Failed to fetch POTA spots:\n{str(e)}"))
 

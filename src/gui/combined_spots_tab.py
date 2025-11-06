@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 import threading
 from src.pota_client import POTAClient
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color
 
 
 class CombinedSpotsTab:
@@ -49,7 +50,7 @@ class CombinedSpotsTab:
 
         dx_info = ttk.Label(dx_header,
                            text="Connect to a DX Cluster in the 'DX Clusters' tab to see spots here",
-                           foreground="blue")
+                           foreground=get_info_color(self.config))
         dx_info.pack()
 
         # DX Spots display
@@ -118,7 +119,7 @@ class CombinedSpotsTab:
                    textvariable=self.refresh_interval_var, width=6).pack(side='left')
         ttk.Label(refresh_row, text="sec").pack(side='left', padx=2)
 
-        self.pota_status_label = ttk.Label(refresh_row, text="Ready", foreground="blue")
+        self.pota_status_label = ttk.Label(refresh_row, text="Ready", foreground=get_info_color(self.config))
         self.pota_status_label.pack(side='left', padx=10)
 
         # POTA Filters
@@ -272,7 +273,7 @@ class CombinedSpotsTab:
     # POTA SPOTS METHODS
     def refresh_pota_spots_async(self):
         """Refresh POTA spots in background thread"""
-        self.pota_status_label.config(text="Fetching...", foreground="orange")
+        self.pota_status_label.config(text="Fetching...", foreground=get_warning_color(self.config))
         thread = threading.Thread(target=self.refresh_pota_spots, daemon=True)
         thread.start()
 
@@ -286,10 +287,10 @@ class CombinedSpotsTab:
             self.parent.after(0, self._update_pota_spots_display)
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text=f"{len(spots)} spots - {datetime.now().strftime('%H:%M:%S')}",
-                foreground="green"))
+                foreground=get_success_color(self.config)))
         except Exception as e:
             self.parent.after(0, lambda: self.pota_status_label.config(
-                text=f"Error", foreground="red"))
+                text=f"Error", foreground=get_error_color(self.config)))
 
     def _update_pota_spots_display(self):
         """Update POTA spots display with filtered spots"""
