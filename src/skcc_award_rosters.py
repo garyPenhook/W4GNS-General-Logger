@@ -235,6 +235,9 @@ class SKCCAwardRosterManager:
         """
         Save roster data to database
 
+        Creates a new database connection for thread safety since roster downloads
+        happen in background threads.
+
         Args:
             award_type: 'centurion', 'tribune', or 'senator'
             records: List of dicts with 'skcc_number', 'callsign', 'award_date'
@@ -246,7 +249,12 @@ class SKCCAwardRosterManager:
             return False
 
         try:
-            cursor = self.database.conn.cursor()
+            import sqlite3
+
+            # Create a new connection for thread safety
+            # SQLite connections cannot be shared across threads
+            conn = sqlite3.connect(self.database.db_path)
+            cursor = conn.cursor()
 
             # Map award type to table and date column
             table_map = {
@@ -267,13 +275,19 @@ class SKCCAwardRosterManager:
                     VALUES (?, ?, ?)
                 ''', (record['skcc_number'], record['callsign'], record['award_date']))
 
-            self.database.conn.commit()
+            conn.commit()
+            conn.close()
+
             logger.info(f"Saved {len(records)} {award_type} records to database")
             return True
 
         except Exception as e:
             logger.error(f"Error saving {award_type} roster to database: {e}")
-            self.database.conn.rollback()
+            try:
+                conn.rollback()
+                conn.close()
+            except:
+                pass
             return False
 
     def get_award_date(self, award_type: str, skcc_number: str) -> Optional[str]:

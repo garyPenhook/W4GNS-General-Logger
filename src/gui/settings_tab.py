@@ -194,8 +194,15 @@ class SettingsTab:
         interval_spin.pack(side='left', padx=5)
         ttk.Label(interval_frame, text="minutes").pack(side='left')
 
-        # Backup now button
-        ttk.Button(backup_frame, text="Backup Log Now", command=self.backup_now).pack(pady=10)
+        # Backup and Restore buttons
+        backup_buttons_frame = ttk.Frame(backup_frame)
+        backup_buttons_frame.pack(pady=10)
+
+        ttk.Button(backup_buttons_frame, text="Backup Log Now", command=self.backup_now).pack(side='left', padx=5)
+        ttk.Button(backup_buttons_frame, text="Restore Database", command=self.restore_database).pack(side='left', padx=5)
+
+        ttk.Label(backup_frame, text="Restore will replace current database with a backup file",
+                 font=('', 8), foreground='red').pack(anchor='w', pady=(0, 5))
 
         # DX Cluster Settings
         cluster_frame = ttk.LabelFrame(scrollable_frame, text="DX Cluster Preferences", padding=10)
@@ -478,6 +485,99 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
 
         except Exception as e:
             messagebox.showerror("Backup Failed", f"Error during backup:\n{str(e)}")
+
+    def restore_database(self):
+        """Restore database from a backup file"""
+        try:
+            # Warn user about the implications
+            warning = messagebox.askyesno(
+                "Restore Database",
+                "⚠️ WARNING ⚠️\n\n"
+                "This will REPLACE your current database with a backup file.\n"
+                "All current contacts and data will be OVERWRITTEN.\n\n"
+                "It is recommended to backup your current database first.\n\n"
+                "Do you want to continue?",
+                icon='warning'
+            )
+
+            if not warning:
+                return
+
+            # Ask user to select a database backup file
+            file_path = filedialog.askopenfilename(
+                title="Select Database Backup File",
+                filetypes=[
+                    ("Database files", "*.db"),
+                    ("All files", "*.*")
+                ],
+                initialdir="./logs"
+            )
+
+            if not file_path:
+                return  # User cancelled
+
+            # Verify it's a valid SQLite database
+            import sqlite3
+            try:
+                # Test if we can open it as a database
+                test_conn = sqlite3.connect(file_path)
+                cursor = test_conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='contacts'")
+                result = cursor.fetchone()
+                test_conn.close()
+
+                if not result:
+                    messagebox.showerror(
+                        "Invalid Database",
+                        "The selected file does not appear to be a valid W4GNS logger database.\n"
+                        "Missing 'contacts' table."
+                    )
+                    return
+
+            except sqlite3.Error as e:
+                messagebox.showerror(
+                    "Invalid File",
+                    f"The selected file is not a valid SQLite database:\n{str(e)}"
+                )
+                return
+
+            # Get database instance
+            app_window = self.parent.winfo_toplevel()
+            database = None
+
+            for widget in app_window.winfo_children():
+                if hasattr(widget, 'master') and hasattr(widget.master, 'database'):
+                    database = widget.master.database
+                    break
+
+            if not database:
+                messagebox.showerror("Error", "Could not access database")
+                return
+
+            # Close the current database connection
+            import shutil
+            import os
+
+            db_path = database.db_path
+            database.close()
+
+            # Create a backup of the current database before replacing
+            backup_current = db_path + ".before_restore"
+            if os.path.exists(db_path):
+                shutil.copy2(db_path, backup_current)
+
+            # Replace with the backup file
+            shutil.copy2(file_path, db_path)
+
+            messagebox.showinfo(
+                "Restore Complete",
+                f"Database restored successfully!\n\n"
+                f"Your previous database was backed up to:\n{backup_current}\n\n"
+                f"⚠️ You MUST restart the application now for changes to take effect."
+            )
+
+        except Exception as e:
+            messagebox.showerror("Restore Failed", f"Error during restore:\n{str(e)}")
 
     def save_settings(self):
         """Save settings to config"""
