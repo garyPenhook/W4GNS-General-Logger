@@ -195,33 +195,53 @@ class W4GNSLogger:
             if not response:
                 return
 
-            # Import each contact with duplicate checking
-            imported_count = 0
-            duplicate_count = 0
-            error_count = 0
+            # Create progress dialog
+            progress_window = tk.Toplevel(self.root)
+            progress_window.title("Importing Contacts")
+            progress_window.geometry("400x150")
+            progress_window.transient(self.root)
+            progress_window.grab_set()
 
-            for contact in contacts:
-                try:
-                    # Check for duplicates within 10-minute window
-                    callsign = contact.get('callsign', '')
-                    date = contact.get('date', '')
-                    time_on = contact.get('time_on', '')
+            progress_frame = ttk.Frame(progress_window, padding=20)
+            progress_frame.pack(fill='both', expand=True)
 
-                    if callsign and date and time_on:
-                        duplicate = self.database.check_duplicate_within_time_window(
-                            callsign, date, time_on, window_minutes=10
-                        )
-                        if duplicate:
-                            duplicate_count += 1
-                            print(f"Skipping duplicate: {callsign} on {date} at {time_on}")
-                            continue
+            progress_label = ttk.Label(progress_frame, text="Preparing import...", wraplength=350)
+            progress_label.pack(pady=10)
 
-                    # Not a duplicate, add it
-                    self.database.add_contact(contact)
-                    imported_count += 1
-                except Exception as e:
-                    error_count += 1
-                    print(f"Error importing contact: {e}")
+            progress_bar = ttk.Progressbar(progress_frame, length=350, mode='determinate')
+            progress_bar.pack(pady=10)
+
+            progress_detail = ttk.Label(progress_frame, text="", font=('', 9))
+            progress_detail.pack()
+
+            # Progress callback for batch import
+            def update_progress(current, total, message):
+                progress_bar['maximum'] = total
+                progress_bar['value'] = current
+                progress_label.config(text=message)
+                progress_detail.config(text=f"{current} / {total}")
+                progress_window.update()
+
+            # Use fast batch import method
+            try:
+                result = self.database.add_contacts_batch(
+                    contacts,
+                    skip_duplicates=True,
+                    window_minutes=10,
+                    progress_callback=update_progress
+                )
+
+                imported_count = result['imported']
+                duplicate_count = result['duplicates']
+                error_count = result['errors']
+                error_details = result.get('error_details', [])
+
+            except Exception as e:
+                progress_window.destroy()
+                raise e
+
+            # Close progress window
+            progress_window.destroy()
 
             # Refresh the contacts log display
             self.contacts_tab.refresh_log()
@@ -233,9 +253,11 @@ class W4GNSLogger:
             # Show results
             result_message = f"Successfully imported {imported_count} contacts"
             if duplicate_count > 0:
-                result_message += f"\nSkipped {duplicate_count} duplicates (within 10 minutes)"
+                result_message += f"\nSkipped {duplicate_count} duplicates"
             if error_count > 0:
                 result_message += f"\nFailed to import {error_count} contacts"
+                if error_details:
+                    result_message += f"\n\nFirst errors:\n" + "\n".join(error_details[:5])
 
             if error_count == 0:
                 messagebox.showinfo("Import Successful", result_message)
@@ -274,6 +296,7 @@ https://www.ng3k.com/Misc/cluster.html
         try:
             from datetime import datetime
             import os
+            import shutil
 
             # Get all contacts
             contacts = self.database.get_all_contacts(limit=999999)
@@ -282,21 +305,37 @@ https://www.ng3k.com/Misc/cluster.html
                 return  # Nothing to backup
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"w4gns_log_{timestamp}.adi"
+            adif_filename = f"w4gns_log_{timestamp}.adi"
+            db_filename = f"w4gns_log_{timestamp}.db"
 
             # Always backup to local logs directory
             logs_dir = "logs"
             os.makedirs(logs_dir, exist_ok=True)
-            local_path = os.path.join(logs_dir, filename)
-            export_contacts_to_adif(contacts, local_path)
-            print(f"Backed up {len(contacts)} contacts to {local_path}")
+
+            # Backup ADIF
+            local_adif_path = os.path.join(logs_dir, adif_filename)
+            export_contacts_to_adif(contacts, local_adif_path)
+            print(f"Backed up {len(contacts)} contacts to {local_adif_path}")
+
+            # Backup database
+            local_db_path = os.path.join(logs_dir, db_filename)
+            if os.path.exists(self.database.db_path):
+                shutil.copy2(self.database.db_path, local_db_path)
+                print(f"Backed up database to {local_db_path}")
 
             # Backup to external path if configured
             external_path = self.config.get('backup.external_path', '').strip()
             if external_path and os.path.exists(external_path):
-                external_file = os.path.join(external_path, filename)
-                export_contacts_to_adif(contacts, external_file)
-                print(f"Also backed up to {external_file}")
+                # Backup ADIF to external
+                external_adif_file = os.path.join(external_path, adif_filename)
+                export_contacts_to_adif(contacts, external_adif_file)
+                print(f"Also backed up ADIF to {external_adif_file}")
+
+                # Backup database to external
+                external_db_file = os.path.join(external_path, db_filename)
+                if os.path.exists(self.database.db_path):
+                    shutil.copy2(self.database.db_path, external_db_file)
+                    print(f"Also backed up database to {external_db_file}")
 
         except Exception as e:
             print(f"Error during shutdown backup: {e}")
@@ -310,16 +349,29 @@ https://www.ng3k.com/Misc/cluster.html
                 try:
                     from datetime import datetime
                     import os
+                    import shutil
 
                     contacts = self.database.get_all_contacts(limit=999999)
 
                     if contacts:
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        filename = f"w4gns_log_autosave_{timestamp}.adi"
-                        external_file = os.path.join(external_path, filename)
-                        export_contacts_to_adif(contacts, external_file)
-                        self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
-                        print(f"Auto-save: {len(contacts)} contacts to {external_file}")
+                        adif_filename = f"w4gns_log_autosave_{timestamp}.adi"
+                        db_filename = f"w4gns_log_autosave_{timestamp}.db"
+
+                        # Backup ADIF
+                        external_adif_file = os.path.join(external_path, adif_filename)
+                        export_contacts_to_adif(contacts, external_adif_file)
+
+                        # Backup database
+                        external_db_file = os.path.join(external_path, db_filename)
+                        if os.path.exists(self.database.db_path):
+                            shutil.copy2(self.database.db_path, external_db_file)
+                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts + database to external backup")
+                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
+                            print(f"Auto-save: database to {external_db_file}")
+                        else:
+                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
+                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
 
                 except Exception as e:
                     print(f"Error during auto-save: {e}")
