@@ -89,6 +89,29 @@ class Database:
 
         self.conn.commit()
 
+        # Validate database schema after creation/upgrade
+        self._validate_schema(cursor)
+
+    def _validate_schema(self, cursor):
+        """Validate that the contacts table has all required core columns"""
+        required_columns = ['id', 'callsign', 'date', 'time_on', 'band', 'mode']
+
+        cursor.execute("PRAGMA table_info(contacts)")
+        existing_columns = [row[1] for row in cursor.fetchall()]
+
+        missing_columns = [col for col in required_columns if col not in existing_columns]
+
+        if missing_columns:
+            error_msg = (
+                f"Database schema is corrupted or incomplete!\n"
+                f"Missing required columns: {', '.join(missing_columns)}\n\n"
+                f"The contacts table may be corrupted. You may need to:\n"
+                f"1. Delete or rename the database file: {self.db_path}\n"
+                f"2. Restart the application to create a fresh database\n"
+                f"3. Or restore from a known good backup"
+            )
+            raise sqlite3.DatabaseError(error_msg)
+
     def _upgrade_schema(self, cursor):
         """Upgrade existing database schema to add new columns"""
         # Get existing columns
