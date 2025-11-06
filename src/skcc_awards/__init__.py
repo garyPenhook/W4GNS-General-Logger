@@ -35,6 +35,8 @@ from .rag_chew import RagChewAward
 from .canadian_maple import CanadianMapleAward
 from .skcc_dx import SKCCDXQAward, SKCCDXCAward
 from .pfx import PFXAward
+from .was import SKCCWASAward
+from .wac import SKCCWACAward
 
 __all__ = [
     'SKCCAwardBase',
@@ -47,4 +49,6 @@ __all__ = [
     'SKCCDXQAward',
     'SKCCDXCAward',
     'PFXAward',
+    'SKCCWASAward',
+    'SKCCWACAward',
 ]
