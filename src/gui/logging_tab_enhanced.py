@@ -196,6 +196,33 @@ class EnhancedLoggingTab:
         self.pota_var = tk.StringVar()
         ttk.Entry(row5, textvariable=self.pota_var, width=12).pack(side='left', padx=5)
 
+        # Row 5.5: SKCC Fields (for Straight Key Century Club awards)
+        row5_5 = ttk.LabelFrame(entry_frame, text="SKCC (Straight Key Century Club)", padding=5)
+        row5_5.pack(fill='x', pady=2)
+
+        skcc_row = ttk.Frame(row5_5)
+        skcc_row.pack(fill='x')
+
+        ttk.Label(skcc_row, text="SKCC#:", width=12, anchor='e').pack(side='left')
+        self.skcc_number_var = tk.StringVar()
+        ttk.Entry(skcc_row, textvariable=self.skcc_number_var, width=12).pack(side='left', padx=5)
+        ttk.Label(skcc_row, text="(Their SKCC number)", font=('', 8), foreground='gray').pack(side='left')
+
+        ttk.Label(skcc_row, text="My SKCC#:", width=12, anchor='e').pack(side='left', padx=(20, 0))
+        self.my_skcc_number_var = tk.StringVar(value=self.config.get('my_skcc_number', ''))
+        ttk.Entry(skcc_row, textvariable=self.my_skcc_number_var, width=12).pack(side='left', padx=5)
+
+        ttk.Label(skcc_row, text="Key Type:", width=10, anchor='e').pack(side='left', padx=(20, 0))
+        self.key_type_var = tk.StringVar()
+        key_combo = ttk.Combobox(skcc_row, textvariable=self.key_type_var, width=12, state='readonly')
+        key_combo['values'] = ('', 'STRAIGHT', 'BUG', 'SIDESWIPER')
+        key_combo.pack(side='left', padx=5)
+
+        ttk.Label(skcc_row, text="Duration (min):", width=14, anchor='e').pack(side='left', padx=(20, 0))
+        self.duration_var = tk.StringVar()
+        ttk.Entry(skcc_row, textvariable=self.duration_var, width=8).pack(side='left', padx=5)
+        ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground='gray').pack(side='left')
+
         # Row 6: Notes/Comments
         row6 = ttk.Frame(entry_frame)
         row6.pack(fill='x', pady=2)
@@ -625,7 +652,13 @@ class EnhancedLoggingTab:
             'sota': self.sota_var.get(),
             'pota': self.pota_var.get(),
             'my_gridsquare': self.config.get('gridsquare', ''),
-            'notes': self.notes_var.get()
+            'notes': self.notes_var.get(),
+            # SKCC fields
+            'skcc_number': self.skcc_number_var.get(),
+            'my_skcc_number': self.my_skcc_number_var.get(),
+            'key_type': self.key_type_var.get(),
+            'duration_minutes': self.duration_var.get() if self.duration_var.get() else None,
+            'power_watts': self.power_var.get() if self.power_var.get() else None
         }
 
         try:
@@ -704,6 +737,11 @@ class EnhancedLoggingTab:
         self.iota_var.set('')
         self.sota_var.set('')
         self.pota_var.set('')
+        # Clear SKCC fields
+        self.skcc_number_var.set('')
+        self.key_type_var.set('')
+        self.duration_var.set('')
+        # Keep my_skcc_number_var (don't clear operator's own number)
         self.notes_var.set('')
         self.dupe_label.config(text='')
         self.callsign_entry.focus()
