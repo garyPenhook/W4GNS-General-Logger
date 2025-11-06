@@ -19,6 +19,7 @@ from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.contacts_tab import ContactsTab
 from src.gui.dx_cluster_tab import DXClusterTab
 from src.gui.awards_tab import AwardsTab
+from src.gui.skcc_awards_tab import SKCCAwardsTab
 from src.gui.space_weather_tab import SpaceWeatherTab
 from src.gui.settings_tab import SettingsTab
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
@@ -100,6 +101,7 @@ class W4GNSLogger:
         self.contacts_tab = ContactsTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
         self.awards_tab = AwardsTab(self.notebook, self.database, self.config)
+        self.skcc_awards_tab = SKCCAwardsTab(self.notebook, self.database, self.config)
         self.space_weather_tab = SpaceWeatherTab(self.notebook, self.database, self.config)
         self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager)
 
@@ -111,6 +113,7 @@ class W4GNSLogger:
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
         self.notebook.add(self.awards_tab.get_frame(), text="  ARRL Awards  ")
+        self.notebook.add(self.skcc_awards_tab.get_frame(), text="  SKCC Awards  ")
         self.notebook.add(self.space_weather_tab.get_frame(), text="  Space Weather  ")
         self.notebook.add(self.settings_tab.get_frame(), text="  Settings  ")
 
@@ -225,6 +228,7 @@ class W4GNSLogger:
 
             # Refresh awards calculations
             self.awards_tab.refresh_awards()
+            self.skcc_awards_tab.refresh_awards()
 
             # Show results
             result_message = f"Successfully imported {imported_count} contacts"
