@@ -116,9 +116,29 @@ class SKCCAwardsTab:
         self.centurion_date_status = ttk.Label(centurion_date_row, text="", font=('', 9))
         self.centurion_date_status.pack(side='left', padx=10)
 
+        # Tribune x8 Achievement Date
+        tribune_x8_date_row = ttk.Frame(user_info_frame)
+        tribune_x8_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(tribune_x8_date_row, text="Tribune x8 Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(tribune_x8_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.tribune_x8_date_var = tk.StringVar(value=self.config.get('skcc.tribune_x8_date', ''))
+        self.tribune_x8_date_entry = ttk.Entry(tribune_x8_date_row, textvariable=self.tribune_x8_date_var, width=12)
+        self.tribune_x8_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(tribune_x8_date_row, text="Save",
+                  command=self.save_tribune_x8_date).pack(side='left', padx=5)
+
+        self.tribune_x8_date_status = ttk.Label(tribune_x8_date_row, text="", font=('', 9))
+        self.tribune_x8_date_status.pack(side='left', padx=10)
+
         ttk.Label(user_info_frame,
-                 text="⚠️ Critical: Join date required for all awards. Centurion date required for Tribune/Senator.",
+                 text="⚠️ Critical: Join date required for all awards.",
                  font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w', pady=(5, 0))
+        ttk.Label(user_info_frame,
+                 text="Centurion date required for Tribune/Senator. Tribune x8 date required for Senator.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
         ttk.Label(user_info_frame,
                  text="QSOs before these dates will not count toward respective awards.",
                  font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
@@ -576,6 +596,47 @@ class SKCCAwardsTab:
 
         # Clear status after 3 seconds
         self.parent.after(3000, lambda: self.centurion_date_status.config(text=""))
+
+    def save_tribune_x8_date(self):
+        """Save user's Tribune x8 achievement date to config"""
+        tribune_x8_date = self.tribune_x8_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if tribune_x8_date and (len(tribune_x8_date) != 8 or not tribune_x8_date.isdigit()):
+            self.tribune_x8_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Validate it's not before Centurion date
+        centurion_date = self.config.get('skcc.centurion_date', '')
+        if tribune_x8_date and centurion_date and tribune_x8_date < centurion_date:
+            self.tribune_x8_date_status.config(
+                text="❌ Cannot be before Centurion date",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.tribune_x8_date', tribune_x8_date)
+
+        # Update status
+        if tribune_x8_date:
+            self.tribune_x8_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.tribune_x8_date_status.config(
+                text="⚠️ Tribune x8 date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.tribune_x8_date_status.config(text=""))
 
     def update_roster_status(self):
         """Update the roster status label"""
