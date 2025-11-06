@@ -30,6 +30,7 @@ from src.skcc_awards.constants import (
     get_endorsement_level,
     get_next_endorsement_threshold
 )
+from src.skcc_award_rosters import get_award_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -42,34 +43,12 @@ class TribuneAward(SKCCAwardBase):
         Initialize Tribune award
 
         Args:
-            database: Database instance for contact queries and member list lookups
+            database: Database instance for contact queries
         """
         super().__init__(name="Tribune", program_id="SKCC_TRIBUNE", database=database)
 
-        # Cache Tribune and Senator member lists for validation
-        self._load_member_lists()
-
-    def _load_member_lists(self):
-        """Load Tribune and Senator member lists from database"""
-        try:
-            # Get Tribune members
-            cursor = self.database.conn.cursor()
-            cursor.execute("SELECT skcc_number FROM skcc_tribune_members")
-            self._tribune_numbers = {row[0] for row in cursor.fetchall()}
-
-            # Get Senator members
-            cursor.execute("SELECT skcc_number FROM skcc_senator_members")
-            self._senator_numbers = {row[0] for row in cursor.fetchall()}
-
-            # Combined list of valid members
-            self._all_valid_members = self._tribune_numbers | self._senator_numbers
-
-            logger.info(f"Loaded {len(self._tribune_numbers)} Tribune and {len(self._senator_numbers)} Senator members")
-        except Exception as e:
-            logger.warning(f"Could not load member lists: {e}. Tribune/Senator validation disabled.")
-            self._tribune_numbers = set()
-            self._senator_numbers = set()
-            self._all_valid_members = set()
+        # Get award roster manager for Tribune/Senator validation
+        self.award_rosters = get_award_roster_manager()
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -115,14 +94,19 @@ class TribuneAward(SKCCAwardBase):
                 )
                 return False
 
-        # Remote station must be Tribune/Senator (from member lists if available)
-        # If member lists are not loaded, we accept any SKCC member
-        if self._all_valid_members:
-            skcc_num = contact.get('skcc_number', '')
-            base_number = extract_base_skcc_number(skcc_num)
+        # CRITICAL RULE: Remote station must have been Tribune or Senator at time of QSO
+        # This is validated against the official SKCC award rosters
+        skcc_num = contact.get('skcc_number', '')
+        if not skcc_num:
+            return False
 
-            if not base_number or base_number not in self._all_valid_members:
-                return False
+        # Check if the contacted station was Tribune or Senator at time of QSO
+        if not self.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date):
+            logger.debug(
+                f"Contact {contact.get('callsign', 'unknown')} with SKCC#{skcc_num} not valid: "
+                f"was not Tribune/Senator on {qso_date}"
+            )
+            return False
 
         return True
 
