@@ -9,6 +9,7 @@ Awards Implemented:
 - Senator: Contact 200 Tribune/Senator members (requires Tribune x8)
 - Triple Key: Contact 100 members with each key type
 - Rag Chew: Accumulate 300 minutes of conversations
+- Marathon: 100 QSOs of 60+ minutes each with different members
 - Canadian Maple: 4 levels (Yellow, Orange, Red, Gold)
 - SKCC DXQ: QSO-based DX contacts
 - SKCC DXC: Country-based DX contacts
@@ -35,6 +36,7 @@ from .tribune import TribuneAward
 from .senator import SenatorAward
 from .triple_key import TripleKeyAward
 from .rag_chew import RagChewAward
+from .marathon import MarathonAward
 from .canadian_maple import CanadianMapleAward
 from .skcc_dx import SKCCDXQAward, SKCCDXCAward
 from .pfx import PFXAward
@@ -51,6 +53,7 @@ __all__ = [
     'SenatorAward',
     'TripleKeyAward',
     'RagChewAward',
+    'MarathonAward',
     'CanadianMapleAward',
     'SKCCDXQAward',
     'SKCCDXCAward',
