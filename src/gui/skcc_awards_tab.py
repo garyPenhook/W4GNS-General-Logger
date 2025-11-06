@@ -3,13 +3,14 @@ SKCC Awards Tab - Display Straight Key Century Club award progress
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 from src.skcc_awards import (
     CenturionAward, TribuneAward, SenatorAward,
     TripleKeyAward, RagChewAward, CanadianMapleAward,
     SKCCDXQAward, SKCCDXCAward, PFXAward,
     SKCCWASAward, SKCCWACAward
 )
+from src.skcc_roster import get_roster_manager
 
 
 class SKCCAwardsTab:
@@ -18,6 +19,9 @@ class SKCCAwardsTab:
         self.database = database
         self.config = config
         self.frame = ttk.Frame(parent)
+
+        # Initialize roster manager
+        self.roster_manager = get_roster_manager()
 
         # Initialize award instances
         self.awards = {
@@ -35,7 +39,11 @@ class SKCCAwardsTab:
         }
 
         self.create_widgets()
+        self.update_roster_status()
         self.refresh_awards()
+
+        # Auto-download roster if not present or old (>30 days)
+        self.auto_download_roster_if_needed()
 
     def create_widgets(self):
         """Create the SKCC awards interface"""
@@ -51,6 +59,24 @@ class SKCCAwardsTab:
 
         ttk.Button(header_frame, text="Refresh Awards",
                   command=self.refresh_awards).pack(side='right', padx=5)
+
+        # SKCC Roster section
+        roster_frame = ttk.LabelFrame(self.frame, text="SKCC Membership Roster", padding=10)
+        roster_frame.pack(fill='x', padx=10, pady=5)
+
+        roster_info_frame = ttk.Frame(roster_frame)
+        roster_info_frame.pack(fill='x')
+
+        ttk.Label(roster_info_frame, text="Roster Status:", font=('', 10, 'bold')).pack(side='left')
+        self.roster_status_label = ttk.Label(roster_info_frame, text="Loading...", font=('', 10))
+        self.roster_status_label.pack(side='left', padx=10)
+
+        ttk.Button(roster_info_frame, text="Download Roster",
+                  command=self.download_roster_manual).pack(side='right', padx=5)
+
+        ttk.Label(roster_frame,
+                 text="The membership roster is used to identify SKCC members and their numbers for award tracking.",
+                 font=('', 9, 'italic'), foreground='gray').pack(anchor='w', pady=(5, 0))
 
         # Create notebook for different awards
         self.notebook = ttk.Notebook(self.frame)
@@ -430,3 +456,72 @@ class SKCCAwardsTab:
     def get_frame(self):
         """Return the main frame"""
         return self.frame
+
+    # SKCC Roster Management Methods
+
+    def update_roster_status(self):
+        """Update the roster status label"""
+        if self.roster_manager.has_local_roster():
+            count = self.roster_manager.get_member_count()
+            age = self.roster_manager.get_roster_age()
+            self.roster_status_label.config(
+                text=f"{count:,} members | Downloaded: {age}",
+                foreground='green'
+            )
+        else:
+            self.roster_status_label.config(
+                text="Not downloaded - Click 'Download Roster' to download",
+                foreground='orange'
+            )
+
+    def download_roster_manual(self):
+        """Manually triggered roster download"""
+        self.roster_status_label.config(text="Downloading...", foreground='blue')
+
+        def progress_callback(msg):
+            # Update UI in main thread
+            self.parent.after(0, lambda: self.roster_status_label.config(text=msg))
+
+        def completion_callback(success):
+            # Update UI when complete
+            self.parent.after(0, self.update_roster_status)
+            if success:
+                self.parent.after(0, lambda: messagebox.showinfo(
+                    "Download Complete",
+                    f"Successfully downloaded {self.roster_manager.get_member_count():,} SKCC members.\n\n"
+                    "The roster is now available for award tracking."
+                ))
+
+        self.roster_manager.download_roster_async(progress_callback, completion_callback)
+
+    def auto_download_roster_if_needed(self):
+        """Auto-download roster if it's missing or very old"""
+        # Check if roster exists
+        if not self.roster_manager.has_local_roster():
+            # No roster exists - download it
+            self.roster_status_label.config(text="Auto-downloading roster...", foreground='blue')
+
+            def progress_callback(msg):
+                self.parent.after(0, lambda: self.roster_status_label.config(text=msg))
+
+            def completion_callback(success):
+                self.parent.after(0, self.update_roster_status)
+
+            self.roster_manager.download_roster_async(progress_callback, completion_callback)
+        else:
+            # Check if roster is old (>30 days)
+            age_str = self.roster_manager.get_roster_age()
+            if age_str and 'days' in age_str:
+                try:
+                    days = int(age_str.split()[0])
+                    if days > 30:
+                        # Roster is old - auto-download in background
+                        def progress_callback(msg):
+                            pass  # Silent background update
+
+                        def completion_callback(success):
+                            self.parent.after(0, self.update_roster_status)
+
+                        self.roster_manager.download_roster_async(progress_callback, completion_callback)
+                except:
+                    pass
