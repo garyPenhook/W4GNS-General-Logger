@@ -123,7 +123,6 @@ class SenatorAward(SKCCAwardBase):
             )
             return False
 
-<<<<<<< HEAD
         # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
         # Check if contacted station was SKCC member at time of QSO
         if not self.roster_manager.was_member_on_date(base_call, qso_date):
