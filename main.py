@@ -296,6 +296,7 @@ https://www.ng3k.com/Misc/cluster.html
         try:
             from datetime import datetime
             import os
+            import shutil
 
             # Get all contacts
             contacts = self.database.get_all_contacts(limit=999999)
@@ -304,21 +305,37 @@ https://www.ng3k.com/Misc/cluster.html
                 return  # Nothing to backup
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"w4gns_log_{timestamp}.adi"
+            adif_filename = f"w4gns_log_{timestamp}.adi"
+            db_filename = f"w4gns_log_{timestamp}.db"
 
             # Always backup to local logs directory
             logs_dir = "logs"
             os.makedirs(logs_dir, exist_ok=True)
-            local_path = os.path.join(logs_dir, filename)
-            export_contacts_to_adif(contacts, local_path)
-            print(f"Backed up {len(contacts)} contacts to {local_path}")
+
+            # Backup ADIF
+            local_adif_path = os.path.join(logs_dir, adif_filename)
+            export_contacts_to_adif(contacts, local_adif_path)
+            print(f"Backed up {len(contacts)} contacts to {local_adif_path}")
+
+            # Backup database
+            local_db_path = os.path.join(logs_dir, db_filename)
+            if os.path.exists(self.database.db_path):
+                shutil.copy2(self.database.db_path, local_db_path)
+                print(f"Backed up database to {local_db_path}")
 
             # Backup to external path if configured
             external_path = self.config.get('backup.external_path', '').strip()
             if external_path and os.path.exists(external_path):
-                external_file = os.path.join(external_path, filename)
-                export_contacts_to_adif(contacts, external_file)
-                print(f"Also backed up to {external_file}")
+                # Backup ADIF to external
+                external_adif_file = os.path.join(external_path, adif_filename)
+                export_contacts_to_adif(contacts, external_adif_file)
+                print(f"Also backed up ADIF to {external_adif_file}")
+
+                # Backup database to external
+                external_db_file = os.path.join(external_path, db_filename)
+                if os.path.exists(self.database.db_path):
+                    shutil.copy2(self.database.db_path, external_db_file)
+                    print(f"Also backed up database to {external_db_file}")
 
         except Exception as e:
             print(f"Error during shutdown backup: {e}")
@@ -332,16 +349,29 @@ https://www.ng3k.com/Misc/cluster.html
                 try:
                     from datetime import datetime
                     import os
+                    import shutil
 
                     contacts = self.database.get_all_contacts(limit=999999)
 
                     if contacts:
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        filename = f"w4gns_log_autosave_{timestamp}.adi"
-                        external_file = os.path.join(external_path, filename)
-                        export_contacts_to_adif(contacts, external_file)
-                        self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
-                        print(f"Auto-save: {len(contacts)} contacts to {external_file}")
+                        adif_filename = f"w4gns_log_autosave_{timestamp}.adi"
+                        db_filename = f"w4gns_log_autosave_{timestamp}.db"
+
+                        # Backup ADIF
+                        external_adif_file = os.path.join(external_path, adif_filename)
+                        export_contacts_to_adif(contacts, external_adif_file)
+
+                        # Backup database
+                        external_db_file = os.path.join(external_path, db_filename)
+                        if os.path.exists(self.database.db_path):
+                            shutil.copy2(self.database.db_path, external_db_file)
+                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts + database to external backup")
+                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
+                            print(f"Auto-save: database to {external_db_file}")
+                        else:
+                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
+                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
 
                 except Exception as e:
                     print(f"Error during auto-save: {e}")
