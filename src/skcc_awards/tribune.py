@@ -6,8 +6,10 @@ who are Centurions, Tribunes, or Senators.
 
 Rules:
 - Must be a Centurion first (100+ unique SKCC members)
-- Contact 50+ Tribunes/Senators (from official list)
+- Contact 50+ Centurions/Tribunes/Senators
 - Both operators must hold Centurion status at time of contact
+- The QSO date must be on or after both participants' Centurion Award date
+- Both parties must be SKCC members at time of contact (QSO date >= join dates)
 - Exchanges must include SKCC numbers
 - QSOs must be CW mode only
 - Mechanical key policy: Contact must use mechanical key (STRAIGHT, BUG, or SIDESWIPER)
@@ -21,7 +23,7 @@ import logging
 from typing import Dict, List, Any, Set
 
 from src.skcc_awards.base import SKCCAwardBase
-from src.utils.skcc_number import extract_base_skcc_number
+from src.utils.skcc_number import extract_base_skcc_number, get_member_type
 from src.skcc_awards.constants import (
     TRIBUNE_ENDORSEMENTS,
     TRIBUNE_EFFECTIVE_DATE,
@@ -30,6 +32,7 @@ from src.skcc_awards.constants import (
     get_endorsement_level,
     get_next_endorsement_threshold
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -45,31 +48,23 @@ class TribuneAward(SKCCAwardBase):
             database: Database instance for contact queries and member list lookups
         """
         super().__init__(name="Tribune", program_id="SKCC_TRIBUNE", database=database)
+        self.roster_manager = get_roster_manager()
 
-        # Cache Tribune and Senator member lists for validation
-        self._load_member_lists()
+        # Get user's critical dates from config
+        self.user_join_date = self._get_user_join_date()
+        self.user_centurion_date = self._get_user_centurion_date()
 
-    def _load_member_lists(self):
-        """Load Tribune and Senator member lists from database"""
-        try:
-            # Get Tribune members
-            cursor = self.database.conn.cursor()
-            cursor.execute("SELECT skcc_number FROM skcc_tribune_members")
-            self._tribune_numbers = {row[0] for row in cursor.fetchall()}
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
-            # Get Senator members
-            cursor.execute("SELECT skcc_number FROM skcc_senator_members")
-            self._senator_numbers = {row[0] for row in cursor.fetchall()}
-
-            # Combined list of valid members
-            self._all_valid_members = self._tribune_numbers | self._senator_numbers
-
-            logger.info(f"Loaded {len(self._tribune_numbers)} Tribune and {len(self._senator_numbers)} Senator members")
-        except Exception as e:
-            logger.warning(f"Could not load member lists: {e}. Tribune/Senator validation disabled.")
-            self._tribune_numbers = set()
-            self._senator_numbers = set()
-            self._all_valid_members = set()
+    def _get_user_centurion_date(self) -> str:
+        """Get user's Centurion achievement date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.centurion_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -81,8 +76,10 @@ class TribuneAward(SKCCAwardBase):
         - Contact date on or after March 1, 2007
         - Mechanical key required (STRAIGHT, BUG, or SIDESWIPER)
         - Club calls and special event calls excluded after October 1, 2008
-        - Remote station must be Tribune/Senator (checked via list if available)
-        - Both operators must hold appropriate SKCC membership at time of contact
+        - Remote station must have Centurion/Tribune/Senator status (C, T, or S suffix)
+        - Both parties must be SKCC members at time of contact
+        - QSO date must be on/after both participants' Centurion Award dates
+        - QSO date must be on/after user's Centurion achievement date
 
         Args:
             contact: Contact record dictionary
@@ -100,14 +97,16 @@ class TribuneAward(SKCCAwardBase):
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
         # Check contact date (must be on/after March 1, 2007)
-        if qso_date and qso_date < TRIBUNE_EFFECTIVE_DATE:
+        if not qso_date or qso_date < TRIBUNE_EFFECTIVE_DATE:
+            logger.debug(f"Contact before Tribune effective date (Mar 1, 2007): {qso_date}")
             return False
 
-        # CRITICAL RULE: Club calls and special event calls don't count after Oct 1, 2008
-        if qso_date and qso_date >= TRIBUNE_SPECIAL_EVENT_CUTOFF:
-            callsign = contact.get('callsign', '').upper().strip()
-            base_call = callsign.split('/')[0] if '/' in callsign else callsign
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
 
+        # CRITICAL RULE: Club calls and special event calls don't count after Oct 1, 2008
+        if qso_date >= TRIBUNE_SPECIAL_EVENT_CUTOFF:
             if base_call in SPECIAL_EVENT_CALLS:
                 logger.debug(
                     f"Special-event call filtered after Oct 1, 2008: {callsign} "
@@ -115,14 +114,61 @@ class TribuneAward(SKCCAwardBase):
                 )
                 return False
 
-        # Remote station must be Tribune/Senator (from member lists if available)
-        # If member lists are not loaded, we accept any SKCC member
-        if self._all_valid_members:
-            skcc_num = contact.get('skcc_number', '')
-            base_number = extract_base_skcc_number(skcc_num)
+        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
 
-            if not base_number or base_number not in self._all_valid_members:
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
+
+        # CRITICAL RULE: Remote station must hold Centurion status (C, T, or S)
+        skcc_num = contact.get('skcc_number', '').strip()
+        if not skcc_num:
+            logger.debug(f"Contact {base_call} missing SKCC number")
+            return False
+
+        # Check if remote station has Centurion/Tribune/Senator designation
+        member_type = get_member_type(skcc_num)
+        if member_type not in ['C', 'T', 'S']:
+            # Also check roster for current status
+            roster_info = self.roster_manager.lookup_callsign(base_call)
+            if roster_info:
+                roster_skcc_num = roster_info.get('skcc_number', '')
+                roster_type = get_member_type(roster_skcc_num)
+                if roster_type not in ['C', 'T', 'S']:
+                    logger.debug(
+                        f"Contact {base_call} not valid: no Centurion/Tribune/Senator "
+                        f"status (SKCC#: {skcc_num}, roster: {roster_skcc_num})"
+                    )
+                    return False
+            else:
+                logger.debug(
+                    f"Contact {base_call} not valid: no Centurion/Tribune/Senator status "
+                    f"and not in roster"
+                )
                 return False
+
+        # CRITICAL RULE: "The QSO date must be on or after both participants' Centurion Award date"
+        # Check user's Centurion achievement date
+        if self.user_centurion_date and qso_date < self.user_centurion_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user Centurion date {self.user_centurion_date}"
+            )
+            return False
+
+        # Note: We cannot verify the contacted station's exact Centurion achievement date
+        # without historical records. We rely on the C/T/S suffix in their SKCC number
+        # or current roster status as evidence they hold/held Centurion status.
 
         return True
 

@@ -82,15 +82,16 @@ class SKCCAwardsTab:
         user_info_frame = ttk.LabelFrame(self.frame, text="Your SKCC Information", padding=10)
         user_info_frame.pack(fill='x', padx=10, pady=5)
 
+        # SKCC Join Date
         join_date_row = ttk.Frame(user_info_frame)
-        join_date_row.pack(fill='x')
+        join_date_row.pack(fill='x', pady=2)
 
-        ttk.Label(join_date_row, text="Your SKCC Join Date:", font=('', 10, 'bold')).pack(side='left')
-        ttk.Label(join_date_row, text="(YYYYMMDD format)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+        ttk.Label(join_date_row, text="SKCC Join Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(join_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
 
         self.join_date_var = tk.StringVar(value=self.config.get('skcc.join_date', ''))
         self.join_date_entry = ttk.Entry(join_date_row, textvariable=self.join_date_var, width=12)
-        self.join_date_entry.pack(side='left', padx=10)
+        self.join_date_entry.pack(side='left', padx=5)
 
         ttk.Button(join_date_row, text="Save",
                   command=self.save_join_date).pack(side='left', padx=5)
@@ -98,10 +99,29 @@ class SKCCAwardsTab:
         self.join_date_status = ttk.Label(join_date_row, text="", font=('', 9))
         self.join_date_status.pack(side='left', padx=10)
 
+        # Centurion Achievement Date
+        centurion_date_row = ttk.Frame(user_info_frame)
+        centurion_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(centurion_date_row, text="Centurion Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(centurion_date_row, text="(YYYYMMDD)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.centurion_date_var = tk.StringVar(value=self.config.get('skcc.centurion_date', ''))
+        self.centurion_date_entry = ttk.Entry(centurion_date_row, textvariable=self.centurion_date_var, width=12)
+        self.centurion_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(centurion_date_row, text="Save",
+                  command=self.save_centurion_date).pack(side='left', padx=5)
+
+        self.centurion_date_status = ttk.Label(centurion_date_row, text="", font=('', 9))
+        self.centurion_date_status.pack(side='left', padx=10)
+
         ttk.Label(user_info_frame,
-                 text="⚠️ Critical: Your join date is required for accurate award tracking. "
-                 "QSOs before your join date will not count toward awards.",
+                 text="⚠️ Critical: Join date required for all awards. Centurion date required for Tribune/Senator.",
                  font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w', pady=(5, 0))
+        ttk.Label(user_info_frame,
+                 text="QSOs before these dates will not count toward respective awards.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w')
 
         # Create notebook for different awards
         self.notebook = ttk.Notebook(self.frame)
@@ -515,6 +535,47 @@ class SKCCAwardsTab:
 
         # Clear status after 3 seconds
         self.parent.after(3000, lambda: self.join_date_status.config(text=""))
+
+    def save_centurion_date(self):
+        """Save user's Centurion achievement date to config"""
+        centurion_date = self.centurion_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if centurion_date and (len(centurion_date) != 8 or not centurion_date.isdigit()):
+            self.centurion_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Validate it's not before join date
+        join_date = self.config.get('skcc.join_date', '')
+        if centurion_date and join_date and centurion_date < join_date:
+            self.centurion_date_status.config(
+                text="❌ Cannot be before join date",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.centurion_date', centurion_date)
+
+        # Update status
+        if centurion_date:
+            self.centurion_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.centurion_date_status.config(
+                text="⚠️ Centurion date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.centurion_date_status.config(text=""))
 
     def update_roster_status(self):
         """Update the roster status label"""
