@@ -8,7 +8,8 @@ from src.skcc_awards import (
     CenturionAward, TribuneAward, SenatorAward,
     TripleKeyAward, RagChewAward, CanadianMapleAward,
     SKCCDXQAward, SKCCDXCAward, PFXAward,
-    SKCCWASAward, SKCCWACAward
+    SKCCWASAward, SKCCWASTAward, SKCCWASSAward, SKCCWACAward,
+    QRPMPWAward, MarathonAward
 )
 from src.skcc_roster import get_roster_manager
 
@@ -30,11 +31,15 @@ class SKCCAwardsTab:
             'senator': SenatorAward(database),
             'triple_key': TripleKeyAward(database),
             'rag_chew': RagChewAward(database),
+            'marathon': MarathonAward(database),
+            'qrp_mpw': QRPMPWAward(database),
             'canadian_maple': CanadianMapleAward(database),
             'dxq': SKCCDXQAward(database),
             'dxc': SKCCDXCAward(database),
             'pfx': PFXAward(database),
             'was': SKCCWASAward(database),
+            'was_t': SKCCWASTAward(database),
+            'was_s': SKCCWASSAward(database),
             'wac': SKCCWACAward(database)
         }
 
@@ -262,6 +267,35 @@ class SKCCAwardsTab:
         self.maple_progress = ttk.Label(maple_frame, text="", font=('', 11, 'bold'))
         self.maple_progress.pack(anchor='w', pady=2)
 
+        # Marathon
+        marathon_frame = ttk.LabelFrame(self.specialty_frame, text="Marathon Award", padding=10)
+        marathon_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(marathon_frame, text="100 QSOs of 60+ minutes each, with different SKCC members",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.marathon_progress = ttk.Label(marathon_frame, text="", font=('', 11, 'bold'))
+        self.marathon_progress.pack(anchor='w', pady=2)
+
+        self.marathon_bar = ttk.Progressbar(marathon_frame, length=400, mode='determinate')
+        self.marathon_bar.pack(fill='x', pady=2)
+
+        self.marathon_details = ttk.Label(marathon_frame, text="", font=('', 9))
+        self.marathon_details.pack(anchor='w')
+
+        # QRP/MPW
+        qrp_mpw_frame = ttk.LabelFrame(self.specialty_frame, text="QRP Miles Per Watt Award", padding=10)
+        qrp_mpw_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(qrp_mpw_frame, text="3 levels: 1,000 MPW, 1,500 MPW, 2,000 MPW (QRP power ≤5W)",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.qrp_mpw_progress = ttk.Label(qrp_mpw_frame, text="", font=('', 11, 'bold'))
+        self.qrp_mpw_progress.pack(anchor='w', pady=2)
+
+        self.qrp_mpw_details = ttk.Label(qrp_mpw_frame, text="", font=('', 9))
+        self.qrp_mpw_details.pack(anchor='w')
+
     def create_geography_awards_display(self):
         """Create display for geography awards (DXQ, DXC, WAS, WAC)"""
         # SKCC WAS
@@ -276,6 +310,32 @@ class SKCCAwardsTab:
 
         self.was_bar = ttk.Progressbar(was_frame, length=400, mode='determinate')
         self.was_bar.pack(fill='x', pady=2)
+
+        # SKCC WAS-T
+        was_t_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAS-T (Tribune/Senator)", padding=10)
+        was_t_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(was_t_frame, text="Contact Tribune OR Senator members in all 50 US states (effective Feb 1, 2016)",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.was_t_progress = ttk.Label(was_t_frame, text="", font=('', 11, 'bold'))
+        self.was_t_progress.pack(anchor='w', pady=2)
+
+        self.was_t_bar = ttk.Progressbar(was_t_frame, length=400, mode='determinate')
+        self.was_t_bar.pack(fill='x', pady=2)
+
+        # SKCC WAS-S
+        was_s_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAS-S (Senator Only)", padding=10)
+        was_s_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(was_s_frame, text="Contact Senator members ONLY in all 50 US states (most restrictive)",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.was_s_progress = ttk.Label(was_s_frame, text="", font=('', 11, 'bold'))
+        self.was_s_progress.pack(anchor='w', pady=2)
+
+        self.was_s_bar = ttk.Progressbar(was_s_frame, length=400, mode='determinate')
+        self.was_s_bar.pack(fill='x', pady=2)
 
         # SKCC WAC
         wac_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAC (Worked All Continents)", padding=10)
@@ -359,6 +419,22 @@ class SKCCAwardsTab:
         # DXC
         dxc_progress = self.awards['dxc'].calculate_progress(contacts_list)
         self.update_dxc_display(dxc_progress)
+
+        # Marathon
+        marathon_progress = self.awards['marathon'].calculate_progress(contacts_list)
+        self.update_marathon_display(marathon_progress)
+
+        # QRP/MPW
+        qrp_mpw_progress = self.awards['qrp_mpw'].calculate_progress(contacts_list)
+        self.update_qrp_mpw_display(qrp_mpw_progress)
+
+        # WAS-T
+        was_t_progress = self.awards['was_t'].calculate_progress(contacts_list)
+        self.update_was_t_display(was_t_progress)
+
+        # WAS-S
+        was_s_progress = self.awards['was_s'].calculate_progress(contacts_list)
+        self.update_was_s_display(was_s_progress)
 
     def update_centurion_display(self, progress):
         """Update Centurion award display"""
@@ -517,6 +593,70 @@ class SKCCAwardsTab:
             text=f"{entities} entities worked (each counts once) - Level: {level}",
             foreground='green' if level != "Not Yet" else 'black'
         )
+
+    def update_marathon_display(self, progress):
+        """Update Marathon award display"""
+        current = progress['current']
+        required = progress['required']
+        pct = progress['progress_pct']
+        total_minutes = progress.get('total_minutes', 0)
+        unique_members = progress.get('unique_members', 0)
+        avg_duration = progress.get('average_duration', 0)
+
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
+        self.marathon_progress.config(
+            text=f"{status} - {current} of {required} marathons ({pct:.1f}%)",
+            foreground='green' if progress['achieved'] else 'black'
+        )
+        self.marathon_bar['value'] = pct
+        self.marathon_details.config(
+            text=f"Total minutes: {total_minutes:,} | Unique members: {unique_members} | Avg duration: {avg_duration:.1f} min"
+        )
+
+    def update_qrp_mpw_display(self, progress):
+        """Update QRP/MPW award display"""
+        max_mpw = progress.get('max_mpw', 0)
+        count_1000 = progress.get('count_1000', 0)
+        count_1500 = progress.get('count_1500', 0)
+        count_2000 = progress.get('count_2000', 0)
+        current_level = progress.get('current_level', 'Not Yet')
+
+        status = "✅ ACHIEVED!" if current_level != "Not Yet" else "In Progress"
+        self.qrp_mpw_progress.config(
+            text=f"{status} - Best: {max_mpw:.1f} MPW - Level: {current_level}",
+            foreground='green' if current_level != "Not Yet" else 'black'
+        )
+        self.qrp_mpw_details.config(
+            text=f"≥1,000 MPW: {count_1000} | ≥1,500 MPW: {count_1500} | ≥2,000 MPW: {count_2000}"
+        )
+
+    def update_was_t_display(self, progress):
+        """Update WAS-T award display"""
+        current = progress['current']
+        required = progress['required']
+        pct = progress['progress_pct']
+        level = progress['level']
+
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
+        self.was_t_progress.config(
+            text=f"{status} - {current} of {required} states ({pct:.1f}%) - {level}",
+            foreground='green' if progress['achieved'] else 'black'
+        )
+        self.was_t_bar['value'] = pct
+
+    def update_was_s_display(self, progress):
+        """Update WAS-S award display"""
+        current = progress['current']
+        required = progress['required']
+        pct = progress['progress_pct']
+        level = progress['level']
+
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
+        self.was_s_progress.config(
+            text=f"{status} - {current} of {required} states ({pct:.1f}%) - {level}",
+            foreground='green' if progress['achieved'] else 'black'
+        )
+        self.was_s_bar['value'] = pct
 
     def get_frame(self):
         """Return the main frame"""
