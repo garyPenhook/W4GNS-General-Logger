@@ -109,30 +109,26 @@ class POTATab:
 
         # Create treeview for spots
         columns = ('Activator', 'Park', 'Location', 'Frequency', 'Mode', 'Band',
-                   'Time', 'Spotter', 'QSOs', 'Comments')
+                   'Spotter', 'Comments')
         self.spots_tree = ttk.Treeview(spots_frame, columns=columns, show='headings', height=20)
 
         # Set column headings and widths
         self.spots_tree.heading('Activator', text='Activator')
-        self.spots_tree.heading('Park', text='Park Reference')
+        self.spots_tree.heading('Park', text='Park')
         self.spots_tree.heading('Location', text='Location')
         self.spots_tree.heading('Frequency', text='Frequency')
         self.spots_tree.heading('Mode', text='Mode')
         self.spots_tree.heading('Band', text='Band')
-        self.spots_tree.heading('Time', text='Spot Time')
         self.spots_tree.heading('Spotter', text='Spotter')
-        self.spots_tree.heading('QSOs', text='QSOs')
         self.spots_tree.heading('Comments', text='Comments')
 
         self.spots_tree.column('Activator', width=100)
-        self.spots_tree.column('Park', width=100)
+        self.spots_tree.column('Park', width=250)
         self.spots_tree.column('Location', width=80)
         self.spots_tree.column('Frequency', width=90)
         self.spots_tree.column('Mode', width=60)
         self.spots_tree.column('Band', width=60)
-        self.spots_tree.column('Time', width=80)
         self.spots_tree.column('Spotter', width=100)
-        self.spots_tree.column('QSOs', width=50)
         self.spots_tree.column('Comments', width=200)
 
         # Scrollbars
@@ -190,25 +186,19 @@ class POTATab:
         filtered_count = 0
         for spot in self.current_spots:
             if self.spot_passes_filters(spot):
-                # Format time
-                spot_time = spot.get('spot_time', '')
-                if 'T' in spot_time:
-                    try:
-                        dt = datetime.fromisoformat(spot_time.replace('Z', '+00:00'))
-                        spot_time = dt.strftime('%H:%M UTC')
-                    except:
-                        pass
+                # Combine park reference and name
+                park_ref = spot.get('park_ref', '')
+                park_name = spot.get('park_name', '')
+                park_display = f"{park_ref} {park_name}" if park_name else park_ref
 
                 self.spots_tree.insert('', 'end', values=(
                     spot.get('activator', ''),
-                    spot.get('park_ref', ''),
+                    park_display,
                     spot.get('location', ''),
                     spot.get('frequency', ''),
                     spot.get('mode', ''),
                     spot.get('band', ''),
-                    spot_time,
                     spot.get('spotter', ''),
-                    spot.get('qso_count', 0),
                     spot.get('comments', '')
                 ))
                 filtered_count += 1
@@ -285,17 +275,18 @@ class POTATab:
         item = self.spots_tree.item(selection[0])
         values = item['values']
 
-        if len(values) >= 10:
+        if len(values) >= 8:
             activator = values[0]
-            park_ref = values[1]
+            park_display = values[1]
             location = values[2]
             frequency = values[3]
             mode = values[4]
             band = values[5]
-            time = values[6]
-            spotter = values[7]
-            qsos = values[8]
-            comments = values[9]
+            spotter = values[6]
+            comments = values[7]
+
+            # Extract park_ref from park_display (first part before space)
+            park_ref = park_display.split()[0] if park_display else ''
 
             # Find full spot details
             spot_details = None
@@ -309,24 +300,34 @@ class POTATab:
             # Build detail message
             details = f"POTA Activator Spot Details\n\n"
             details += f"Activator: {activator}\n"
-            details += f"Park: {park_ref}\n"
+            details += f"Park: {park_display}\n"
 
             if spot_details:
-                park_name = spot_details.get('park_name', '')
-                if park_name:
-                    details += f"Park Name: {park_name}\n"
-
                 grid = spot_details.get('grid', '')
                 if grid:
                     details += f"Grid: {grid}\n"
+
+                # Show spot time
+                spot_time = spot_details.get('spot_time', '')
+                if 'T' in spot_time:
+                    try:
+                        dt = datetime.fromisoformat(spot_time.replace('Z', '+00:00'))
+                        spot_time = dt.strftime('%H:%M UTC')
+                    except:
+                        pass
+                if spot_time:
+                    details += f"Spotted: {spot_time}\n"
+
+                # Show QSO count
+                qso_count = spot_details.get('qso_count', 0)
+                if qso_count:
+                    details += f"QSO Count: {qso_count}\n"
 
             details += f"Location: {location}\n"
             details += f"Frequency: {frequency} MHz\n"
             details += f"Mode: {mode}\n"
             details += f"Band: {band}\n"
-            details += f"Spotted: {time}\n"
             details += f"Spotter: {spotter}\n"
-            details += f"QSO Count: {qsos}\n"
 
             if comments:
                 details += f"Comments: {comments}\n"
