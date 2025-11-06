@@ -173,27 +173,23 @@ class CombinedSpotsTab:
         pota_spots_frame.pack(fill='both', expand=True, padx=5, pady=5)
 
         # Create treeview for POTA spots (compact columns)
-        pota_columns = ('Activator', 'Park', 'Location', 'Freq', 'Mode', 'Band', 'Time', 'QSOs')
+        pota_columns = ('Activator', 'Park', 'Location', 'Freq', 'Mode', 'Band')
         self.pota_spots_tree = ttk.Treeview(pota_spots_frame, columns=pota_columns,
                                            show='headings', height=25)
 
         self.pota_spots_tree.heading('Activator', text='Activator')
-        self.pota_spots_tree.heading('Park', text='Park Ref')
+        self.pota_spots_tree.heading('Park', text='Park')
         self.pota_spots_tree.heading('Location', text='Loc')
         self.pota_spots_tree.heading('Freq', text='Frequency')
         self.pota_spots_tree.heading('Mode', text='Mode')
         self.pota_spots_tree.heading('Band', text='Band')
-        self.pota_spots_tree.heading('Time', text='Time')
-        self.pota_spots_tree.heading('QSOs', text='QSOs')
 
         self.pota_spots_tree.column('Activator', width=90)
-        self.pota_spots_tree.column('Park', width=90)
+        self.pota_spots_tree.column('Park', width=200)
         self.pota_spots_tree.column('Location', width=60)
         self.pota_spots_tree.column('Freq', width=80)
         self.pota_spots_tree.column('Mode', width=50)
         self.pota_spots_tree.column('Band', width=50)
-        self.pota_spots_tree.column('Time', width=70)
-        self.pota_spots_tree.column('QSOs', width=40)
 
         # POTA Scrollbars
         pota_vsb = ttk.Scrollbar(pota_spots_frame, orient='vertical',
@@ -304,24 +300,18 @@ class CombinedSpotsTab:
         # Apply filters and add spots
         for spot in self.current_pota_spots:
             if self.pota_spot_passes_filters(spot):
-                # Format time
-                spot_time = spot.get('spot_time', '')
-                if 'T' in spot_time:
-                    try:
-                        dt = datetime.fromisoformat(spot_time.replace('Z', '+00:00'))
-                        spot_time = dt.strftime('%H:%M')
-                    except:
-                        pass
+                # Combine park reference and name
+                park_ref = spot.get('park_ref', '')
+                park_name = spot.get('park_name', '')
+                park_display = f"{park_ref} {park_name}" if park_name else park_ref
 
                 self.pota_spots_tree.insert('', 'end', values=(
                     spot.get('activator', ''),
-                    spot.get('park_ref', ''),
+                    park_display,
                     spot.get('location', ''),
                     spot.get('frequency', ''),
                     spot.get('mode', ''),
-                    spot.get('band', ''),
-                    spot_time,
-                    spot.get('qso_count', 0)
+                    spot.get('band', '')
                 ))
 
     def pota_spot_passes_filters(self, spot):
@@ -408,23 +398,16 @@ class CombinedSpotsTab:
         item = self.pota_spots_tree.item(selection[0])
         values = item['values']
 
-        if len(values) >= 8:
+        if len(values) >= 6:
             activator = values[0]
-            park_ref = values[1]
+            park_display = values[1]
             location = values[2]
             frequency = values[3]
             mode = values[4]
             band = values[5]
-            time = values[6]
-            qsos = values[7]
 
-            # Find full spot details for park name
-            park_name = ""
-            for spot in self.current_pota_spots:
-                if (spot.get('activator') == activator and
-                    spot.get('park_ref') == park_ref):
-                    park_name = spot.get('park_name', '')
-                    break
+            # Extract park_ref from park_display (first part before space)
+            park_ref = park_display.split()[0] if park_display else ''
 
             # Switch to Log Contacts tab
             if self.notebook:
@@ -436,14 +419,9 @@ class CombinedSpotsTab:
             self.logging_tab.mode_var.set(mode)
             self.logging_tab.band_var.set(band)
 
-            # Add POTA reference and park name to POTA field and notes
+            # Add POTA reference to POTA field and full park info to notes
             self.logging_tab.pota_var.set(park_ref)
-
-            # Build descriptive note
-            pota_note = f"POTA: {park_ref}"
-            if park_name:
-                pota_note += f" ({park_name})"
-            self.logging_tab.notes_var.set(pota_note)
+            self.logging_tab.notes_var.set(f"POTA: {park_display}")
 
             # Trigger callsign lookup (QRZ)
             self.logging_tab.on_callsign_changed()
