@@ -16,6 +16,7 @@ Awards Implemented:
 - QRP MPW: Miles per watt achievement (1,000/1,500/2,000 MPW)
 - SKCC WAS: All 50 US states
 - SKCC WAS-T: All 50 US states (Tribune/Senator only)
+- SKCC WAS-S: All 50 US states (Senator only)
 - SKCC WAC: All 6 continents
 
 All awards enforce:
@@ -40,6 +41,7 @@ from .pfx import PFXAward
 from .qrp_mpw import QRPMPWAward
 from .was import SKCCWASAward
 from .was_t import SKCCWASTAward
+from .was_s import SKCCWASSAward
 from .wac import SKCCWACAward
 
 __all__ = [
@@ -56,5 +58,6 @@ __all__ = [
     'QRPMPWAward',
     'SKCCWASAward',
     'SKCCWASTAward',
+    'SKCCWASSAward',
     'SKCCWACAward',
 ]
