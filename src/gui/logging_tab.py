@@ -17,9 +17,28 @@ class LoggingTab:
 
     def create_widgets(self):
         """Create the logging interface"""
-        # Input frame
-        input_frame = ttk.LabelFrame(self.frame, text="New Contact", padding=10)
-        input_frame.pack(fill='x', padx=10, pady=5)
+        # Top container with two columns
+        top_container = ttk.Frame(self.frame)
+        top_container.pack(fill='both', expand=True, padx=10, pady=5)
+
+        # Left side: Input frame
+        input_frame = ttk.LabelFrame(top_container, text="New Contact", padding=10)
+        input_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
+
+        # Right side: Previous QSOs frame
+        self.previous_qsos_frame = ttk.LabelFrame(top_container, text="Previous QSOs", padding=10)
+        self.previous_qsos_frame.pack(side='right', fill='both', expand=False, padx=(5, 0), ipadx=10)
+
+        # Previous QSOs display (initially empty)
+        self.previous_qsos_text = tk.Text(self.previous_qsos_frame, width=40, height=15,
+                                          font=('Courier', 9), wrap='none', state='disabled')
+        self.previous_qsos_text.pack(fill='both', expand=True)
+
+        # Scrollbar for previous QSOs
+        prev_scrollbar = ttk.Scrollbar(self.previous_qsos_frame, orient='vertical',
+                                       command=self.previous_qsos_text.yview)
+        prev_scrollbar.pack(side='right', fill='y')
+        self.previous_qsos_text.configure(yscrollcommand=prev_scrollbar.set)
 
         # Row 1: Callsign, Date, Time
         row1 = ttk.Frame(input_frame)
@@ -142,6 +161,7 @@ class LoggingTab:
         """
         Callback when callsign entry changes.
         Automatically looks up and fills in SKCC number from previous contacts.
+        Also displays previous QSO history.
         """
         callsign = self.callsign_var.get().strip().upper()
 
@@ -149,6 +169,7 @@ class LoggingTab:
             # Clear SKCC field and status if callsign too short
             self.skcc_number_var.set('')
             self.skcc_status_label.config(text='')
+            self.clear_previous_qsos()
             return
 
         # Lookup SKCC number from previous contacts
@@ -161,6 +182,9 @@ class LoggingTab:
             # Only clear if user hasn't manually entered a number
             if not self.skcc_number_var.get():
                 self.skcc_status_label.config(text='(no previous SKCC #)', foreground='gray')
+
+        # Display previous QSOs
+        self.display_previous_qsos(callsign)
 
     def lookup_skcc_number(self, callsign):
         """
@@ -196,6 +220,76 @@ class LoggingTab:
             print(f"Error looking up SKCC number: {e}")
 
         return None
+
+    def display_previous_qsos(self, callsign):
+        """
+        Display previous QSOs with the entered callsign.
+
+        Args:
+            callsign: Callsign to search for
+        """
+        if not callsign:
+            self.clear_previous_qsos()
+            return
+
+        try:
+            # Get previous QSOs for this callsign
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT date, time_on, band, mode, skcc_number
+                FROM contacts
+                WHERE UPPER(callsign) = ?
+                ORDER BY date DESC, time_on DESC
+                LIMIT 20
+            ''', (callsign.upper(),))
+
+            results = cursor.fetchall()
+
+            # Enable text widget for editing
+            self.previous_qsos_text.config(state='normal')
+            self.previous_qsos_text.delete('1.0', 'end')
+
+            if results:
+                # Header
+                header = f"Previous QSOs with {callsign}\n"
+                header += "=" * 38 + "\n\n"
+                self.previous_qsos_text.insert('end', header, 'header')
+
+                # Display each QSO
+                for row in results:
+                    date_str = row[0] if row[0] else '????-??-??'
+                    time_str = row[1] if row[1] else '??:??'
+                    band_str = (row[2] if row[2] else '???').ljust(5)
+                    mode_str = (row[3] if row[3] else '???').ljust(5)
+                    skcc_str = row[4] if row[4] else 'N/A'
+
+                    # Format line
+                    line = f"{date_str} {time_str}  {band_str} {mode_str}  SKCC: {skcc_str}\n"
+                    self.previous_qsos_text.insert('end', line)
+
+                # Summary
+                summary = f"\nTotal: {len(results)} QSO{'s' if len(results) != 1 else ''}"
+                self.previous_qsos_text.insert('end', summary, 'summary')
+            else:
+                self.previous_qsos_text.insert('end', f"No previous QSOs with {callsign}\n", 'empty')
+
+            # Disable editing
+            self.previous_qsos_text.config(state='disabled')
+
+            # Configure text tags for formatting
+            self.previous_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
+            self.previous_qsos_text.tag_config('summary', font=('Courier', 9, 'italic'), foreground='gray')
+            self.previous_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground='gray')
+
+        except Exception as e:
+            print(f"Error displaying previous QSOs: {e}")
+            self.clear_previous_qsos()
+
+    def clear_previous_qsos(self):
+        """Clear the previous QSOs display."""
+        self.previous_qsos_text.config(state='normal')
+        self.previous_qsos_text.delete('1.0', 'end')
+        self.previous_qsos_text.config(state='disabled')
 
     def log_contact(self):
         """Save contact to database"""
@@ -245,6 +339,7 @@ class LoggingTab:
         self.notes_var.set('')
         self.skcc_number_var.set('')
         self.skcc_status_label.config(text='')
+        self.clear_previous_qsos()
         self.callsign_entry.focus()
 
     def refresh_log(self):
