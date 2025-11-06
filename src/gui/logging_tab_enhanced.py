@@ -9,6 +9,7 @@ import threading
 from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
+from src.skcc_roster import SKCCRosterManager
 
 
 class EnhancedLoggingTab:
@@ -18,6 +19,9 @@ class EnhancedLoggingTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.qrz_session = None
+
+        # SKCC roster manager for member lookup
+        self.skcc_roster = SKCCRosterManager()
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -467,7 +471,15 @@ class EnhancedLoggingTab:
         if self.config.get('logging.warn_duplicates', True):
             self.check_duplicate()
 
-        # Auto-lookup if enabled
+        # Always check SKCC roster for SKCC number (regardless of auto-lookup setting)
+        if len(callsign) >= 3:  # Only lookup if 3+ characters entered
+            skcc_number, source = self.lookup_skcc_number(callsign)
+            if skcc_number:
+                self.skcc_number_var.set(skcc_number)
+                source_text = "SKCC roster" if source == 'roster' else "previous contact"
+                print(f"SKCC #{skcc_number} auto-filled for {callsign} (from {source_text})")
+
+        # Auto-lookup QRZ/DXCC if enabled
         if self.config.get('logging.auto_lookup', True):
             self.lookup_callsign(auto=True)
 
@@ -614,6 +626,54 @@ class EnhancedLoggingTab:
         except Exception as e:
             if not auto:
                 messagebox.showerror("Lookup Error", f"Error looking up callsign: {str(e)}")
+
+        # Always check SKCC roster/database for SKCC number
+        skcc_number, source = self.lookup_skcc_number(callsign)
+        if skcc_number:
+            self.skcc_number_var.set(skcc_number)
+            source_text = "SKCC roster" if source == 'roster' else "previous contact"
+            print(f"SKCC #{skcc_number} found for {callsign} (from {source_text})")
+
+    def lookup_skcc_number(self, callsign):
+        """
+        Look up SKCC number from both roster and previous contacts.
+
+        Args:
+            callsign: Callsign to lookup
+
+        Returns:
+            tuple: (skcc_number, source) where source is 'roster' or 'previous' or None
+        """
+        if not callsign:
+            return None, None
+
+        callsign = callsign.upper()
+
+        # First check SKCC roster
+        member_info = self.skcc_roster.lookup_callsign(callsign)
+        if member_info and member_info.get('skcc'):
+            return member_info['skcc'], 'roster'
+
+        # If not in roster, check previous contacts
+        try:
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT skcc_number
+                FROM contacts
+                WHERE UPPER(callsign) = ?
+                  AND skcc_number IS NOT NULL
+                  AND skcc_number != ''
+                ORDER BY date DESC, time_on DESC
+                LIMIT 1
+            ''', (callsign,))
+
+            result = cursor.fetchone()
+            if result and result[0]:
+                return result[0], 'previous'
+        except Exception as e:
+            print(f"Error looking up SKCC number from database: {e}")
+
+        return None, None
 
     def log_contact(self):
         """Save contact to database"""
