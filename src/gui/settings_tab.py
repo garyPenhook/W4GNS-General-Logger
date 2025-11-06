@@ -5,6 +5,7 @@ Settings Tab - Configuration and preferences
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from src.qrz import test_qrz_login
+from src.theme_colors import get_error_color, get_info_color, get_muted_color
 
 
 class SettingsTab:
@@ -86,7 +87,7 @@ class SettingsTab:
         # Show current theme
         self.current_theme_label = ttk.Label(theme_row,
                                             text=f"(Currently: {current_theme.capitalize()})",
-                                            foreground="blue")
+                                            foreground=get_info_color(self.config))
         self.current_theme_label.pack(side='left', padx=5)
 
         # QRZ.com Integration
@@ -118,7 +119,7 @@ class SettingsTab:
         ttk.Entry(qrz_row3, textvariable=self.qrz_apikey_var, width=40).pack(side='left', padx=5)
 
         ttk.Label(qrz_frame, text="(Get your API key from QRZ.com Logbook settings)",
-                 font=('', 8), foreground='gray').pack(anchor='w', pady=2)
+                 font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w', pady=2)
 
         self.qrz_auto_upload_var = tk.BooleanVar(value=self.config.get('qrz.auto_upload', False))
         ttk.Checkbutton(qrz_frame, text="Automatically upload contacts to QRZ Logbook after logging",
@@ -160,7 +161,7 @@ class SettingsTab:
                        variable=self.auto_backup_var).pack(anchor='w', pady=2)
 
         ttk.Label(backup_frame, text="Local logs are always saved to: ./logs/",
-                 font=('', 8), foreground='gray').pack(anchor='w', pady=(0, 10))
+                 font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w', pady=(0, 10))
 
         # External backup path
         external_frame = ttk.Frame(backup_frame)
@@ -177,7 +178,7 @@ class SettingsTab:
         ttk.Button(path_row, text="Browse...", command=self.browse_backup_path).pack(side='left')
 
         ttk.Label(external_frame, text="(Leave blank to disable external backup, e.g., USB: /media/usb/ham_logs)",
-                 font=('', 8), foreground='gray').pack(anchor='w')
+                 font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w')
 
         self.auto_save_var = tk.BooleanVar(value=self.config.get('backup.auto_save', False))
         auto_save_check = ttk.Checkbutton(backup_frame, text="Enable auto-save to external path",
@@ -203,7 +204,7 @@ class SettingsTab:
         ttk.Button(backup_buttons_frame, text="Restore Database", command=self.restore_database).pack(side='left', padx=5)
 
         ttk.Label(backup_frame, text="Restore will replace current database with a backup file",
-                 font=('', 8), foreground='red').pack(anchor='w', pady=(0, 5))
+                 font=('', 8), foreground=get_error_color(self.config)).pack(anchor='w', pady=(0, 5))
 
         # DX Cluster Settings
         cluster_frame = ttk.LabelFrame(scrollable_frame, text="DX Cluster Preferences", padding=10)
