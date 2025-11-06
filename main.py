@@ -298,6 +298,11 @@ https://www.ng3k.com/Misc/cluster.html
             import os
             import shutil
 
+            # Check if database connection is still open
+            if not self.database or not self.database.conn:
+                print("Database connection is closed, skipping shutdown backup")
+                return
+
             # Get all contacts
             contacts = self.database.get_all_contacts(limit=999999)
 

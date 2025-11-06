@@ -558,8 +558,13 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
                 "Restore Complete",
                 f"Database restored successfully!\n\n"
                 f"Your previous database was backed up to:\n{backup_current}\n\n"
-                f"⚠️ You MUST restart the application now for changes to take effect."
+                f"⚠️ The application will now close.\n"
+                f"Please restart it to use the restored database."
             )
+
+            # Close the application to prevent operating on a closed database
+            root = self.parent.winfo_toplevel()
+            root.destroy()  # This will close the application cleanly
 
         except Exception as e:
             messagebox.showerror("Restore Failed", f"Error during restore:\n{str(e)}")
