@@ -78,6 +78,31 @@ class SKCCAwardsTab:
                  text="The membership roster is used to identify SKCC members and their numbers for award tracking.",
                  font=('', 9, 'italic'), foreground='gray').pack(anchor='w', pady=(5, 0))
 
+        # User's SKCC Join Date section
+        user_info_frame = ttk.LabelFrame(self.frame, text="Your SKCC Information", padding=10)
+        user_info_frame.pack(fill='x', padx=10, pady=5)
+
+        join_date_row = ttk.Frame(user_info_frame)
+        join_date_row.pack(fill='x')
+
+        ttk.Label(join_date_row, text="Your SKCC Join Date:", font=('', 10, 'bold')).pack(side='left')
+        ttk.Label(join_date_row, text="(YYYYMMDD format)", font=('', 9), foreground='gray').pack(side='left', padx=5)
+
+        self.join_date_var = tk.StringVar(value=self.config.get('skcc.join_date', ''))
+        self.join_date_entry = ttk.Entry(join_date_row, textvariable=self.join_date_var, width=12)
+        self.join_date_entry.pack(side='left', padx=10)
+
+        ttk.Button(join_date_row, text="Save",
+                  command=self.save_join_date).pack(side='left', padx=5)
+
+        self.join_date_status = ttk.Label(join_date_row, text="", font=('', 9))
+        self.join_date_status.pack(side='left', padx=10)
+
+        ttk.Label(user_info_frame,
+                 text="⚠️ Critical: Your join date is required for accurate award tracking. "
+                 "QSOs before your join date will not count toward awards.",
+                 font=('', 9, 'italic'), foreground='darkorange').pack(anchor='w', pady=(5, 0))
+
         # Create notebook for different awards
         self.notebook = ttk.Notebook(self.frame)
         self.notebook.pack(fill='both', expand=True, padx=10, pady=5)
@@ -458,6 +483,38 @@ class SKCCAwardsTab:
         return self.frame
 
     # SKCC Roster Management Methods
+
+    def save_join_date(self):
+        """Save user's SKCC join date to config"""
+        join_date = self.join_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if join_date and (len(join_date) != 8 or not join_date.isdigit()):
+            self.join_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground='red'
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.join_date', join_date)
+
+        # Update status
+        if join_date:
+            self.join_date_status.config(
+                text="✅ Saved",
+                foreground='green'
+            )
+            # Refresh awards to apply new validation
+            self.refresh_awards()
+        else:
+            self.join_date_status.config(
+                text="⚠️ Join date cleared",
+                foreground='orange'
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.join_date_status.config(text=""))
 
     def update_roster_status(self):
         """Update the roster status label"""

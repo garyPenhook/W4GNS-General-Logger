@@ -100,23 +100,39 @@ class SKCCRosterManager:
         members = []
 
         # Extract table rows using regex (works without BeautifulSoup)
-        # Pattern matches: <tr>...</tr> containing member data
-        tr_pattern = re.compile(r'<tr>\s*<td class="right">(\d+[CTS]?)</td>\s*<td class="left">([^<]+)</td>\s*<td class="left">([^<]*)</td>\s*<td class="left">([^<]*)</td>\s*<td class="left">([^<]*)</td>\s*<td class="right">(\d+)</td>', re.DOTALL)
+        # Pattern matches: <tr>...</tr> containing member data including join date
+        # Format: SKCC#, Call, Name, City, SPC, DXCC, Member Date, Other Calls
+        tr_pattern = re.compile(
+            r'<tr>\s*'
+            r'<td class="right">(\d+[CTS]?)</td>\s*'  # SKCC number
+            r'<td class="left">([^<]+)</td>\s*'  # Call
+            r'<td class="left">([^<]*)</td>\s*'  # Name
+            r'<td class="left">([^<]*)</td>\s*'  # City
+            r'<td class="left">([^<]*)</td>\s*'  # SPC
+            r'<td class="right">(\d+)</td>\s*'  # DXCC
+            r'<td class="right[^"]*">([^<]+)</td>',  # Member Date (e.g., "2-Jan-2006")
+            re.DOTALL
+        )
 
         matches = tr_pattern.findall(html_content)
 
         for match in matches:
-            skcc_num, call, name, city, spc, dxcc = match
+            skcc_num, call, name, city, spc, dxcc, member_date = match
 
             # Clean up the data
             call = call.strip()
             name = name.strip()
             city = city.strip()
             spc = spc.strip()
+            member_date = member_date.strip()
 
             # Skip silent keys (SK in callsign)
             if '/SK' in call.upper():
                 continue
+
+            # Parse member date to YYYYMMDD format for easy comparison
+            # Input format: "2-Jan-2006" or "15-Dec-2023"
+            join_date_yyyymmdd = self._parse_member_date(member_date)
 
             members.append({
                 'skcc_number': skcc_num.strip(),
@@ -124,10 +140,35 @@ class SKCCRosterManager:
                 'name': name,
                 'city': city,
                 'spc': spc,
-                'dxcc': dxcc.strip()
+                'dxcc': dxcc.strip(),
+                'join_date': join_date_yyyymmdd  # YYYYMMDD format
             })
 
         return members
+
+    def _parse_member_date(self, date_str: str) -> str:
+        """
+        Parse SKCC member date to YYYYMMDD format.
+
+        Args:
+            date_str: Date string like "2-Jan-2006" or "15-Dec-2023"
+
+        Returns:
+            Date in YYYYMMDD format, or empty string if parse fails
+        """
+        try:
+            from datetime import datetime
+            # Parse formats like "2-Jan-2006"
+            dt = datetime.strptime(date_str, "%d-%b-%Y")
+            return dt.strftime("%Y%m%d")
+        except:
+            try:
+                # Try alternate format
+                dt = datetime.strptime(date_str, "%d-%B-%Y")
+                return dt.strftime("%Y%m%d")
+            except:
+                # Return empty if can't parse
+                return ""
 
     def _save_roster_to_csv(self, members: List[Dict]):
         """Save roster to CSV file"""
@@ -137,7 +178,7 @@ class SKCCRosterManager:
         # Write CSV file
         with open(self.ROSTER_FILE, 'w', newline='', encoding='utf-8') as f:
             if members:
-                fieldnames = ['skcc_number', 'call', 'name', 'city', 'spc', 'dxcc']
+                fieldnames = ['skcc_number', 'call', 'name', 'city', 'spc', 'dxcc', 'join_date']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(members)
@@ -200,6 +241,40 @@ class SKCCRosterManager:
         """
         member = self.lookup_callsign(callsign)
         return member['skcc_number'] if member else None
+
+    def get_join_date(self, callsign: str) -> Optional[str]:
+        """
+        Get SKCC join date for a callsign.
+
+        Args:
+            callsign: Callsign to look up
+
+        Returns:
+            Join date in YYYYMMDD format or None if not found
+        """
+        member = self.lookup_callsign(callsign)
+        return member.get('join_date') if member else None
+
+    def was_member_on_date(self, callsign: str, qso_date: str) -> bool:
+        """
+        Check if a callsign was an SKCC member on a specific date.
+
+        Args:
+            callsign: Callsign to check
+            qso_date: QSO date in YYYYMMDD format
+
+        Returns:
+            True if callsign was a member on that date (join_date <= qso_date)
+        """
+        join_date = self.get_join_date(callsign)
+        if not join_date or not qso_date:
+            return False
+
+        # Normalize dates to YYYYMMDD format (remove hyphens)
+        qso_date_norm = qso_date.replace('-', '')
+        join_date_norm = join_date.replace('-', '')
+
+        return join_date_norm <= qso_date_norm
 
     def get_member_count(self) -> int:
         """Get total number of members in roster"""
