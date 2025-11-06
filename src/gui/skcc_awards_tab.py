@@ -54,6 +54,8 @@ class SKCCAwardsTab:
         ttk.Label(header_frame, text="(Straight Key Century Club)",
                  font=('', 10), foreground='gray').pack(side='left', padx=10)
 
+        ttk.Button(header_frame, text="🔍 Run Diagnostic",
+                  command=self.run_diagnostic).pack(side='right', padx=2)
         ttk.Button(header_frame, text="Refresh Awards",
                   command=self.refresh_awards).pack(side='right', padx=5)
 
@@ -566,6 +568,106 @@ class SKCCAwardsTab:
             foreground='green' if progress['achieved'] else 'black'
         )
         self.was_s_bar['value'] = pct
+
+    def run_diagnostic(self):
+        """Run SKCC awards diagnostic to identify configuration issues"""
+        # Analyze configuration
+        join_date = self.config.get('skcc.join_date', '')
+        centurion_date = self.config.get('skcc.centurion_date', '')
+        tribune_x8_date = self.config.get('skcc.tribune_x8_date', '')
+
+        # Analyze contacts
+        contacts = self.database.get_all_contacts(limit=999999)
+        contacts_list = list(contacts)
+        total_contacts = len(contacts_list)
+
+        cw_contacts = 0
+        skcc_contacts = 0
+        key_type_contacts = 0
+
+        for contact in contacts_list:
+            if contact['mode'] and contact['mode'].upper() == 'CW':
+                cw_contacts += 1
+            if contact['skcc_number'] and contact['skcc_number'].strip():
+                skcc_contacts += 1
+            if contact['key_type'] and contact['key_type'].strip():
+                key_type_contacts += 1
+
+        # Build diagnostic message
+        report = "SKCC AWARDS DIAGNOSTIC\n" + "="*60 + "\n\n"
+
+        report += "CONFIGURATION:\n" + "-"*60 + "\n"
+        if join_date:
+            report += f"✓ SKCC Join Date: {join_date}\n"
+        else:
+            report += "❌ SKCC Join Date: NOT SET (CRITICAL!)\n"
+
+        if centurion_date:
+            report += f"✓ Centurion Date: {centurion_date}\n"
+        else:
+            report += "⚪ Centurion Date: NOT SET\n"
+
+        if tribune_x8_date:
+            report += f"✓ Tribune x8 Date: {tribune_x8_date}\n"
+        else:
+            report += "⚪ Tribune x8 Date: NOT SET\n"
+
+        report += f"\nCONTACT DATA:\n" + "-"*60 + "\n"
+        report += f"Total contacts: {total_contacts:,}\n"
+        if total_contacts > 0:
+            report += f"CW contacts: {cw_contacts:,} ({cw_contacts/total_contacts*100:.1f}%)\n"
+            report += f"With SKCC numbers: {skcc_contacts:,} ({skcc_contacts/total_contacts*100:.1f}%)\n"
+            report += f"With key types: {key_type_contacts:,} ({key_type_contacts/total_contacts*100:.1f}%)\n"
+
+        # Identify issues and recommendations
+        issues = []
+        fixes = []
+
+        if not join_date:
+            issues.append("SKCC Join Date is NOT SET")
+            fixes.append(
+                "1. Enter your SKCC Join Date below\n"
+                "   Format: YYYYMMDD (e.g., 20200315)\n"
+                "   Click 'Save' then 'Refresh Awards'"
+            )
+
+        if not centurion_date:
+            issues.append("Centurion Date is NOT SET")
+            fixes.append(
+                "2. Enter your Centurion Date below\n"
+                "   (When you reached 100 members)\n"
+                "   Click 'Save' then 'Refresh Awards'"
+            )
+
+        if total_contacts > 0 and skcc_contacts == 0:
+            issues.append("No SKCC numbers in contacts")
+            fixes.append(
+                "3. Your contacts are missing SKCC numbers\n"
+                "   Check ADIF export includes SKCC data"
+            )
+
+        if total_contacts > 0 and key_type_contacts == 0:
+            issues.append("No key types in contacts")
+            fixes.append(
+                "4. Contacts need key type data\n"
+                "   (STRAIGHT, BUG, SIDESWIPER)"
+            )
+
+        if issues:
+            report += f"\nISSUES FOUND:\n" + "-"*60 + "\n"
+            for i, issue in enumerate(issues, 1):
+                report += f"{i}. {issue}\n"
+
+            report += f"\nHOW TO FIX:\n" + "-"*60 + "\n"
+            for fix in fixes:
+                report += f"\n{fix}\n"
+
+            # Show error dialog
+            messagebox.showwarning("SKCC Awards Diagnostic", report)
+        else:
+            report += f"\n✅ Configuration looks good!\n"
+            report += f"\nIf awards still don't show, click 'Refresh Awards'."
+            messagebox.showinfo("SKCC Awards Diagnostic", report)
 
     def get_frame(self):
         """Return the main frame"""
