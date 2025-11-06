@@ -130,6 +130,7 @@ class ADIFGenerator:
         field_map = {
             'callsign': 'CALL',
             'date': 'QSO_DATE',
+            'qso_date': 'QSO_DATE',  # Support both field names
             'time_on': 'TIME_ON',
             'time_off': 'TIME_OFF',
             'frequency': 'FREQ',
@@ -138,6 +139,7 @@ class ADIFGenerator:
             'rst_sent': 'RST_SENT',
             'rst_rcvd': 'RST_RCVD',
             'power': 'TX_PWR',
+            'power_watts': 'TX_PWR',  # Support alternate field name
             'name': 'NAME',
             'qth': 'QTH',
             'gridsquare': 'GRIDSQUARE',
@@ -148,12 +150,19 @@ class ADIFGenerator:
             'cq_zone': 'CQZ',
             'itu_zone': 'ITUZ',
             'dxcc': 'DXCC',
+            'dxcc_entity': 'DXCC',  # Support alternate field name
             'iota': 'IOTA',
             'sota': 'SOTA_REF',
             'pota': 'POTA_REF',
             'my_gridsquare': 'MY_GRIDSQUARE',
             'comment': 'COMMENT',
-            'notes': 'NOTES'
+            'comments': 'COMMENT',  # Support alternate field name
+            'notes': 'NOTES',
+            # SKCC-specific fields (user-defined ADIF fields)
+            'skcc_number': 'APP_SKCC_NUMBER',
+            'key_type': 'APP_SKCC_KEY_TYPE',
+            'duration_minutes': 'APP_SKCC_DURATION',
+            'distance_miles': 'APP_SKCC_DISTANCE'
         }
 
         for db_field, adif_field in field_map.items():
