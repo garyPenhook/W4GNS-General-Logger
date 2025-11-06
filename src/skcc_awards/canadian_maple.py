@@ -11,7 +11,8 @@ Rules:
 - CW mode exclusively
 - Mechanical key policy: STRAIGHT, BUG, or SIDESWIPER required
 - Remote station must be in Canada
-- Both operators must have SKCC membership
+- Both operators must have SKCC membership at time of contact
+- QSO dates must match or exceed both participants' SKCC join dates
 - Valid HF bands: 160M, 80M, 60M, 40M, 30M, 20M, 17M, 15M, 12M, 10M
 - 9 main HF bands for Red/Gold: 160M, 80M, 40M, 30M, 20M, 17M, 15M, 12M, 10M
 - Provinces valid from September 1, 2009
@@ -31,6 +32,7 @@ from src.skcc_awards.constants import (
     CANADIAN_PROVINCES_EFFECTIVE_DATE,
     CANADIAN_TERRITORIES_EFFECTIVE_DATE
 )
+from src.skcc_roster import get_roster_manager
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +57,19 @@ class CanadianMapleAward(SKCCAwardBase):
             database: Database instance for contact queries
         """
         super().__init__(name="Canadian Maple", program_id="SKCC_CANADIAN_MAPLE", database=database)
+        self.roster_manager = get_roster_manager()
+
+        # Get user's SKCC join date from config
+        self.user_join_date = self._get_user_join_date()
 
         # All valid provinces and territories
         self._all_locations = CANADIAN_PROVINCES | CANADIAN_TERRITORIES
+
+    def _get_user_join_date(self) -> str:
+        """Get user's SKCC join date from config (YYYYMMDD format)"""
+        if hasattr(self.database, 'config'):
+            return self.database.config.get('skcc.join_date', '')
+        return ''
 
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
@@ -70,7 +82,8 @@ class CanadianMapleAward(SKCCAwardBase):
         - Remote station in Canada
         - Province contacts valid from September 1, 2009
         - Territory contacts valid from January 1, 2014
-        - Both operators must have SKCC membership
+        - Both operators must be SKCC members at time of contact
+        - QSO dates must match or exceed both participants' SKCC join dates
 
         Args:
             contact: Contact record dictionary
@@ -87,24 +100,54 @@ class CanadianMapleAward(SKCCAwardBase):
         if qso_date:
             qso_date = qso_date.replace('-', '')  # Normalize YYYY-MM-DD to YYYYMMDD
 
+        # Get callsign (remove portable/suffix indicators)
+        callsign = contact.get('callsign', '').upper().strip()
+        base_call = callsign.split('/')[0] if '/' in callsign else callsign
+
         # Get province/territory
         location = self._extract_location(contact)
         if not location:
+            logger.debug(f"Contact {base_call}: no Canadian province/territory identified")
             return False
 
         # Check date validity based on location type
         if location in CANADIAN_PROVINCES:
-            if qso_date and qso_date < CANADIAN_PROVINCES_EFFECTIVE_DATE:
+            if not qso_date or qso_date < CANADIAN_PROVINCES_EFFECTIVE_DATE:
+                logger.debug(
+                    f"Contact {base_call}: province contact before Sept 1, 2009 "
+                    f"(date: {qso_date})"
+                )
                 return False
         elif location in CANADIAN_TERRITORIES:
-            if qso_date and qso_date < CANADIAN_TERRITORIES_EFFECTIVE_DATE:
+            if not qso_date or qso_date < CANADIAN_TERRITORIES_EFFECTIVE_DATE:
+                logger.debug(
+                    f"Contact {base_call}: territory contact before Jan 1, 2014 "
+                    f"(date: {qso_date})"
+                )
                 return False
+
+        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
+        # Check if contacted station was SKCC member at time of QSO
+        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+            logger.debug(
+                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
 
         # Verify valid SKCC number
         skcc_num = contact.get('skcc_number', '').strip()
         if skcc_num:
             base_number = extract_base_skcc_number(skcc_num)
             if not base_number or not base_number.isdigit():
+                logger.debug(f"Contact {base_call}: invalid SKCC number format: {skcc_num}")
                 return False
 
         return True
