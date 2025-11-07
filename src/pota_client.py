@@ -5,6 +5,7 @@ Fetches activator spots from the POTA API
 
 import requests
 import logging
+import time
 from datetime import datetime
 
 
@@ -46,14 +47,35 @@ class POTAClient:
                 - count: Number of QSOs
                 - expire: Time until expiration in seconds
         """
+        # Retry configuration
+        max_retries = 3
+        retry_delays = [2, 4, 8]  # Exponential backoff in seconds
+
+        for attempt in range(max_retries):
+            try:
+                url = f"{self.BASE_URL}{self.SPOTS_ENDPOINT}"
+                # Increased timeout to 30 seconds
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+
+                spots = response.json()
+                break  # Success, exit retry loop
+
+            except requests.exceptions.Timeout as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    logger.warning(f"POTA API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"Error fetching POTA spots after {max_retries} attempts: {e}")
+                    return []
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error fetching POTA spots: {e}")
+                return []
+
+        # Parse and enrich spot data
         try:
-            url = f"{self.BASE_URL}{self.SPOTS_ENDPOINT}"
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
-
-            spots = response.json()
-
-            # Parse and enrich spot data
             processed_spots = []
             for spot in spots:
                 # Convert frequency to MHz for consistency
@@ -90,9 +112,6 @@ class POTAClient:
             logger.info(f"Retrieved {len(processed_spots)} POTA spots")
             return processed_spots
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching POTA spots: {e}")
-            return []
         except Exception as e:
             logger.error(f"Error processing POTA spots: {e}")
             return []
