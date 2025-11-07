@@ -32,6 +32,20 @@ class DXClusterTab:
         self.create_widgets()
         self.update_timer()
 
+        # Auto-connect if enabled
+        if self.config.get('dx_cluster.auto_connect', False):
+            # Delay connection until after main loop is running to avoid issues
+            self.parent.after(500, self.auto_connect_on_startup)
+
+    def auto_connect_on_startup(self):
+        """Automatically connect to cluster on startup if enabled"""
+        callsign = self.user_callsign_var.get().strip()
+        if callsign and self.cluster_var.get():
+            print("Auto-connecting to DX cluster...")
+            self.connect()
+        else:
+            print("Auto-connect skipped: missing callsign or cluster selection")
+
     def create_widgets(self):
         """Create the DX cluster interface"""
 
