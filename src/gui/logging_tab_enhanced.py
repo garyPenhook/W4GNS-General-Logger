@@ -674,8 +674,8 @@ class EnhancedLoggingTab:
 
         # First check SKCC roster
         member_info = self.skcc_roster.lookup_callsign(callsign)
-        if member_info and member_info.get('skcc'):
-            return member_info['skcc'], 'roster'
+        if member_info and member_info.get('skcc_number'):
+            return member_info['skcc_number'], 'roster'
 
         # If not in roster, check previous contacts
         try:
