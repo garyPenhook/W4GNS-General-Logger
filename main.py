@@ -189,7 +189,7 @@ class W4GNSLogger:
             return
 
         # Ask user for save location
-        from datetime import datetime
+        from datetime import datetime, timezone
         default_filename = f"skcc_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.adi"
 
         filename = filedialog.asksaveasfilename(
@@ -221,7 +221,7 @@ class W4GNSLogger:
                     f.write(f"Callsign: {user_callsign}\n")
                 if user_skcc:
                     f.write(f"SKCC Nr.: {user_skcc}\n")
-                f.write(f"Log Created: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}Z\n")
+                f.write(f"Log Created: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}Z\n")
                 f.write(f"Record Count: {len(contacts)}\n")
                 f.write(f"Log Filename: {filename}\n\n")
                 f.write("<EOH>\n\n")
@@ -484,7 +484,6 @@ https://www.ng3k.com/Misc/cluster.html
         """Backup log to local and external locations on shutdown"""
         try:
             from datetime import datetime
-            import os
             import shutil
 
             # Check if database connection is still open
@@ -542,7 +541,6 @@ https://www.ng3k.com/Misc/cluster.html
             if external_path and os.path.exists(external_path):
                 try:
                     from datetime import datetime
-                    import os
                     import shutil
 
                     contacts = self.database.get_all_contacts(limit=999999)
