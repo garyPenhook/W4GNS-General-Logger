@@ -392,17 +392,6 @@ class EnhancedLoggingTab:
             var = tk.BooleanVar(value=(mode == 'CW'))
             self.pota_mode_filters[mode] = var
 
-        # Location filter
-        loc_row = ttk.Frame(pota_filter)
-        loc_row.pack(fill='x', pady=2)
-
-        ttk.Label(loc_row, text="Location:").pack(side='left', padx=2)
-        # Load saved location filter
-        saved_location = self.config.get('pota_filter.location', '')
-        self.location_filter_var = tk.StringVar(value=saved_location)
-        self.location_filter_var.trace('w', lambda *args: self.save_and_apply_pota_filters())
-        ttk.Entry(loc_row, textvariable=self.location_filter_var, width=15).pack(side='left', padx=2)
-
         # POTA Spots display
         pota_spots_frame = ttk.Frame(pota_panel)
         pota_spots_frame.pack(fill='both', expand=True, padx=5, pady=5)
@@ -1051,9 +1040,6 @@ class EnhancedLoggingTab:
         # Save mode filters
         for mode, var in self.pota_mode_filters.items():
             self.config.set(f'pota_filter.mode.{mode}', var.get())
-
-        # Save location filter
-        self.config.set('pota_filter.location', self.location_filter_var.get())
 
         self.apply_pota_filters()
 
