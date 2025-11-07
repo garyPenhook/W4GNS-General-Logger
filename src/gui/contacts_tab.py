@@ -12,10 +12,44 @@ class ContactsTab:
         self.database = database
         self.config = config
         self.frame = ttk.Frame(parent)
+        self.all_contacts = []  # Store all contacts for filtering
         self.create_widgets()
 
     def create_widgets(self):
         """Create the contacts log interface"""
+
+        # Search/Filter frame
+        search_frame = ttk.LabelFrame(self.frame, text="Search Contacts", padding=10)
+        search_frame.pack(fill='x', padx=10, pady=5)
+
+        # Search controls row
+        search_row = ttk.Frame(search_frame)
+        search_row.pack(fill='x', pady=2)
+
+        # Callsign search
+        ttk.Label(search_row, text="Callsign:", width=10).pack(side='left', padx=2)
+        self.callsign_search_var = tk.StringVar()
+        self.callsign_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row, textvariable=self.callsign_search_var, width=15).pack(side='left', padx=5)
+
+        # Prefix search
+        ttk.Label(search_row, text="Prefix:", width=8).pack(side='left', padx=2)
+        self.prefix_search_var = tk.StringVar()
+        self.prefix_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row, textvariable=self.prefix_search_var, width=10).pack(side='left', padx=5)
+
+        # Country search
+        ttk.Label(search_row, text="Country:", width=8).pack(side='left', padx=2)
+        self.country_search_var = tk.StringVar()
+        self.country_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row, textvariable=self.country_search_var, width=20).pack(side='left', padx=5)
+
+        # Clear search button
+        ttk.Button(search_row, text="Clear Search", command=self.clear_search).pack(side='left', padx=10)
+
+        # Results count label
+        self.results_label = ttk.Label(search_row, text="", font=('', 9))
+        self.results_label.pack(side='left', padx=10)
 
         # Log display frame
         log_frame = ttk.LabelFrame(self.frame, text="Contact Log", padding=10)
@@ -49,17 +83,48 @@ class ContactsTab:
         self.refresh_log()
 
     def refresh_log(self):
-        """Refresh the contact log display"""
+        """Refresh the contact log display - load all contacts"""
+        # Get all contacts (no limit)
+        contacts = self.database.get_all_contacts(limit=999999)
+        self.all_contacts = list(contacts)
+
+        # Apply current search filters
+        self.apply_search()
+
+    def apply_search(self):
+        """Apply search filters and update display"""
         # Clear existing items
         for item in self.log_tree.get_children():
             self.log_tree.delete(item)
 
-        # Get recent contacts
-        contacts = self.database.get_all_contacts(limit=100)
+        # Get search criteria
+        callsign_search = self.callsign_search_var.get().strip().upper()
+        prefix_search = self.prefix_search_var.get().strip().upper()
+        country_search = self.country_search_var.get().strip().upper()
 
-        # Add to treeview
-        for contact in contacts:
-            self.log_tree.insert('', 0, values=(
+        # Filter contacts
+        filtered_contacts = []
+        for contact in self.all_contacts:
+            callsign = contact.get('callsign', '').upper()
+            country = contact.get('country', '').upper()
+
+            # Callsign filter (partial match)
+            if callsign_search and callsign_search not in callsign:
+                continue
+
+            # Prefix filter (starts with)
+            if prefix_search and not callsign.startswith(prefix_search):
+                continue
+
+            # Country filter (partial match)
+            if country_search and country_search not in country:
+                continue
+
+            filtered_contacts.append(contact)
+
+        # Add filtered contacts to treeview (most recent first)
+        for contact in filtered_contacts:
+            self.log_tree.insert('', 'end', values=(
                 contact.get('callsign', ''),
                 contact.get('date', ''),
                 contact.get('time_on', ''),
@@ -70,6 +135,21 @@ class ContactsTab:
                 contact.get('country', ''),
                 contact.get('gridsquare', '')
             ))
+
+        # Update results label
+        total = len(self.all_contacts)
+        shown = len(filtered_contacts)
+        if callsign_search or prefix_search or country_search:
+            self.results_label.config(text=f"Showing {shown} of {total} contacts")
+        else:
+            self.results_label.config(text=f"Total: {total} contacts")
+
+    def clear_search(self):
+        """Clear all search filters"""
+        self.callsign_search_var.set('')
+        self.prefix_search_var.set('')
+        self.country_search_var.set('')
+        # apply_search() will be called automatically via trace
 
     def get_frame(self):
         """Return the frame widget"""
