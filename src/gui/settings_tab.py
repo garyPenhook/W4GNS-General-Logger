@@ -548,12 +548,13 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
             self.auto_save_var.set(False)
 
     def backup_now(self):
-        """Manually trigger a backup"""
+        """Manually trigger a backup of both database and ADIF export"""
         try:
             # Import here to avoid circular dependency
             from src.adif import export_contacts_to_adif
             from datetime import datetime
             import os
+            import shutil
 
             # Check if database is available
             if not self.database:
@@ -568,22 +569,37 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
                 return
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"w4gns_log_{timestamp}.adi"
+            db_filename = f"w4gns_log_{timestamp}.db"
+            adif_filename = f"w4gns_log_{timestamp}.adi"
 
             # Backup to local logs directory
             logs_dir = "logs"
             os.makedirs(logs_dir, exist_ok=True)
-            local_path = os.path.join(logs_dir, filename)
-            export_contacts_to_adif(contacts, local_path)
 
-            backup_message = f"Backed up {len(contacts)} contacts to:\n{local_path}"
+            # Backup database file
+            local_db_path = os.path.join(logs_dir, db_filename)
+            shutil.copy2(self.database.db_path, local_db_path)
+
+            # Export to ADIF
+            local_adif_path = os.path.join(logs_dir, adif_filename)
+            export_contacts_to_adif(contacts, local_adif_path)
+
+            backup_message = f"Backed up {len(contacts)} contacts:\n\n"
+            backup_message += f"Database: {local_db_path}\n"
+            backup_message += f"ADIF: {local_adif_path}"
 
             # Backup to external path if configured
             external_path = self.backup_path_var.get().strip()
             if external_path and os.path.exists(external_path):
-                external_file = os.path.join(external_path, filename)
-                export_contacts_to_adif(contacts, external_file)
-                backup_message += f"\n\nAlso backed up to:\n{external_file}"
+                external_db_file = os.path.join(external_path, db_filename)
+                external_adif_file = os.path.join(external_path, adif_filename)
+
+                shutil.copy2(self.database.db_path, external_db_file)
+                export_contacts_to_adif(contacts, external_adif_file)
+
+                backup_message += f"\n\nAlso backed up to external path:\n"
+                backup_message += f"Database: {external_db_file}\n"
+                backup_message += f"ADIF: {external_adif_file}"
 
             messagebox.showinfo("Backup Complete", backup_message)
 
