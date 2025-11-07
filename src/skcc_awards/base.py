@@ -121,7 +121,7 @@ class SKCCAwardBase(ABC):
         # Contact must use mechanical key (STRAIGHT, BUG, or SIDESWIPER)
         # Electronic keyers are NOT allowed
         key_type = contact.get('key_type', '').upper()
-        if key_type and key_type not in VALID_KEY_TYPES:
+        if not key_type or key_type not in VALID_KEY_TYPES:
             return False
 
         return True
