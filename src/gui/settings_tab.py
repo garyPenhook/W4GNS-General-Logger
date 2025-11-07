@@ -72,6 +72,11 @@ class SettingsTab:
         self.power_var = tk.StringVar(value=self.config.get('default_power', '100'))
         ttk.Entry(row3, textvariable=self.power_var, width=8).pack(side='left', padx=5)
 
+        ttk.Label(row3, text="Zip Code:").pack(side='left', padx=(20, 0))
+        self.zip_code_var = tk.StringVar(value=self.config.get('zip_code', ''))
+        ttk.Entry(row3, textvariable=self.zip_code_var, width=10).pack(side='left', padx=5)
+        ttk.Label(row3, text="(for weather)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
         # Appearance Settings
         appearance_frame = ttk.LabelFrame(scrollable_frame, text="Appearance", padding=10)
         appearance_frame.pack(fill='x', padx=10, pady=5)
@@ -581,6 +586,7 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         self.config.set('skcc_number', self.skcc_number_var.get().strip().upper())
         self.config.set('default_rst', self.rst_var.get())
         self.config.set('default_power', self.power_var.get())
+        self.config.set('zip_code', self.zip_code_var.get().strip())
 
         # QRZ settings
         self.config.set('qrz.username', self.qrz_username_var.get().strip())
