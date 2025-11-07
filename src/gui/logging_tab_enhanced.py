@@ -384,21 +384,13 @@ class EnhancedLoggingTab:
             ttk.Checkbutton(band_row, text=band, variable=var,
                            command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
-        # Mode filters (compact)
-        mode_row = ttk.Frame(pota_filter)
-        mode_row.pack(fill='x', pady=2)
-
-        ttk.Label(mode_row, text="Modes:").pack(side='left', padx=2)
-
+        # Mode filters - defaulted to CW only (no UI to save space)
         self.pota_mode_filters = {}
         modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'DIGI']
         for mode in modes:
-            # Load saved filter state or default to True
-            saved_state = self.config.get(f'pota_filter.mode.{mode}', True)
-            var = tk.BooleanVar(value=saved_state)
+            # Default to CW only to save space
+            var = tk.BooleanVar(value=(mode == 'CW'))
             self.pota_mode_filters[mode] = var
-            ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
         # Location filter
         loc_row = ttk.Frame(pota_filter)
@@ -454,6 +446,12 @@ class EnhancedLoggingTab:
 
         # Double-click to populate form
         self.pota_spots_tree.bind('<Double-1>', self.on_pota_spot_double_click)
+
+        # Mode filter indicator
+        pota_info_row = ttk.Frame(pota_panel)
+        pota_info_row.pack(fill='x', padx=5, pady=2)
+        ttk.Label(pota_info_row, text="Showing: CW spots only",
+                 foreground=get_info_color(self.config), font=('', 9, 'bold')).pack(side='left')
 
     def update_clock(self):
         """Update the UTC clock display every second"""
