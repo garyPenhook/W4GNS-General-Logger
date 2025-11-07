@@ -84,6 +84,7 @@ class ADIFParser:
                 'APP_SKCC_DISTANCE': 'distance_nm',
                 'APP_SKCC_POWER': 'power_watts',
                 # SKCC Logger-specific fields (uses different naming)
+                'SKCC': 'skcc_number',  # SKCC Logger uses this field name
                 'APP_SKCCLOGGER_KEYTYPE': 'key_type',
                 'APP_SKCCLOGGER_NUMBER': 'skcc_number',
                 'DXCC_ENTITY': 'dxcc_entity'
