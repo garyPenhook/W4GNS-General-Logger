@@ -3,7 +3,8 @@ Contacts Tab - View and manage logged contacts
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+from datetime import datetime
 
 
 class ContactsTab:
@@ -79,6 +80,9 @@ class ContactsTab:
         self.log_tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
 
+        # Bind double-click to open contact details
+        self.log_tree.bind('<Double-Button-1>', self.on_contact_double_click)
+
         # Load existing contacts
         self.refresh_log()
 
@@ -124,7 +128,8 @@ class ContactsTab:
 
         # Add filtered contacts to treeview (most recent first)
         for contact in filtered_contacts:
-            self.log_tree.insert('', 'end', values=(
+            # Store contact ID in the item tags for later retrieval
+            item_id = self.log_tree.insert('', 'end', values=(
                 contact.get('callsign', ''),
                 contact.get('date', ''),
                 contact.get('time_on', ''),
@@ -135,6 +140,8 @@ class ContactsTab:
                 contact.get('country', ''),
                 contact.get('gridsquare', '')
             ))
+            # Store the full contact data and ID as tags
+            self.log_tree.item(item_id, tags=(str(contact.get('id', '')),))
 
         # Update results label
         total = len(self.all_contacts)
@@ -150,6 +157,214 @@ class ContactsTab:
         self.prefix_search_var.set('')
         self.country_search_var.set('')
         # apply_search() will be called automatically via trace
+
+    def on_contact_double_click(self, event):
+        """Handle double-click on a contact to open detail view"""
+        selection = self.log_tree.selection()
+        if not selection:
+            return
+
+        # Get the contact ID from the item's tags
+        item = selection[0]
+        tags = self.log_tree.item(item, 'tags')
+        if not tags:
+            return
+
+        contact_id = int(tags[0])
+
+        # Find the full contact data
+        contact = None
+        for c in self.all_contacts:
+            if c.get('id') == contact_id:
+                contact = c
+                break
+
+        if contact:
+            self.show_contact_detail(contact)
+
+    def show_contact_detail(self, contact):
+        """Show contact detail dialog for viewing, editing, and deleting"""
+        dialog = tk.Toplevel(self.parent)
+        dialog.title(f"Contact Details - {contact.get('callsign', 'Unknown')}")
+        dialog.geometry("700x800")
+        dialog.transient(self.parent)
+        dialog.grab_set()
+
+        # Create scrollable frame
+        canvas = tk.Canvas(dialog)
+        scrollbar = ttk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Header
+        header_frame = ttk.Frame(scrollable_frame)
+        header_frame.pack(fill='x', padx=10, pady=10)
+        ttk.Label(header_frame, text=f"Contact with {contact.get('callsign', 'Unknown')}",
+                 font=('', 14, 'bold')).pack(anchor='w')
+        ttk.Label(header_frame, text=f"Logged on {contact.get('date', '')} at {contact.get('time_on', '')} UTC",
+                 font=('', 10)).pack(anchor='w')
+
+        # Store entry variables
+        vars_dict = {}
+
+        # Basic Information
+        basic_frame = ttk.LabelFrame(scrollable_frame, text="Basic Information", padding=10)
+        basic_frame.pack(fill='x', padx=10, pady=5)
+
+        fields = [
+            ('callsign', 'Callsign'),
+            ('date', 'Date (YYYY-MM-DD)'),
+            ('time_on', 'Time ON (UTC)'),
+            ('time_off', 'Time OFF (UTC)'),
+            ('frequency', 'Frequency (MHz)'),
+            ('band', 'Band'),
+            ('mode', 'Mode'),
+            ('rst_sent', 'RST Sent'),
+            ('rst_rcvd', 'RST Received'),
+            ('power', 'Power (W)'),
+        ]
+
+        for field, label in fields:
+            row = ttk.Frame(basic_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"{label}:", width=20).pack(side='left')
+            var = tk.StringVar(value=contact.get(field, ''))
+            vars_dict[field] = var
+            ttk.Entry(row, textvariable=var, width=40).pack(side='left', padx=5)
+
+        # Station Information
+        station_frame = ttk.LabelFrame(scrollable_frame, text="Station Information", padding=10)
+        station_frame.pack(fill='x', padx=10, pady=5)
+
+        station_fields = [
+            ('name', 'Name'),
+            ('qth', 'QTH'),
+            ('gridsquare', 'Grid Square'),
+            ('county', 'County'),
+            ('state', 'State'),
+            ('country', 'Country'),
+            ('continent', 'Continent'),
+            ('cq_zone', 'CQ Zone'),
+            ('itu_zone', 'ITU Zone'),
+        ]
+
+        for field, label in station_fields:
+            row = ttk.Frame(station_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"{label}:", width=20).pack(side='left')
+            var = tk.StringVar(value=contact.get(field, ''))
+            vars_dict[field] = var
+            ttk.Entry(row, textvariable=var, width=40).pack(side='left', padx=5)
+
+        # Special Fields
+        special_frame = ttk.LabelFrame(scrollable_frame, text="Special Fields", padding=10)
+        special_frame.pack(fill='x', padx=10, pady=5)
+
+        special_fields = [
+            ('iota', 'IOTA'),
+            ('sota', 'SOTA'),
+            ('pota', 'POTA'),
+            ('my_gridsquare', 'My Grid Square'),
+        ]
+
+        for field, label in special_fields:
+            row = ttk.Frame(special_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"{label}:", width=20).pack(side='left')
+            var = tk.StringVar(value=contact.get(field, ''))
+            vars_dict[field] = var
+            ttk.Entry(row, textvariable=var, width=40).pack(side='left', padx=5)
+
+        # SKCC Fields
+        skcc_frame = ttk.LabelFrame(scrollable_frame, text="SKCC Information", padding=10)
+        skcc_frame.pack(fill='x', padx=10, pady=5)
+
+        skcc_fields = [
+            ('skcc_number', 'SKCC Number'),
+            ('my_skcc_number', 'My SKCC Number'),
+            ('key_type', 'Key Type'),
+            ('duration_minutes', 'Duration (minutes)'),
+        ]
+
+        for field, label in skcc_fields:
+            row = ttk.Frame(skcc_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"{label}:", width=20).pack(side='left')
+            var = tk.StringVar(value=contact.get(field, ''))
+            vars_dict[field] = var
+            ttk.Entry(row, textvariable=var, width=40).pack(side='left', padx=5)
+
+        # Notes
+        notes_frame = ttk.LabelFrame(scrollable_frame, text="Notes", padding=10)
+        notes_frame.pack(fill='x', padx=10, pady=5)
+
+        notes_text = tk.Text(notes_frame, height=4, width=60)
+        notes_text.pack(fill='x')
+        notes_text.insert('1.0', contact.get('notes', ''))
+
+        # Button frame
+        button_frame = ttk.Frame(scrollable_frame)
+        button_frame.pack(fill='x', padx=10, pady=15)
+
+        def save_changes():
+            """Save the edited contact"""
+            try:
+                # Collect all the data
+                updated_contact = {}
+                for field, var in vars_dict.items():
+                    value = var.get().strip()
+                    updated_contact[field] = value if value else None
+
+                # Add notes
+                updated_contact['notes'] = notes_text.get('1.0', 'end-1c').strip()
+
+                # Update in database
+                self.database.update_contact(contact['id'], updated_contact)
+
+                messagebox.showinfo("Success", f"Contact with {contact.get('callsign')} updated successfully!")
+                dialog.destroy()
+
+                # Refresh the contacts list
+                self.refresh_log()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to update contact: {str(e)}")
+
+        def delete_contact():
+            """Delete this contact"""
+            confirm = messagebox.askyesno(
+                "Confirm Delete",
+                f"Are you sure you want to delete the contact with {contact.get('callsign')}?\n\n"
+                f"Date: {contact.get('date')} {contact.get('time_on')} UTC\n\n"
+                "This action cannot be undone.",
+                icon='warning'
+            )
+
+            if confirm:
+                try:
+                    self.database.delete_contact(contact['id'])
+                    messagebox.showinfo("Success", f"Contact with {contact.get('callsign')} deleted successfully!")
+                    dialog.destroy()
+
+                    # Refresh the contacts list
+                    self.refresh_log()
+
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to delete contact: {str(e)}")
+
+        ttk.Button(button_frame, text="Save Changes", command=save_changes).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Contact", command=delete_contact).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=dialog.destroy).pack(side='right', padx=5)
 
     def get_frame(self):
         """Return the frame widget"""

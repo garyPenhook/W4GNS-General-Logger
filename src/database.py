@@ -581,6 +581,47 @@ class Database:
         # Convert Row objects to dicts for compatibility
         return [dict(row) for row in cursor.fetchall()]
 
+    def update_contact(self, contact_id, contact_data):
+        """
+        Update an existing contact in the database.
+
+        Args:
+            contact_id: The ID of the contact to update
+            contact_data: Dictionary containing the updated contact fields
+        """
+        cursor = self.conn.cursor()
+
+        # Build the UPDATE query dynamically based on provided fields
+        fields = []
+        values = []
+
+        for field, value in contact_data.items():
+            if field != 'id':  # Don't update the ID field
+                fields.append(f"{field} = ?")
+                values.append(value)
+
+        if not fields:
+            return  # Nothing to update
+
+        # Add the contact_id for the WHERE clause
+        values.append(contact_id)
+
+        query = f"UPDATE contacts SET {', '.join(fields)} WHERE id = ?"
+
+        cursor.execute(query, values)
+        self.conn.commit()
+
+    def delete_contact(self, contact_id):
+        """
+        Delete a contact from the database.
+
+        Args:
+            contact_id: The ID of the contact to delete
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+        self.conn.commit()
+
     def close(self):
         """Close database connection"""
         if self.conn:
