@@ -41,10 +41,10 @@ class AwardsCalculator:
 
         for contact in contacts:
             contact_dict = dict(contact)
-            country = contact_dict.get('country', '').strip()
-            band = contact_dict.get('band', '').strip()
-            mode = contact_dict.get('mode', '').strip()
-            callsign = contact_dict.get('callsign', '').strip()
+            country = (contact_dict.get('country') or '').strip()
+            band = (contact_dict.get('band') or '').strip()
+            mode = (contact_dict.get('mode') or '').strip()
+            callsign = (contact_dict.get('callsign') or '').strip()
             date = contact_dict.get('date', '')
 
             if country:
@@ -103,11 +103,11 @@ class AwardsCalculator:
 
         for contact in contacts:
             contact_dict = dict(contact)
-            state = contact_dict.get('state', '').strip().upper()
-            country = contact_dict.get('country', '').strip()
-            band = contact_dict.get('band', '').strip()
-            mode = contact_dict.get('mode', '').strip()
-            callsign = contact_dict.get('callsign', '').strip()
+            state = (contact_dict.get('state') or '').strip().upper()
+            country = (contact_dict.get('country') or '').strip()
+            band = (contact_dict.get('band') or '').strip()
+            mode = (contact_dict.get('mode') or '').strip()
+            callsign = (contact_dict.get('callsign') or '').strip()
             date = contact_dict.get('date', '')
 
             # Only count if in USA and valid state
@@ -163,10 +163,10 @@ class AwardsCalculator:
 
         for contact in contacts:
             contact_dict = dict(contact)
-            continent = contact_dict.get('continent', '').strip().upper()
-            band = contact_dict.get('band', '').strip()
-            mode = contact_dict.get('mode', '').strip()
-            callsign = contact_dict.get('callsign', '').strip()
+            continent = (contact_dict.get('continent') or '').strip().upper()
+            band = (contact_dict.get('band') or '').strip()
+            mode = (contact_dict.get('mode') or '').strip()
+            callsign = (contact_dict.get('callsign') or '').strip()
             date = contact_dict.get('date', '')
             country = contact_dict.get('country', '')
 
@@ -228,9 +228,9 @@ class AwardsCalculator:
 
         for contact in contacts:
             contact_dict = dict(contact)
-            callsign = contact_dict.get('callsign', '').strip().upper()
-            band = contact_dict.get('band', '').strip()
-            mode = contact_dict.get('mode', '').strip()
+            callsign = (contact_dict.get('callsign') or '').strip().upper()
+            band = (contact_dict.get('band') or '').strip()
+            mode = (contact_dict.get('mode') or '').strip()
 
             if callsign:
                 prefix = self._extract_prefix(callsign)
@@ -267,9 +267,9 @@ class AwardsCalculator:
 
         for contact in contacts:
             contact_dict = dict(contact)
-            grid = contact_dict.get('gridsquare', '').strip().upper()
-            band = contact_dict.get('band', '').strip()
-            callsign = contact_dict.get('callsign', '').strip()
+            grid = (contact_dict.get('gridsquare') or '').strip().upper()
+            band = (contact_dict.get('band') or '').strip()
+            callsign = (contact_dict.get('callsign') or '').strip()
             date = contact_dict.get('date', '')
 
             # Only count VHF/UHF bands
