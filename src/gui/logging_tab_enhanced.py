@@ -49,12 +49,12 @@ class EnhancedLoggingTab:
         # Focus on callsign field
         self.callsign_entry.focus()
 
-        # Do initial POTA fetch
-        self.refresh_pota_spots()
+        # Do initial POTA fetch - delay until after main loop is running to avoid threading errors
+        self.parent.after(100, self.refresh_pota_spots)
 
         # Start auto-refresh if it was enabled
         if self.auto_refresh:
-            self.auto_refresh_timer()
+            self.parent.after(100, self.auto_refresh_timer)
 
     def create_widgets(self):
         """Create the enhanced logging interface"""

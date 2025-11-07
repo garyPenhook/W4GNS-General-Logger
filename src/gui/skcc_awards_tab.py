@@ -51,7 +51,8 @@ class SKCCAwardsTab:
         self.refresh_awards()
 
         # CRITICAL: Auto-download rosters on EVERY startup for accurate award validation
-        self.auto_download_rosters_on_startup()
+        # Delay start until after main loop is running to avoid threading errors
+        self.parent.after(100, self.auto_download_rosters_on_startup)
 
     def create_widgets(self):
         """Create the SKCC awards interface"""
