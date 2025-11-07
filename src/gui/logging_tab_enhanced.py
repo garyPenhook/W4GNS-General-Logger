@@ -1021,14 +1021,6 @@ class EnhancedLoggingTab:
             if not self.pota_mode_filters[mode_category].get():
                 return False
 
-        # Location filter
-        location_filter = self.location_filter_var.get().upper().strip()
-        if location_filter:
-            location = spot.get('location', '').upper()
-            park_ref = spot.get('park_ref', '').upper()
-            if location_filter not in location and location_filter not in park_ref:
-                return False
-
         return True
 
     def save_and_apply_pota_filters(self):
