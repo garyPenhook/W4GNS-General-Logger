@@ -81,6 +81,7 @@ class W4GNSLogger:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Export Log (ADIF)...", command=self.export_adif)
+        file_menu.add_command(label="Export SKCC Contacts (ADIF)...", command=self.export_skcc_adif)
         file_menu.add_command(label="Import Log (ADIF)...", command=self.import_adif)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_closing)
@@ -154,6 +155,191 @@ class W4GNSLogger:
             self.status_bar.config(text=f"Exported {len(contacts)} contacts to ADIF")
         except Exception as e:
             messagebox.showerror("Export Failed", f"Failed to export log:\n{str(e)}")
+
+    def export_skcc_adif(self):
+        """Export SKCC contacts only to ADIF format"""
+        # Get SKCC contacts from database (contacts with SKCC numbers)
+        cursor = self.database.conn.cursor()
+        cursor.execute('''
+            SELECT
+                callsign, date, time_on, time_off, frequency, band, mode,
+                rst_sent, rst_rcvd, power, name, qth, gridsquare, county,
+                state, country, continent, cq_zone, itu_zone, dxcc,
+                my_gridsquare, comment, skcc_number, my_skcc_number,
+                dxcc_entity
+            FROM contacts
+            WHERE skcc_number IS NOT NULL AND skcc_number != ''
+            ORDER BY date, time_on
+        ''')
+
+        contacts = cursor.fetchall()
+
+        if not contacts:
+            messagebox.showwarning(
+                "No SKCC Contacts",
+                "No SKCC contacts found to export.\n\n"
+                "Make sure your contacts have SKCC numbers populated.\n"
+                "You may need to run:\n"
+                "  • extract_skcc_from_comments.py\n"
+                "  • set_default_key_type.py"
+            )
+            return
+
+        # Ask user for save location
+        from datetime import datetime
+        default_filename = f"skcc_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.adi"
+
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".adi",
+            initialfile=default_filename,
+            filetypes=[
+                ("ADIF files", "*.adi"),
+                ("ADIF files", "*.adif"),
+                ("All files", "*.*")
+            ],
+            title="Export SKCC Contacts to ADIF"
+        )
+
+        if not filename:
+            return  # User cancelled
+
+        try:
+            # Get user's callsign and SKCC number from config
+            user_callsign = self.config.get('callsign', '')
+            user_skcc = self.config.get('skcc_number', '')
+
+            # Write ADIF file
+            with open(filename, 'w', encoding='utf-8') as f:
+                # Write header
+                f.write("ADIF Log Created by W4GNS General Logger\n")
+                f.write("SKCC Contacts Export\n")
+                f.write("Version: 1.0.0\n\n")
+                if user_callsign:
+                    f.write(f"Callsign: {user_callsign}\n")
+                if user_skcc:
+                    f.write(f"SKCC Nr.: {user_skcc}\n")
+                f.write(f"Log Created: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}Z\n")
+                f.write(f"Record Count: {len(contacts)}\n")
+                f.write(f"Log Filename: {filename}\n\n")
+                f.write("<EOH>\n\n")
+
+                # Column indices (matching the SELECT query)
+                for contact in contacts:
+                    fields = []
+
+                    # Band
+                    if contact[5]:  # band
+                        band = contact[5].upper()
+                        fields.append(f"<BAND:{len(band)}>{band}")
+
+                    # Callsign
+                    callsign = contact[0].upper()
+                    fields.append(f"<CALL:{len(callsign)}>{callsign}")
+
+                    # Comment
+                    if contact[21]:  # comment
+                        comment = contact[21]
+                        fields.append(f"<COMMENT:{len(comment)}>{comment}")
+
+                    # Country
+                    if contact[15]:  # country
+                        country = contact[15]
+                        fields.append(f"<COUNTRY:{len(country)}>{country}")
+
+                    # DXCC
+                    if contact[19]:  # dxcc
+                        dxcc = str(contact[19])
+                        fields.append(f"<DXCC:{len(dxcc)}>{dxcc}")
+
+                    # Frequency
+                    if contact[4]:  # frequency
+                        freq = contact[4]
+                        fields.append(f"<FREQ:{len(freq)}>{freq}")
+
+                    # Gridsquare
+                    if contact[12]:  # gridsquare
+                        grid = contact[12].upper()
+                        fields.append(f"<GRIDSQUARE:{len(grid)}>{grid}")
+
+                    # Mode
+                    mode = contact[6].upper()
+                    fields.append(f"<MODE:{len(mode)}>{mode}")
+
+                    # My Gridsquare
+                    if contact[20]:  # my_gridsquare
+                        my_grid = contact[20].upper()
+                        fields.append(f"<MY_GRIDSQUARE:{len(my_grid)}>{my_grid}")
+
+                    # Name
+                    if contact[10]:  # name
+                        name = contact[10]
+                        fields.append(f"<NAME:{len(name)}>{name}")
+
+                    # Operator
+                    if user_callsign:
+                        fields.append(f"<OPERATOR:{len(user_callsign)}>{user_callsign}")
+
+                    # QSO Date - format as YYYYMMDD
+                    date = contact[1].replace('-', '')
+                    fields.append(f"<QSO_DATE:{len(date)}>{date}")
+
+                    # QTH
+                    if contact[11]:  # qth
+                        qth = contact[11]
+                        fields.append(f"<QTH:{len(qth)}>{qth}")
+
+                    # RST Received
+                    if contact[8]:  # rst_rcvd
+                        rst_rcvd = contact[8]
+                        fields.append(f"<RST_RCVD:{len(rst_rcvd)}>{rst_rcvd}")
+
+                    # RST Sent
+                    if contact[7]:  # rst_sent
+                        rst_sent = contact[7]
+                        fields.append(f"<RST_SENT:{len(rst_sent)}>{rst_sent}")
+
+                    # SKCC Number (CRITICAL for SKCC Logger)
+                    skcc = contact[22]
+                    fields.append(f"<SKCC:{len(skcc)}>{skcc}")
+
+                    # State
+                    if contact[14]:  # state
+                        state = contact[14].upper()
+                        fields.append(f"<STATE:{len(state)}>{state}")
+
+                    # Station Callsign
+                    if user_callsign:
+                        fields.append(f"<STATION_CALLSIGN:{len(user_callsign)}>{user_callsign}")
+
+                    # Time Off - format as HHMMSS
+                    if contact[3]:  # time_off
+                        time_off = contact[3].replace(':', '') + '00'
+                        fields.append(f"<TIME_OFF:{len(time_off)}>{time_off}")
+
+                    # Time On - format as HHMMSS
+                    time_on = contact[2].replace(':', '') + '00'
+                    fields.append(f"<TIME_ON:{len(time_on)}>{time_on}")
+
+                    # TX Power
+                    if contact[9]:  # power
+                        power = str(contact[9])
+                        fields.append(f"<TX_PWR:{len(power)}>{power}")
+
+                    # End of record
+                    fields.append("<EOR>")
+
+                    # Write record
+                    f.write('\n'.join(fields))
+                    f.write('\n\n')
+
+            messagebox.showinfo(
+                "Export Successful",
+                f"Successfully exported {len(contacts)} SKCC contacts to:\n{filename}\n\n"
+                f"You can now import this file into SKCC Logger."
+            )
+            self.status_bar.config(text=f"Exported {len(contacts)} SKCC contacts to ADIF")
+        except Exception as e:
+            messagebox.showerror("Export Failed", f"Failed to export SKCC contacts:\n{str(e)}")
 
     def import_adif(self):
         """Import contacts from ADIF format"""
