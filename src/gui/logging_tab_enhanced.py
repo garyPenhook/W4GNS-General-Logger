@@ -214,7 +214,7 @@ class EnhancedLoggingTab:
         ttk.Label(skcc_row, text="(Their SKCC number)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
 
         ttk.Label(skcc_row, text="My SKCC#:", width=12, anchor='e').pack(side='left', padx=(20, 0))
-        self.my_skcc_number_var = tk.StringVar(value=self.config.get('my_skcc_number', ''))
+        self.my_skcc_number_var = tk.StringVar(value=self.config.get('skcc_number', ''))
         ttk.Entry(skcc_row, textvariable=self.my_skcc_number_var, width=12).pack(side='left', padx=5)
 
         ttk.Label(skcc_row, text="Key Type:", width=10, anchor='e').pack(side='left', padx=(20, 0))
