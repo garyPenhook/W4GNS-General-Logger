@@ -940,18 +940,49 @@ class SKCCAwardsTab:
                 ))
 
                 # Download membership roster
-                self.roster_manager.download_roster()
+                success = self.roster_manager.download_roster()
 
-                # Update UI on completion
-                self.parent.after(0, self.update_roster_status)
-                print(f"✓ SKCC membership roster updated: {self.roster_manager.get_member_count():,} members")
+                if success:
+                    # Show completion message
+                    count = self.roster_manager.get_member_count()
+
+                    def show_success():
+                        self.roster_status_label.config(
+                            text=f"✓ Download complete: {count:,} members",
+                            foreground=get_success_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_success)
+                    print(f"✓ SKCC membership roster updated: {count:,} members")
+                else:
+                    # Download failed
+                    def show_failure():
+                        self.roster_status_label.config(
+                            text="⚠ Download failed - using cached data if available",
+                            foreground=get_warning_color(self.config)
+                        )
+                        # After 5 seconds, show current status
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_failure)
+                    print(f"⚠ SKCC membership roster download failed")
 
             except Exception as e:
                 print(f"Error downloading membership roster: {e}")
-                self.parent.after(0, lambda: self.roster_status_label.config(
-                    text="Download failed",
-                    foreground=get_error_color(self.config)
-                ))
+                import traceback
+                traceback.print_exc()
+
+                def show_error():
+                    self.roster_status_label.config(
+                        text=f"❌ Error: {str(e)[:50]}",
+                        foreground=get_error_color(self.config)
+                    )
+                    # After 5 seconds, try to show what we have
+                    self.parent.after(5000, self.update_roster_status)
+
+                self.parent.after(0, show_error)
 
         def download_award_rosters():
             """Download award rosters in background thread"""
@@ -964,24 +995,55 @@ class SKCCAwardsTab:
                 # Download Centurion, Tribune, and Senator rosters
                 results = self.award_rosters.download_all_rosters(force=False)
 
-                # Update UI on completion
-                self.parent.after(0, self.update_roster_status)
+                # Get roster info for display
+                info = self.award_rosters.get_roster_info()
 
+                # Update UI on completion
                 if all(results.values()):
-                    info = self.award_rosters.get_roster_info()
+                    # All rosters downloaded successfully
+                    def show_success():
+                        self.award_roster_status_label.config(
+                            text=f"✓ Download complete: C:{info['centurion']['count']:,} T:{info['tribune']['count']:,} S:{info['senator']['count']:,}",
+                            foreground=get_success_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_success)
+
                     print(f"✓ SKCC award rosters updated:")
                     print(f"  Centurion: {info['centurion']['count']:,} members")
                     print(f"  Tribune: {info['tribune']['count']:,} members")
                     print(f"  Senator: {info['senator']['count']:,} members")
                 else:
+                    # Some rosters failed
+                    failed_rosters = [name for name, success in results.items() if not success]
+
+                    def show_partial_failure():
+                        self.award_roster_status_label.config(
+                            text=f"⚠ Partial download - failed: {', '.join(failed_rosters)}",
+                            foreground=get_warning_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_partial_failure)
                     print(f"⚠ Some award rosters failed to download: {results}")
 
             except Exception as e:
                 print(f"Error downloading award rosters: {e}")
-                self.parent.after(0, lambda: self.award_roster_status_label.config(
-                    text="Download failed",
-                    foreground=get_error_color(self.config)
-                ))
+                import traceback
+                traceback.print_exc()
+
+                def show_error():
+                    self.award_roster_status_label.config(
+                        text=f"❌ Download failed: {str(e)[:50]}",
+                        foreground=get_error_color(self.config)
+                    )
+                    # After 5 seconds, try to show what we have
+                    self.parent.after(5000, self.update_roster_status)
+
+                self.parent.after(0, show_error)
 
         # Start both downloads in parallel background threads
         membership_thread = threading.Thread(target=download_membership_roster, daemon=True)

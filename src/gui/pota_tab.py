@@ -75,24 +75,13 @@ class POTATab:
         ttk.Button(band_row, text="Clear Bands",
                   command=lambda: self.toggle_all_filters(self.band_filters, False)).pack(side='left')
 
-        # Mode filters
-        mode_row = ttk.Frame(filter_frame)
-        mode_row.pack(fill='x', pady=2)
-
-        ttk.Label(mode_row, text="Modes:").pack(side='left', padx=(0, 5))
-
+        # Mode filters - defaulted to CW only (no UI controls to save space)
         self.mode_filters = {}
         modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'RTTY', 'PSK', 'DIGI']
         for mode in modes:
-            var = tk.BooleanVar(value=True)
+            # Default to CW only, all others disabled
+            var = tk.BooleanVar(value=(mode == 'CW'))
             self.mode_filters[mode] = var
-            ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.apply_filters).pack(side='left', padx=2)
-
-        ttk.Button(mode_row, text="All Modes",
-                  command=lambda: self.toggle_all_filters(self.mode_filters, True)).pack(side='left', padx=5)
-        ttk.Button(mode_row, text="Clear Modes",
-                  command=lambda: self.toggle_all_filters(self.mode_filters, False)).pack(side='left')
 
         # Search/filter by location
         search_row = ttk.Frame(filter_frame)
@@ -153,6 +142,10 @@ class POTATab:
         self.info_label = ttk.Label(info_row, text="Double-click a spot to view park details",
                                     foreground=get_muted_color(self.config))
         self.info_label.pack(side='left')
+
+        # Mode filter indicator
+        ttk.Label(info_row, text="│ Showing: CW spots only",
+                 foreground=get_info_color(self.config), font=('', 9, 'bold')).pack(side='left', padx=10)
 
     def refresh_spots_async(self):
         """Refresh spots in a background thread to avoid blocking UI"""
