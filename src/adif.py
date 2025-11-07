@@ -83,6 +83,9 @@ class ADIFParser:
                 'APP_SKCC_DURATION': 'duration_minutes',
                 'APP_SKCC_DISTANCE': 'distance_nm',
                 'APP_SKCC_POWER': 'power_watts',
+                # SKCC Logger-specific fields (uses different naming)
+                'APP_SKCCLOGGER_KEYTYPE': 'key_type',
+                'APP_SKCCLOGGER_NUMBER': 'skcc_number',
                 'DXCC_ENTITY': 'dxcc_entity'
             }
 
@@ -102,9 +105,41 @@ class ADIFParser:
                 elif field_name == 'FREQ':
                     field_data = field_data  # Keep as-is
 
+                # Translate SKCC Logger abbreviated key codes to full names
+                elif field_name in ('APP_SKCCLOGGER_KEYTYPE', 'APP_SKCC_KEY_TYPE') and db_field == 'key_type':
+                    field_data = self._translate_key_type(field_data)
+
                 contact[db_field] = field_data.strip()
 
         return contact if contact else None
+
+    def _translate_key_type(self, code):
+        """
+        Translate SKCC Logger abbreviated key codes to full names
+
+        SKCC Logger uses abbreviated codes:
+        - BG = Bug
+        - SK or ST = Straight key
+        - SS = Sideswiper
+
+        Args:
+            code: Abbreviated key code (case-insensitive)
+
+        Returns:
+            Full key type name (STRAIGHT, BUG, SIDESWIPER) or original if unrecognized
+        """
+        code_map = {
+            'BG': 'BUG',
+            'SK': 'STRAIGHT',
+            'ST': 'STRAIGHT',  # Support both SK and ST for straight key
+            'SS': 'SIDESWIPER',
+            # Also support full names if already present
+            'BUG': 'BUG',
+            'STRAIGHT': 'STRAIGHT',
+            'SIDESWIPER': 'SIDESWIPER'
+        }
+
+        return code_map.get(code.upper().strip(), code)
 
 
 class ADIFGenerator:
