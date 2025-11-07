@@ -335,7 +335,7 @@ class EnhancedLoggingTab:
         paned.add(pota_panel, weight=1)
 
         # POTA Control frame
-        pota_control = ttk.LabelFrame(pota_panel, text="POTA Spots Control", padding=5)
+        pota_control = ttk.LabelFrame(pota_panel, text="POTA Spots Control (CW Only)", padding=5)
         pota_control.pack(fill='x', padx=5, pady=5)
 
         # Refresh controls
