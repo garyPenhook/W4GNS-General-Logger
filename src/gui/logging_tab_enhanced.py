@@ -629,8 +629,8 @@ class EnhancedLoggingTab:
                 if 'county' in data:
                     self.county_var.set(data['county'])
 
-                if 'addr1' in data:
-                    self.qth_var.set(data['addr1'])
+                if 'addr2' in data:
+                    self.qth_var.set(data['addr2'])
 
                 # QRZ data overrides DXCC for zones if available
                 if 'cq_zone' in data:
