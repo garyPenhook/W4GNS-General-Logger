@@ -184,11 +184,13 @@ class ContactsTab:
 
     def show_contact_detail(self, contact):
         """Show contact detail dialog for viewing, editing, and deleting"""
-        dialog = tk.Toplevel(self.parent)
+        # Get the root window
+        root = self.parent.winfo_toplevel()
+
+        dialog = tk.Toplevel(root)
         dialog.title(f"Contact Details - {contact.get('callsign', 'Unknown')}")
         dialog.geometry("700x800")
-        dialog.transient(self.parent)
-        dialog.grab_set()
+        dialog.transient(root)
 
         # Create scrollable frame
         canvas = tk.Canvas(dialog)
@@ -365,6 +367,11 @@ class ContactsTab:
         ttk.Button(button_frame, text="Save Changes", command=save_changes).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Contact", command=delete_contact).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Close", command=dialog.destroy).pack(side='right', padx=5)
+
+        # Wait for window to be visible before grabbing focus
+        dialog.wait_visibility()
+        dialog.grab_set()
+        dialog.focus_set()
 
     def get_frame(self):
         """Return the frame widget"""
