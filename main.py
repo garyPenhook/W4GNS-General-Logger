@@ -111,6 +111,9 @@ class W4GNSLogger:
         # Wire DX cluster to logging tab for DX spot display
         self.dx_cluster_tab.set_logging_tab(self.logging_tab)
 
+        # Wire contacts tab to logging tab for auto-refresh after logging
+        self.logging_tab.set_contacts_tab(self.contacts_tab)
+
         # Add tabs to notebook
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")

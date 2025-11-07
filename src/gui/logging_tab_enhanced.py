@@ -56,6 +56,13 @@ class EnhancedLoggingTab:
         if self.auto_refresh:
             self.parent.after(100, self.auto_refresh_timer)
 
+        # Reference to contacts tab for refreshing after logging
+        self.contacts_tab = None
+
+    def set_contacts_tab(self, contacts_tab):
+        """Set reference to contacts tab for refreshing after logging"""
+        self.contacts_tab = contacts_tab
+
     def create_widgets(self):
         """Create the enhanced logging interface"""
 
@@ -805,6 +812,10 @@ class EnhancedLoggingTab:
 
         try:
             contact_id = self.database.add_contact(contact_data)
+
+            # Refresh contacts tab to show the new contact
+            if self.contacts_tab:
+                self.contacts_tab.refresh_log()
 
             # Auto-upload to QRZ if enabled
             if self.config.get('qrz.auto_upload', False):
