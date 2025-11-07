@@ -58,6 +58,10 @@ class SettingsTab:
         self.grid_var = tk.StringVar(value=self.config.get('gridsquare', ''))
         ttk.Entry(row2, textvariable=self.grid_var, width=10).pack(side='left', padx=5)
 
+        ttk.Label(row2, text="SKCC Number:").pack(side='left', padx=(20, 0))
+        self.skcc_number_var = tk.StringVar(value=self.config.get('skcc_number', ''))
+        ttk.Entry(row2, textvariable=self.skcc_number_var, width=12).pack(side='left', padx=5)
+
         row3 = ttk.Frame(station_frame)
         row3.pack(fill='x', pady=5)
         ttk.Label(row3, text="Default RST:").pack(side='left')
@@ -574,6 +578,7 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
         """Save settings to config"""
         self.config.set('callsign', self.callsign_var.get().strip().upper())
         self.config.set('gridsquare', self.grid_var.get().strip().upper())
+        self.config.set('skcc_number', self.skcc_number_var.get().strip().upper())
         self.config.set('default_rst', self.rst_var.get())
         self.config.set('default_power', self.power_var.get())
 
