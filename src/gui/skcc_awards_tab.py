@@ -191,8 +191,22 @@ class SKCCAwardsTab:
         self.centurion_bar = ttk.Progressbar(centurion_frame, length=400, mode='determinate')
         self.centurion_bar.pack(fill='x', pady=2)
 
-        self.centurion_endorsement = ttk.Label(centurion_frame, text="", foreground=get_info_color(self.config))
+        # Endorsement status section
+        endorsement_centurion_frame = ttk.Frame(centurion_frame)
+        endorsement_centurion_frame.pack(fill='x', pady=(5, 0))
+
+        self.centurion_endorsement = ttk.Label(endorsement_centurion_frame, text="",
+                                               font=('', 10, 'bold'), foreground=get_info_color(self.config))
         self.centurion_endorsement.pack(anchor='w')
+
+        # Progress to next endorsement
+        self.centurion_next_endorsement = ttk.Label(endorsement_centurion_frame, text="",
+                                                     font=('', 9), foreground=get_muted_color(self.config))
+        self.centurion_next_endorsement.pack(anchor='w')
+
+        self.centurion_endorsement_bar = ttk.Progressbar(endorsement_centurion_frame,
+                                                          length=300, mode='determinate')
+        self.centurion_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
         # Tribune
         tribune_frame = ttk.LabelFrame(self.core_frame, text="Tribune Award", padding=10)
@@ -207,8 +221,22 @@ class SKCCAwardsTab:
         self.tribune_bar = ttk.Progressbar(tribune_frame, length=400, mode='determinate')
         self.tribune_bar.pack(fill='x', pady=2)
 
-        self.tribune_endorsement = ttk.Label(tribune_frame, text="", foreground=get_info_color(self.config))
+        # Endorsement status section
+        endorsement_tribune_frame = ttk.Frame(tribune_frame)
+        endorsement_tribune_frame.pack(fill='x', pady=(5, 0))
+
+        self.tribune_endorsement = ttk.Label(endorsement_tribune_frame, text="",
+                                             font=('', 10, 'bold'), foreground=get_info_color(self.config))
         self.tribune_endorsement.pack(anchor='w')
+
+        # Progress to next endorsement
+        self.tribune_next_endorsement = ttk.Label(endorsement_tribune_frame, text="",
+                                                   font=('', 9), foreground=get_muted_color(self.config))
+        self.tribune_next_endorsement.pack(anchor='w')
+
+        self.tribune_endorsement_bar = ttk.Progressbar(endorsement_tribune_frame,
+                                                        length=300, mode='determinate')
+        self.tribune_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
         # Senator
         senator_frame = ttk.LabelFrame(self.core_frame, text="Senator Award", padding=10)
@@ -223,8 +251,22 @@ class SKCCAwardsTab:
         self.senator_bar = ttk.Progressbar(senator_frame, length=400, mode='determinate')
         self.senator_bar.pack(fill='x', pady=2)
 
-        self.senator_endorsement = ttk.Label(senator_frame, text="", foreground=get_info_color(self.config))
+        # Endorsement status section
+        endorsement_senator_frame = ttk.Frame(senator_frame)
+        endorsement_senator_frame.pack(fill='x', pady=(5, 0))
+
+        self.senator_endorsement = ttk.Label(endorsement_senator_frame, text="",
+                                             font=('', 10, 'bold'), foreground=get_info_color(self.config))
         self.senator_endorsement.pack(anchor='w')
+
+        # Progress to next endorsement
+        self.senator_next_endorsement = ttk.Label(endorsement_senator_frame, text="",
+                                                   font=('', 9), foreground=get_muted_color(self.config))
+        self.senator_next_endorsement.pack(anchor='w')
+
+        self.senator_endorsement_bar = ttk.Progressbar(endorsement_senator_frame,
+                                                        length=300, mode='determinate')
+        self.senator_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
     def create_specialty_awards_display(self):
         """Create display for specialty awards (Triple Key, Rag Chew, PFX, Canadian Maple)"""
@@ -452,6 +494,7 @@ class SKCCAwardsTab:
         required = progress['required']
         pct = progress['progress_pct']
         endorsement = progress['endorsement']
+        next_level_count = progress.get('next_level_count')
 
         status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
         self.centurion_progress.config(
@@ -459,7 +502,44 @@ class SKCCAwardsTab:
             foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.centurion_bar['value'] = pct
-        self.centurion_endorsement.config(text=f"Current Level: {endorsement}")
+
+        # Update endorsement status
+        if endorsement == "Not Yet":
+            self.centurion_endorsement.config(text="Endorsement Level: Not Yet Achieved")
+            self.centurion_next_endorsement.config(text=f"Need {required - current} more contacts for Centurion")
+            self.centurion_endorsement_bar['value'] = pct
+        else:
+            self.centurion_endorsement.config(text=f"🏆 Endorsement Level: {endorsement}")
+
+            # Show progress to next level
+            if next_level_count and next_level_count > current:
+                needed = next_level_count - current
+                from src.skcc_awards.constants import CENTURION_ENDORSEMENTS
+                next_endorsement = None
+                for threshold, name in CENTURION_ENDORSEMENTS:
+                    if threshold == next_level_count:
+                        next_endorsement = name
+                        break
+
+                # Calculate previous threshold
+                prev_threshold = 0
+                for threshold, name in CENTURION_ENDORSEMENTS:
+                    if threshold <= current:
+                        prev_threshold = threshold
+
+                # Calculate progress between previous and next threshold
+                if next_level_count > prev_threshold:
+                    progress_to_next = ((current - prev_threshold) / (next_level_count - prev_threshold)) * 100
+                else:
+                    progress_to_next = 0
+
+                self.centurion_next_endorsement.config(
+                    text=f"Next: {next_endorsement} ({current}/{next_level_count}) - Need {needed} more"
+                )
+                self.centurion_endorsement_bar['value'] = progress_to_next
+            else:
+                self.centurion_next_endorsement.config(text="🌟 Maximum endorsement level achieved!")
+                self.centurion_endorsement_bar['value'] = 100
 
     def update_tribune_display(self, progress):
         """Update Tribune award display"""
@@ -467,6 +547,7 @@ class SKCCAwardsTab:
         required = progress['required']
         pct = progress['progress_pct']
         endorsement = progress['endorsement']
+        next_level_count = progress.get('next_level_count')
 
         prereq_status = "✅" if progress.get('prerequisite_met') else "❌"
         status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
@@ -476,7 +557,44 @@ class SKCCAwardsTab:
             foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.tribune_bar['value'] = pct
-        self.tribune_endorsement.config(text=f"Current Level: {endorsement}")
+
+        # Update endorsement status
+        if endorsement == "Not Yet":
+            self.tribune_endorsement.config(text="Endorsement Level: Not Yet Achieved")
+            self.tribune_next_endorsement.config(text=f"Need {required - current} more contacts for Tribune")
+            self.tribune_endorsement_bar['value'] = pct
+        else:
+            self.tribune_endorsement.config(text=f"🏆 Endorsement Level: {endorsement}")
+
+            # Show progress to next level
+            if next_level_count and next_level_count > current:
+                needed = next_level_count - current
+                from src.skcc_awards.constants import TRIBUNE_ENDORSEMENTS
+                next_endorsement = None
+                for threshold, name in TRIBUNE_ENDORSEMENTS:
+                    if threshold == next_level_count:
+                        next_endorsement = name
+                        break
+
+                # Calculate previous threshold
+                prev_threshold = 0
+                for threshold, name in TRIBUNE_ENDORSEMENTS:
+                    if threshold <= current:
+                        prev_threshold = threshold
+
+                # Calculate progress between previous and next threshold
+                if next_level_count > prev_threshold:
+                    progress_to_next = ((current - prev_threshold) / (next_level_count - prev_threshold)) * 100
+                else:
+                    progress_to_next = 0
+
+                self.tribune_next_endorsement.config(
+                    text=f"Next: {next_endorsement} ({current}/{next_level_count}) - Need {needed} more"
+                )
+                self.tribune_endorsement_bar['value'] = progress_to_next
+            else:
+                self.tribune_next_endorsement.config(text="🌟 Maximum endorsement level achieved!")
+                self.tribune_endorsement_bar['value'] = 100
 
     def update_senator_display(self, progress):
         """Update Senator award display"""
@@ -484,6 +602,7 @@ class SKCCAwardsTab:
         required = progress['required']
         pct = progress['progress_pct']
         endorsement = progress['endorsement']
+        next_level_count = progress.get('next_level_count')
 
         prereq_status = "✅" if progress.get('prerequisite_met') else "❌"
         status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
@@ -493,7 +612,44 @@ class SKCCAwardsTab:
             foreground=get_success_color(self.config) if progress['achieved'] else 'black'
         )
         self.senator_bar['value'] = pct
-        self.senator_endorsement.config(text=f"Current Level: {endorsement}")
+
+        # Update endorsement status
+        if endorsement == "Not Yet":
+            self.senator_endorsement.config(text="Endorsement Level: Not Yet Achieved")
+            self.senator_next_endorsement.config(text=f"Need {required - current} more contacts for Senator")
+            self.senator_endorsement_bar['value'] = pct
+        else:
+            self.senator_endorsement.config(text=f"🏆 Endorsement Level: {endorsement}")
+
+            # Show progress to next level
+            if next_level_count and next_level_count > current:
+                needed = next_level_count - current
+                from src.skcc_awards.constants import SENATOR_ENDORSEMENTS
+                next_endorsement = None
+                for threshold, name in SENATOR_ENDORSEMENTS:
+                    if threshold == next_level_count:
+                        next_endorsement = name
+                        break
+
+                # Calculate previous threshold
+                prev_threshold = 0
+                for threshold, name in SENATOR_ENDORSEMENTS:
+                    if threshold <= current:
+                        prev_threshold = threshold
+
+                # Calculate progress between previous and next threshold
+                if next_level_count > prev_threshold:
+                    progress_to_next = ((current - prev_threshold) / (next_level_count - prev_threshold)) * 100
+                else:
+                    progress_to_next = 0
+
+                self.senator_next_endorsement.config(
+                    text=f"Next: {next_endorsement} ({current}/{next_level_count}) - Need {needed} more"
+                )
+                self.senator_endorsement_bar['value'] = progress_to_next
+            else:
+                self.senator_next_endorsement.config(text="🌟 Maximum endorsement level achieved!")
+                self.senator_endorsement_bar['value'] = 100
 
     def update_triple_key_display(self, progress):
         """Update Triple Key award display"""
