@@ -5,7 +5,7 @@ Settings Tab - Configuration and preferences
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from src.qrz import test_qrz_login
-from src.theme_colors import get_error_color, get_info_color, get_muted_color
+from src.theme_colors import get_error_color, get_info_color, get_muted_color, get_success_color, get_warning_color
 
 
 class SettingsTab:
@@ -15,7 +15,18 @@ class SettingsTab:
         self.theme_manager = theme_manager
         self.database = database
         self.frame = ttk.Frame(parent)
+
+        # Initialize SKCC roster managers
+        from src.skcc_roster import get_roster_manager
+        from src.skcc_award_rosters import get_award_roster_manager
+        self.roster_manager = get_roster_manager()
+        self.award_rosters = get_award_roster_manager(database=database) if database else None
+
         self.create_widgets()
+
+        # CRITICAL: Auto-download rosters on EVERY startup for accurate award validation
+        # Delay start until after main loop is running to avoid threading errors
+        self.parent.after(100, self.auto_download_rosters_on_startup)
 
     def create_widgets(self):
         """Create the settings interface"""
@@ -76,6 +87,96 @@ class SettingsTab:
         self.zip_code_var = tk.StringVar(value=self.config.get('zip_code', ''))
         ttk.Entry(row3, textvariable=self.zip_code_var, width=10).pack(side='left', padx=5)
         ttk.Label(row3, text="(for weather)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
+        # SKCC Roster Status section
+        roster_frame = ttk.LabelFrame(scrollable_frame, text="SKCC Rosters Status", padding=10)
+        roster_frame.pack(fill='x', padx=10, pady=5)
+
+        roster_info_frame = ttk.Frame(roster_frame)
+        roster_info_frame.pack(fill='x')
+
+        ttk.Label(roster_info_frame, text="Membership Roster:", font=('', 10, 'bold'), width=20).pack(side='left')
+        self.roster_status_label = ttk.Label(roster_info_frame, text="Loading...", font=('', 10))
+        self.roster_status_label.pack(side='left', padx=10)
+
+        roster_info_frame2 = ttk.Frame(roster_frame)
+        roster_info_frame2.pack(fill='x', pady=(5, 0))
+
+        ttk.Label(roster_info_frame2, text="Award Rosters:", font=('', 10, 'bold'), width=20).pack(side='left')
+        self.award_roster_status_label = ttk.Label(roster_info_frame2, text="Loading...", font=('', 10))
+        self.award_roster_status_label.pack(side='left', padx=10)
+
+        ttk.Label(roster_frame,
+                 text="Rosters are downloaded automatically on startup for accurate award validation.",
+                 font=('', 9, 'italic'), foreground=get_muted_color(self.config)).pack(anchor='w', pady=(5, 0))
+
+        # Update roster status display
+        self.update_roster_status()
+
+        # User's SKCC Information section
+        user_skcc_frame = ttk.LabelFrame(scrollable_frame, text="SKCC Award Configuration", padding=10)
+        user_skcc_frame.pack(fill='x', padx=10, pady=5)
+
+        # SKCC Join Date
+        join_date_row = ttk.Frame(user_skcc_frame)
+        join_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(join_date_row, text="SKCC Join Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(join_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
+
+        self.join_date_var = tk.StringVar(value=self.config.get('skcc.join_date', ''))
+        self.join_date_entry = ttk.Entry(join_date_row, textvariable=self.join_date_var, width=12)
+        self.join_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(join_date_row, text="Save",
+                  command=self.save_join_date).pack(side='left', padx=5)
+
+        self.join_date_status = ttk.Label(join_date_row, text="", font=('', 9))
+        self.join_date_status.pack(side='left', padx=10)
+
+        # Centurion Achievement Date
+        centurion_date_row = ttk.Frame(user_skcc_frame)
+        centurion_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(centurion_date_row, text="Centurion Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(centurion_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
+
+        self.centurion_date_var = tk.StringVar(value=self.config.get('skcc.centurion_date', ''))
+        self.centurion_date_entry = ttk.Entry(centurion_date_row, textvariable=self.centurion_date_var, width=12)
+        self.centurion_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(centurion_date_row, text="Save",
+                  command=self.save_centurion_date).pack(side='left', padx=5)
+
+        self.centurion_date_status = ttk.Label(centurion_date_row, text="", font=('', 9))
+        self.centurion_date_status.pack(side='left', padx=10)
+
+        # Tribune x8 Achievement Date
+        tribune_x8_date_row = ttk.Frame(user_skcc_frame)
+        tribune_x8_date_row.pack(fill='x', pady=2)
+
+        ttk.Label(tribune_x8_date_row, text="Tribune x8 Date:", font=('', 10, 'bold'), width=20).pack(side='left')
+        ttk.Label(tribune_x8_date_row, text="(YYYYMMDD)", font=('', 9), foreground=get_muted_color(self.config)).pack(side='left', padx=5)
+
+        self.tribune_x8_date_var = tk.StringVar(value=self.config.get('skcc.tribune_x8_date', ''))
+        self.tribune_x8_date_entry = ttk.Entry(tribune_x8_date_row, textvariable=self.tribune_x8_date_var, width=12)
+        self.tribune_x8_date_entry.pack(side='left', padx=5)
+
+        ttk.Button(tribune_x8_date_row, text="Save",
+                  command=self.save_tribune_x8_date).pack(side='left', padx=5)
+
+        self.tribune_x8_date_status = ttk.Label(tribune_x8_date_row, text="", font=('', 9))
+        self.tribune_x8_date_status.pack(side='left', padx=10)
+
+        ttk.Label(user_skcc_frame,
+                 text="⚠️ Critical: Join date required for all awards.",
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w', pady=(5, 0))
+        ttk.Label(user_skcc_frame,
+                 text="Centurion date required for Tribune/Senator. Tribune x8 date required for Senator.",
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w')
+        ttk.Label(user_skcc_frame,
+                 text="QSOs before these dates will not count toward respective awards.",
+                 font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w')
 
         # Appearance Settings
         appearance_frame = ttk.LabelFrame(scrollable_frame, text="Appearance", padding=10)
@@ -658,6 +759,292 @@ Cluster list source: https://www.ng3k.com/Misc/cluster.html
 
         messagebox.showinfo("Theme Changed",
                           f"Switched to {new_theme.capitalize()} theme!")
+
+    # SKCC Configuration Methods
+
+    def save_join_date(self):
+        """Save user's SKCC join date to config"""
+        join_date = self.join_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if join_date and (len(join_date) != 8 or not join_date.isdigit()):
+            self.join_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground=get_error_color(self.config)
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.join_date', join_date)
+
+        # Update status
+        if join_date:
+            self.join_date_status.config(
+                text="✅ Saved",
+                foreground=get_success_color(self.config)
+            )
+        else:
+            self.join_date_status.config(
+                text="⚠️ Join date cleared",
+                foreground=get_warning_color(self.config)
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.join_date_status.config(text=""))
+
+    def save_centurion_date(self):
+        """Save user's Centurion achievement date to config"""
+        centurion_date = self.centurion_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if centurion_date and (len(centurion_date) != 8 or not centurion_date.isdigit()):
+            self.centurion_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground=get_error_color(self.config)
+            )
+            return
+
+        # Validate it's not before join date
+        join_date = self.config.get('skcc.join_date', '')
+        if centurion_date and join_date and centurion_date < join_date:
+            self.centurion_date_status.config(
+                text="❌ Cannot be before join date",
+                foreground=get_error_color(self.config)
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.centurion_date', centurion_date)
+
+        # Update status
+        if centurion_date:
+            self.centurion_date_status.config(
+                text="✅ Saved",
+                foreground=get_success_color(self.config)
+            )
+        else:
+            self.centurion_date_status.config(
+                text="⚠️ Centurion date cleared",
+                foreground=get_warning_color(self.config)
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.centurion_date_status.config(text=""))
+
+    def save_tribune_x8_date(self):
+        """Save user's Tribune x8 achievement date to config"""
+        tribune_x8_date = self.tribune_x8_date_var.get().strip().replace('-', '')
+
+        # Validate format
+        if tribune_x8_date and (len(tribune_x8_date) != 8 or not tribune_x8_date.isdigit()):
+            self.tribune_x8_date_status.config(
+                text="❌ Invalid format (use YYYYMMDD)",
+                foreground=get_error_color(self.config)
+            )
+            return
+
+        # Validate it's not before Centurion date
+        centurion_date = self.config.get('skcc.centurion_date', '')
+        if tribune_x8_date and centurion_date and tribune_x8_date < centurion_date:
+            self.tribune_x8_date_status.config(
+                text="❌ Cannot be before Centurion date",
+                foreground=get_error_color(self.config)
+            )
+            return
+
+        # Save to config
+        self.config.set('skcc.tribune_x8_date', tribune_x8_date)
+
+        # Update status
+        if tribune_x8_date:
+            self.tribune_x8_date_status.config(
+                text="✅ Saved",
+                foreground=get_success_color(self.config)
+            )
+        else:
+            self.tribune_x8_date_status.config(
+                text="⚠️ Tribune x8 date cleared",
+                foreground=get_warning_color(self.config)
+            )
+
+        # Clear status after 3 seconds
+        self.parent.after(3000, lambda: self.tribune_x8_date_status.config(text=""))
+
+    def update_roster_status(self):
+        """Update the roster status labels"""
+        # Membership roster status
+        if self.roster_manager.has_local_roster():
+            count = self.roster_manager.get_member_count()
+            age = self.roster_manager.get_roster_age()
+            self.roster_status_label.config(
+                text=f"{count:,} members | Updated: {age}",
+                foreground=get_success_color(self.config)
+            )
+        else:
+            self.roster_status_label.config(
+                text="Not downloaded",
+                foreground=get_warning_color(self.config)
+            )
+
+        # Award rosters status
+        if self.award_rosters:
+            award_info = self.award_rosters.get_roster_info()
+            centurion_count = award_info['centurion']['count']
+            tribune_count = award_info['tribune']['count']
+            senator_count = award_info['senator']['count']
+
+            if centurion_count > 0 and tribune_count > 0 and senator_count > 0:
+                self.award_roster_status_label.config(
+                    text=f"C:{centurion_count:,} T:{tribune_count:,} S:{senator_count:,}",
+                    foreground=get_success_color(self.config)
+                )
+            else:
+                self.award_roster_status_label.config(
+                    text="Not downloaded",
+                    foreground=get_warning_color(self.config)
+                )
+        else:
+            self.award_roster_status_label.config(
+                text="Database not available",
+                foreground=get_warning_color(self.config)
+            )
+
+    def auto_download_rosters_on_startup(self):
+        """
+        Auto-download all rosters on EVERY startup.
+
+        CRITICAL: Rosters MUST be updated on every startup to ensure contacts
+        are validated with current membership data and award dates.
+
+        This downloads:
+        1. Membership roster (SKCC member numbers and join dates)
+        2. Award rosters (Centurion, Tribune, Senator award dates)
+        """
+        import threading
+
+        def download_membership_roster():
+            """Download membership roster in background thread"""
+            try:
+                self.parent.after(0, lambda: self.roster_status_label.config(
+                    text="Downloading membership roster...",
+                    foreground=get_info_color(self.config)
+                ))
+
+                # Download membership roster
+                success = self.roster_manager.download_roster()
+
+                if success:
+                    # Show completion message
+                    count = self.roster_manager.get_member_count()
+
+                    def show_success():
+                        self.roster_status_label.config(
+                            text=f"✓ Download complete: {count:,} members",
+                            foreground=get_success_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_success)
+                    print(f"✓ SKCC membership roster updated: {count:,} members")
+                else:
+                    # Download failed
+                    def show_failure():
+                        self.roster_status_label.config(
+                            text="⚠ Download failed - using cached data if available",
+                            foreground=get_warning_color(self.config)
+                        )
+                        # After 5 seconds, show current status
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_failure)
+                    print(f"⚠ SKCC membership roster download failed")
+
+            except Exception as e:
+                print(f"Error downloading membership roster: {e}")
+                import traceback
+                traceback.print_exc()
+
+                def show_error():
+                    self.roster_status_label.config(
+                        text=f"❌ Error: {str(e)[:50]}",
+                        foreground=get_error_color(self.config)
+                    )
+                    # After 5 seconds, try to show what we have
+                    self.parent.after(5000, self.update_roster_status)
+
+                self.parent.after(0, show_error)
+
+        def download_award_rosters():
+            """Download award rosters in background thread"""
+            try:
+                if not self.award_rosters:
+                    return
+
+                self.parent.after(0, lambda: self.award_roster_status_label.config(
+                    text="Downloading award rosters...",
+                    foreground=get_info_color(self.config)
+                ))
+
+                # Download Centurion, Tribune, and Senator rosters
+                results = self.award_rosters.download_all_rosters(force=False)
+
+                # Get roster info for display
+                info = self.award_rosters.get_roster_info()
+
+                # Update UI on completion
+                if all(results.values()):
+                    # All rosters downloaded successfully
+                    def show_success():
+                        self.award_roster_status_label.config(
+                            text=f"✓ Download complete: C:{info['centurion']['count']:,} T:{info['tribune']['count']:,} S:{info['senator']['count']:,}",
+                            foreground=get_success_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_success)
+
+                    print(f"✓ SKCC award rosters updated:")
+                    print(f"  Centurion: {info['centurion']['count']:,} members")
+                    print(f"  Tribune: {info['tribune']['count']:,} members")
+                    print(f"  Senator: {info['senator']['count']:,} members")
+                else:
+                    # Some rosters failed
+                    failed_rosters = [name for name, success in results.items() if not success]
+
+                    def show_partial_failure():
+                        self.award_roster_status_label.config(
+                            text=f"⚠ Partial download - failed: {', '.join(failed_rosters)}",
+                            foreground=get_warning_color(self.config)
+                        )
+                        # After 5 seconds, revert to normal status display
+                        self.parent.after(5000, self.update_roster_status)
+
+                    self.parent.after(0, show_partial_failure)
+                    print(f"⚠ Some award rosters failed to download: {results}")
+
+            except Exception as e:
+                print(f"Error downloading award rosters: {e}")
+                import traceback
+                traceback.print_exc()
+
+                def show_error():
+                    self.award_roster_status_label.config(
+                        text=f"❌ Download failed: {str(e)[:50]}",
+                        foreground=get_error_color(self.config)
+                    )
+                    # After 5 seconds, try to show what we have
+                    self.parent.after(5000, self.update_roster_status)
+
+                self.parent.after(0, show_error)
+
+        # Start both downloads in parallel background threads
+        membership_thread = threading.Thread(target=download_membership_roster, daemon=True)
+        award_thread = threading.Thread(target=download_award_rosters, daemon=True)
+
+        membership_thread.start()
+        award_thread.start()
 
     def get_frame(self):
         """Return the frame widget"""
