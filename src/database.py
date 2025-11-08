@@ -462,6 +462,38 @@ class Database:
         # Convert Row objects to dicts for compatibility
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_contacts_by_date_range(self, start_date, end_date, start_time=None, end_time=None):
+        """
+        Retrieve contacts within a date/time range
+
+        Args:
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+            start_time: Optional start time in HH:MM format (defaults to 00:00)
+            end_time: Optional end time in HH:MM format (defaults to 23:59)
+
+        Returns:
+            List of contact dictionaries within the specified range
+        """
+        cursor = self.conn.cursor()
+
+        # Default times if not specified
+        if start_time is None:
+            start_time = '00:00'
+        if end_time is None:
+            end_time = '23:59'
+
+        # Query contacts within date/time range
+        cursor.execute('''
+            SELECT * FROM contacts
+            WHERE (date > ? OR (date = ? AND time_on >= ?))
+              AND (date < ? OR (date = ? AND time_on <= ?))
+            ORDER BY date ASC, time_on ASC
+        ''', (start_date, start_date, start_time, end_date, end_date, end_time))
+
+        # Convert Row objects to dicts for compatibility
+        return [dict(row) for row in cursor.fetchall()]
+
     def search_contacts(self, callsign):
         """Search for contacts by callsign"""
         cursor = self.conn.cursor()
