@@ -65,8 +65,8 @@ class DXClusterTab:
                                           values=cluster_names, width=40, state='readonly')
         self.cluster_combo.pack(side='left', padx=5)
 
-        # Set default from config
-        default_cluster = self.config.get('dx_cluster.selected', 'W3LPL')
+        # Set default from config (prefer USA RBN-enabled cluster)
+        default_cluster = self.config.get('dx_cluster.selected', 'AE5E')
         for i, cluster in enumerate(DX_CLUSTERS):
             if cluster['callsign'] == default_cluster:
                 self.cluster_combo.current(i)
@@ -413,6 +413,22 @@ class DXClusterTab:
         """Append text to console"""
         self.console_text.config(state='normal')
         self.console_text.insert('end', text + '\n')
+
+        # Detect RBN unavailability messages and provide helpful guidance
+        if 'no rbn' in text.lower() and 'available' in text.lower():
+            # Add a helpful suggestion
+            suggestion = (
+                "\n⚠️ RBN (Reverse Beacon Network) spots are not available on this cluster node.\n"
+                "💡 Try these USA clusters with active RBN/Skimmer feeds:\n"
+                "   • AE5E (Thief River Falls, MN) - dxspots.com:7300\n"
+                "   • K1AX-11 (N. Virginia) - dxdata.io:7300\n"
+                "   • AI9T (Marshall, IL) - dxc.ai9t.com:7300\n"
+                "   • K7TJ-1 (Spokane, WA) - k7tj.ewarg.org:7300\n"
+                "   • KB8PMY-3 (Hamilton, OH) - kb8pmy.net:7300\n"
+                "   Or check the Settings tab for the full list of RBN clusters.\n\n"
+            )
+            self.console_text.insert('end', suggestion)
+
         self.console_text.see('end')
         self.console_text.config(state='disabled')
 

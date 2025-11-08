@@ -347,18 +347,40 @@ class SettingsTab:
         info_text = """
 The following DX clusters are configured:
 
+USA RBN/Skimmer Clusters (Reverse Beacon Network):
+• AE5E (Thief River Falls, MN) - DX Spider +RBN - dxspots.com:7300
+• K1AX-11 (N. Virginia) - DX Spider +RBN - dxdata.io:7300
+• AI9T (Marshall, IL) - DX Spider +RBN - dxc.ai9t.com:7300
+• K7TJ-1 (Spokane, WA) - DX Spider +RBN - k7tj.ewarg.org:7300
+• AI6W-1 (Newcastle, CA) - DX Spider +RBN - ai6w.net:7300
+• KB8PMY-3 (Hamilton, OH) - DX Spider +RBN - kb8pmy.net:7300
+• K9LC (Rockford, IL) - DX Spider +RBN - k9lc.ddns.net:7300
+• AE3N-2 (Virginia) - DX Spider +RBN - dxc.ae3n.us:7300
+• K4GSO-2 (Ocala, FL) - AR-Cluster +RBN - dxc.k4gso.com:7373
+• K2CAN (Oswego, NY) - AR-Cluster +RBN - k2can.us:7373
 • NC7J (Syracuse, UT) - CW/RTTY Skimmer - dxc.nc7j.com:7373
+
+International RBN Clusters:
+• G6NHU-2 (Essex, UK) - DX Spider with RBN - dxspider.co.uk:7300
 • DL8LAS (Kiel, Germany) - Skimmer Server - dl8las.dyndns.org:7300
+• S50CLX (Slovenia) - Multi-mode Skimmer - s50clx.infrax.si:41112
+
+Traditional DX Clusters (USA):
 • W1NR (Marlborough, MA) - DXSpider - dx.w1nr.net:7300
 • W1NR-9 (Marlborough, MA) - DXSpider zones 1-8 - usdx.w1nr.net:7300
 • K1TTT (Peru, MA) - AR-Cluster - k1ttt.net:7373
 • W3LPL (Glenwood, MD) - AR-Cluster v.6 - w3lpl.net:7373
 • W6RFU (Santa Barbara, CA) - DX Spider - ucsbdx.ece.ucsb.edu:7300
-• G6NHU-2 (Essex, UK) - DX Spider with RBN - dxspider.co.uk:7300
-• S50CLX (Slovenia) - Multi-mode Skimmer - s50clx.infrax.si:41112
+
+Traditional DX Clusters (International):
 • ZL2ARN-10 (New Zealand) - DXSpider - zl2arn.ddns.net:7300
 
-Cluster list source: https://www.ng3k.com/Misc/cluster.html
+💡 RBN/Skimmer clusters provide automated CW spot detection via remote receivers.
+   Traditional clusters rely on manual user-submitted spots.
+
+Cluster list sources:
+• https://www.ng3k.com/Misc/cluster.html
+• https://www.dxcluster.info/telnet/index.php
         """
 
         info_label = ttk.Label(info_frame, text=info_text, justify='left')
