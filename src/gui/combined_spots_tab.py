@@ -314,7 +314,7 @@ class CombinedSpotsTab:
             if not self.pota_band_filters[band].get():
                 return False
 
-        # Mode filter
+        # Mode filter - CW only
         mode = spot.get('mode', '').upper()
         mode_map = {
             'SSB': 'SSB', 'USB': 'SSB', 'LSB': 'SSB',
@@ -326,9 +326,9 @@ class CombinedSpotsTab:
         }
         mode_category = mode_map.get(mode, mode)
 
-        if mode_category and mode_category in self.pota_mode_filters:
-            if not self.pota_mode_filters[mode_category].get():
-                return False
+        # Filter out any non-CW spots
+        if mode_category and mode_category != 'CW':
+            return False
 
         # Location filter
         location_filter = self.location_filter_var.get().upper().strip()
