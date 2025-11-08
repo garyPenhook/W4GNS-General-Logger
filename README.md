@@ -16,6 +16,7 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - **Keyboard shortcuts**: Ctrl+Enter to log, Esc to clear
 - **Smart auto-fill**: Date/time (UTC), power, RST from settings
 - **ADIF 3.x import/export** compatible with LOTW, QRZ, eQSL, and other logging software
+- **Date/Time range export** - Export contacts from specific time periods (perfect for contest logs and special events)
 - SQLite database for fast, reliable local storage
 - View 100 most recent contacts in sortable table
 
@@ -211,7 +212,7 @@ These clusters provide automated CW spot detection via remote receivers.
 
 ### ADIF Import/Export
 
-**Exporting Your Log:**
+**Exporting Your Entire Log:**
 1. Go to **File** menu → **Export Log (ADIF)...**
 2. Choose a location and filename (`.adi` or `.adif` extension)
 3. Click Save
@@ -222,6 +223,28 @@ These clusters provide automated CW spot detection via remote receivers.
    - eQSL
    - Other logging software (Log4OM, N1MM, etc.)
 
+**Exporting by Date/Time Range (NEW!):**
+Perfect for contest logs, special events, and field days:
+1. Go to **File** menu → **Export by Date/Time Range (ADIF)...**
+2. Select your date range using the dialog:
+   - Enter start and end dates (YYYY-MM-DD format)
+   - Optionally specify exact times (HH:MM format)
+   - Or use quick presets: **Today**, **Yesterday**, **This Week**, **This Month**
+3. Click **Export**
+4. Choose a location and filename
+5. Only contacts within the specified range will be exported
+
+**Examples:**
+- Export a weekend contest: Select Saturday 00:00 to Sunday 23:59
+- Export a special event: Select the event date range
+- Export SKCC WES weekend: Select the weekend dates
+- Export monthly activity: Use "This Month" preset
+
+**Exporting SKCC Contacts:**
+1. Go to **File** menu → **Export SKCC Contacts (ADIF)...**
+2. Only contacts with SKCC numbers will be exported
+3. Includes SKCC-specific fields for award applications
+
 **Importing a Log:**
 1. Go to **File** menu → **Import Log (ADIF)...**
 2. Select an ADIF file (`.adi` or `.adif`)
@@ -231,7 +254,7 @@ These clusters provide automated CW spot detection via remote receivers.
 6. Contacts will be added to your database
 7. The log display will refresh automatically
 
-**Note:** Duplicate checking is not currently performed during import. Be careful not to import the same file multiple times.
+**Note:** Duplicate checking (10-minute window) is performed during import to avoid duplicate contacts.
 
 ## Project Structure
 
@@ -253,8 +276,14 @@ W4GNS-General-Logger/
     └── gui/
         ├── __init__.py
         ├── logging_tab_enhanced.py  # Log4OM-style logging interface
+        ├── contacts_tab.py          # Contact log viewer
         ├── dx_cluster_tab.py        # DX cluster interface
-        └── settings_tab.py          # Settings interface
+        ├── awards_tab.py            # ARRL awards tracking
+        ├── skcc_awards_tab.py       # SKCC awards tracking
+        ├── settings_tab.py          # Settings interface
+        ├── date_range_dialog.py     # Date/time range selection dialog
+        ├── space_weather_tab.py     # Space weather information
+        └── weather_tab.py           # Weather information
 ```
 
 ## Database
@@ -323,11 +352,16 @@ Built with:
 
 Completed features:
 - [x] ADIF 3.x import/export ✅
+- [x] Date/time range export ✅
 - [x] QRZ.com XML lookups ✅
 - [x] QRZ.com Logbook upload ✅
 - [x] DXCC prefix lookup ✅
 - [x] Duplicate contact detection ✅
 - [x] Log4OM-style interface ✅
+- [x] SKCC awards tracking (all 11 awards) ✅
+- [x] ARRL awards tracking ✅
+- [x] Space weather integration ✅
+- [x] Dark/Light themes ✅
 
 Potential future features:
 - [ ] Rig control (CAT interface via Hamlib)
