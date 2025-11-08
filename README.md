@@ -43,6 +43,7 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Send cluster commands directly from the interface
 - Automatic spot parsing and display
 - Cache spots in local database
+- **SKCC member highlighting**: Spots for SKCC members with **Centurion (C)**, **Tribune (T)**, or **Senator (S)** suffixes are highlighted in **yellow** on the Logging tab
 
 ### ⚙️ **Configuration & Preferences**
 - **Station Information**: Callsign, grid square, default power, default RST
@@ -199,6 +200,12 @@ These clusters provide automated CW spot detection via remote receivers.
    - `SH/DX 14000-14350` - Show 20m spots
    - `SH/DX/20` - Show last 20 spots
    - Many other commands supported by your cluster
+
+**SKCC Member Highlighting:**
+On the **Log Contacts** tab, DX spots for SKCC members with special achievements are automatically highlighted:
+- **Yellow background** = SKCC member with **Centurion (C)**, **Tribune (T)**, or **Senator (S)** award suffix
+- This helps identify high-achievement SKCC operators at a glance
+- Requires SKCC roster to be downloaded (Settings → SKCC Awards tab)
 
 ### Common DX Cluster Commands
 
