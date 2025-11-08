@@ -289,6 +289,14 @@ class ADIFGenerator:
                 # Also include full name for other programs
                 fields.append(f"<APP_SKCC_KEY_TYPE:{len(key_type_str)}>{key_type_str}")
 
+        # Export power_watts as APP_SKCC_POWER for QRP award validation
+        # This is separate from TX_PWR and used specifically for QRP MPW calculations
+        power_watts = contact.get('power_watts', '')
+        if power_watts:
+            power_str = str(power_watts).strip()
+            if power_str:
+                fields.append(f"<APP_SKCC_POWER:{len(power_str)}>{power_str}")
+
         # Add end-of-record marker
         fields.append("<EOR>")
 
