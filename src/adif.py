@@ -174,12 +174,15 @@ class ADIFGenerator:
         # SKCCLogger expects SKCC data in the COMMENT field
         comment_parts = []
 
-        # Get existing comment/notes
+        # Get existing comment/notes and strip any old SKCC data from it
         existing_comment = contact.get('comment', '') or contact.get('comments', '') or contact.get('notes', '')
         if existing_comment:
-            comment_parts.append(str(existing_comment).strip())
+            # Remove any old SKCC-formatted data from existing comments
+            cleaned_comment = self._strip_skcc_from_comment(str(existing_comment))
+            if cleaned_comment:
+                comment_parts.append(cleaned_comment)
 
-        # Add SKCC data to comment for SKCCLogger
+        # Add SKCC data to comment for SKCCLogger in correct format
         skcc_number = contact.get('skcc_number', '')
         key_type = contact.get('key_type', '')
 
@@ -307,6 +310,45 @@ class ADIFGenerator:
             'SIDESWIPER': 'SS'
         }
         return code_map.get(key_type.upper().strip(), key_type)
+
+    def _strip_skcc_from_comment(self, comment):
+        """
+        Strip SKCC-formatted data from existing comments
+
+        Removes old SKCC comment patterns like:
+        - "SKCC: 12345"
+        - "SKCC: 12345S - Ron - MD"
+        - "SKCC 12345"
+        - "SKCC 12345 BG"
+
+        Args:
+            comment: Original comment string
+
+        Returns:
+            Cleaned comment with SKCC data removed
+        """
+        if not comment:
+            return ''
+
+        # Pattern to match SKCC data in various formats:
+        # - "SKCC: 12345" or "SKCC 12345" (with optional colon)
+        # - Followed by optional suffix letter (C, T, S)
+        # - Followed by optional " - Name - State" or similar
+        # - Followed by optional key type codes (BG, ST, SS)
+        patterns = [
+            r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',  # SKCC: 12345S - Name - State
+            r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)',  # SKCC 12345S BG
+            r'SKCC\s+\d+[CTS]?',  # SKCC 12345S
+        ]
+
+        cleaned = comment
+        for pattern in patterns:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+
+        # Clean up extra whitespace
+        cleaned = ' '.join(cleaned.split())
+
+        return cleaned.strip()
 
 
 def export_contacts_to_adif(contacts, filename, program_name="W4GNS General Logger"):
