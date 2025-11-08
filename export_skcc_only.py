@@ -63,13 +63,19 @@ def export_skcc_contacts(output_file=None, db_path=None):
     print(f"{'='*70}\n")
 
     # Get user's callsign and SKCC number from config (if available)
-    cursor.execute('SELECT value FROM config WHERE key = "callsign"')
-    result = cursor.fetchone()
-    user_callsign = result[0] if result else ""
+    user_callsign = ""
+    user_skcc = ""
+    try:
+        cursor.execute('SELECT value FROM config WHERE key = "callsign"')
+        result = cursor.fetchone()
+        user_callsign = result[0] if result else ""
 
-    cursor.execute('SELECT value FROM config WHERE key = "skcc_number"')
-    result = cursor.fetchone()
-    user_skcc = result[0] if result else ""
+        cursor.execute('SELECT value FROM config WHERE key = "skcc_number"')
+        result = cursor.fetchone()
+        user_skcc = result[0] if result else ""
+    except Exception:
+        # Config table doesn't exist, just continue without user info
+        pass
 
     # Write ADIF file
     with open(output_file, 'w', encoding='utf-8') as f:
