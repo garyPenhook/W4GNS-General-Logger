@@ -12,56 +12,66 @@ Without these rosters, the validation code cannot verify the award status and re
 
 ## Solution
 
-The fix includes two improvements:
+The fix includes three improvements:
 
-### 1. **Roster Download Script**
+### 1. **Automatic Roster Downloads** ✨
 
-A new script `download_rosters.py` will download the official Centurion, Tribune, and Senator rosters from the SKCC website and cache them locally.
+The app now **automatically downloads** the official Centurion, Tribune, and Senator rosters from the SKCC website when it starts up.
 
-**Usage:**
+- Runs in a background thread (doesn't slow down startup)
+- Uses 7-day cache (won't re-download if recent)
+- Rosters stored in `~/.skcc_rosters/` directory
+- Also saved to database for validation
+
+**You don't need to do anything - it happens automatically when you launch the app!**
+
+### 2. **Manual Roster Download Script** (optional)
+
+If you want to manually force a roster download, use the `download_rosters.py` script:
+
 ```bash
 python3 download_rosters.py
 ```
 
-This downloads all three rosters and stores them in:
-- `~/.skcc_rosters/centurion_roster.txt`
-- `~/.skcc_rosters/tribune_roster.txt`
-- `~/.skcc_rosters/senator_roster.txt`
+This is useful if:
+- You want to force a fresh download
+- You're troubleshooting roster issues
+- You want to verify roster contents
 
-And also saves them to the database for validation.
-
-### 2. **Fallback Validation**
+### 3. **Fallback Validation**
 
 Modified `src/skcc_awards/tribune.py` and `src/skcc_awards/senator.py` to add a **fallback validation** when rosters aren't available:
 
 - **Primary validation**: Check official rosters to verify the station was T/S on the QSO date
 - **Fallback validation**: If rosters aren't downloaded, check the SKCC number suffix (T or S)
 
-The fallback is less precise (it doesn't verify the exact date they achieved the award), but it allows validation when rosters haven't been downloaded.
+The fallback is less precise (it doesn't verify the exact date they achieved the award), but it ensures validation always works.
 
 ## How to Fix Your Export
 
-### Option 1: Download Rosters (Recommended)
-
-This is the most accurate method:
+With the fix, rosters are **automatically downloaded** when you start the app, so you just need to:
 
 ```bash
-# 1. Download the rosters
+# Launch the app (rosters download automatically in background)
+python3 main.py
+
+# Or export directly from command line
+python3 export_award_application.py --award tribune --callsign W4GNS
+```
+
+That's it! The app will:
+1. Automatically download rosters if needed (7-day cache)
+2. Use roster validation for accurate date checking
+3. Fall back to T/S suffix validation if rosters aren't available
+
+### Manual Roster Download (Optional)
+
+If you want to force a fresh roster download without launching the GUI:
+
+```bash
 python3 download_rosters.py
-
-# 2. Export Tribune award again
 python3 export_award_application.py --award tribune --callsign W4GNS
 ```
-
-### Option 2: Use Fallback Validation
-
-The code now automatically uses fallback validation when rosters aren't available. Simply re-export:
-
-```bash
-python3 export_award_application.py --award tribune --callsign W4GNS
-```
-
-The validation will use the T/S suffix in SKCC numbers to determine Tribune/Senator status.
 
 ## Verification
 
@@ -109,13 +119,16 @@ if not is_valid and not rosters_loaded:
 
 ## Files Modified
 
+- `main.py` - Added automatic roster downloads on app startup (background thread)
 - `src/skcc_awards/tribune.py` - Added fallback validation
 - `src/skcc_awards/senator.py` - Added fallback validation
-- `download_rosters.py` - New script to download rosters
+- `download_rosters.py` - New script to manually download rosters
 - `diagnose_tribune.py` - New diagnostic script
+- `TRIBUNE_EXPORT_FIX.md` - This documentation
 
 ## Notes
 
-- Rosters are cached for 7 days
-- Use `download_rosters.py -f` to force re-download
+- Rosters are automatically downloaded on app startup (7-day cache)
+- Roster downloads run in background thread (doesn't slow down startup)
+- Use `download_rosters.py -f` to force manual re-download
 - The fallback validation is safe - it only accepts stations with T or S suffixes, which are official SKCC award indicators

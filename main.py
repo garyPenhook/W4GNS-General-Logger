@@ -60,6 +60,9 @@ class W4GNSLogger:
         # Center window
         self.center_window()
 
+        # Download SKCC award rosters in background (for Tribune/Senator validation)
+        self.download_skcc_rosters_background()
+
         # Start auto-save timer if enabled
         if self.config.get('backup.auto_save', False):
             interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000
@@ -654,6 +657,45 @@ https://www.ng3k.com/Misc/cluster.html
         # Schedule next auto-save
         interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000  # Convert to milliseconds
         self.root.after(interval, self.auto_save_timer)
+
+    def download_skcc_rosters_background(self):
+        """
+        Download SKCC award rosters in background thread.
+
+        These rosters are needed for Tribune and Senator award validation.
+        They contain the dates when members achieved each award level.
+        """
+        import threading
+
+        def download_rosters():
+            try:
+                from src.skcc_award_rosters import get_award_roster_manager
+
+                roster_mgr = get_award_roster_manager(database=self.database)
+
+                # Download all rosters (uses 7-day cache, won't re-download if recent)
+                results = roster_mgr.download_all_rosters(force=False)
+
+                # Log results
+                success_count = sum(1 for success in results.values() if success)
+                if success_count > 0:
+                    print(f"SKCC Rosters: Downloaded/loaded {success_count}/3 rosters")
+
+                    # Show roster info
+                    roster_info = roster_mgr.get_roster_info()
+                    for award_type, info in roster_info.items():
+                        if info['loaded']:
+                            print(f"  {award_type.title()}: {info['count']} members (age: {info['age_days']} days)")
+                else:
+                    print("SKCC Rosters: Failed to download rosters (will use fallback validation)")
+
+            except Exception as e:
+                print(f"SKCC Rosters: Error downloading rosters: {e}")
+                print("  Tribune/Senator validation will use fallback mode (T/S suffix)")
+
+        # Start download in background thread
+        thread = threading.Thread(target=download_rosters, daemon=True)
+        thread.start()
 
     def on_closing(self):
         """Handle window closing"""
