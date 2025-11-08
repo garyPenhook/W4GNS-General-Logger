@@ -156,11 +156,40 @@ class SenatorAward(SKCCAwardBase):
             return False
 
         # Check if the contacted station was Tribune or Senator at time of QSO
-        if not self.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date):
-            logger.debug(
-                f"Contact {callsign} with SKCC#{skcc_num} not valid: "
-                f"was not Tribune/Senator on {qso_date}"
-            )
+        is_valid_tribune_senator = self.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date)
+
+        # FALLBACK: If rosters aren't available, check the SKCC number suffix (T or S)
+        # This is less precise but allows validation when rosters haven't been downloaded
+        if not is_valid_tribune_senator:
+            from src.utils.skcc_number import is_tribune_or_senator
+
+            # Check if the SKCC number has T or S suffix
+            if is_tribune_or_senator(skcc_num):
+                # Check if rosters are actually loaded
+                roster_info = self.award_rosters.get_roster_info()
+                tribune_loaded = roster_info.get('tribune', {}).get('loaded', False)
+                senator_loaded = roster_info.get('senator', {}).get('loaded', False)
+
+                # If rosters aren't loaded, use suffix as fallback
+                if not tribune_loaded and not senator_loaded:
+                    logger.debug(
+                        f"Contact {callsign} with SKCC#{skcc_num}: "
+                        f"Using T/S suffix validation (rosters not loaded)"
+                    )
+                    is_valid_tribune_senator = True
+                else:
+                    # Rosters are loaded but member not found - reject
+                    logger.debug(
+                        f"Contact {callsign} with SKCC#{skcc_num} not valid: "
+                        f"was not Tribune/Senator on {qso_date}"
+                    )
+            else:
+                logger.debug(
+                    f"Contact {callsign} with SKCC#{skcc_num} not valid: "
+                    f"was not Tribune/Senator on {qso_date}"
+                )
+
+        if not is_valid_tribune_senator:
             return False
 
         return True
