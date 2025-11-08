@@ -360,6 +360,34 @@ class SKCCAwardRosterManager:
 
         return False
 
+    def was_centurion_or_higher_on_date(self, skcc_number: str, qso_date: str) -> bool:
+        """
+        Check if a member was Centurion OR Tribune OR Senator at time of QSO
+
+        This is the critical validation for Tribune award contacts - the contacted
+        station must have been at least a Centurion at the time of QSO.
+
+        Args:
+            skcc_number: SKCC member number
+            qso_date: QSO date in YYYYMMDD format
+
+        Returns:
+            True if member was Centurion, Tribune, or Senator at time of QSO
+        """
+        # Check if they were Centurion by the QSO date
+        if self.was_award_holder_on_date('centurion', skcc_number, qso_date):
+            return True
+
+        # Check if they were Tribune by the QSO date
+        if self.was_award_holder_on_date('tribune', skcc_number, qso_date):
+            return True
+
+        # Check if they were Senator by the QSO date
+        if self.was_award_holder_on_date('senator', skcc_number, qso_date):
+            return True
+
+        return False
+
     def download_all_rosters(self, force: bool = False) -> Dict[str, bool]:
         """
         Download all three award rosters

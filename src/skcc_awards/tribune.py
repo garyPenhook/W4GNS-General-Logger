@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class TribuneAward(SKCCAwardBase):
-    """SKCC Tribune Award - 50+ unique Tribune/Senator contacts"""
+    """SKCC Tribune Award - 50+ unique Centurion/Tribune/Senator contacts"""
 
     def __init__(self, database):
         """
@@ -134,48 +134,49 @@ class TribuneAward(SKCCAwardBase):
             )
             return False
 
-        # CRITICAL RULE: Remote station must have been Tribune or Senator at time of QSO
+        # CRITICAL RULE: Remote station must have been Centurion/Tribune/Senator at time of QSO
         # This is validated against the official SKCC award rosters
         skcc_num = contact.get('skcc_number', '').strip()
         if not skcc_num:
             logger.debug(f"Contact {base_call} missing SKCC number")
             return False
 
-        # Check if the contacted station was Tribune or Senator at time of QSO
-        is_valid_tribune_senator = self.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date)
+        # Check if the contacted station was Centurion/Tribune/Senator at time of QSO
+        is_valid_centurion_or_higher = self.award_rosters.was_centurion_or_higher_on_date(skcc_num, qso_date)
 
-        # FALLBACK: If rosters aren't available, check the SKCC number suffix (T or S)
+        # FALLBACK: If rosters aren't available, check the SKCC number suffix (C, T, or S)
         # This is less precise but allows validation when rosters haven't been downloaded
-        if not is_valid_tribune_senator:
-            from src.utils.skcc_number import is_tribune_or_senator
+        if not is_valid_centurion_or_higher:
+            from src.utils.skcc_number import is_centurion
 
-            # Check if the SKCC number has T or S suffix
-            if is_tribune_or_senator(skcc_num):
+            # Check if the SKCC number has C, T, or S suffix
+            if is_centurion(skcc_num):
                 # Check if rosters are actually loaded
                 roster_info = self.award_rosters.get_roster_info()
+                centurion_loaded = roster_info.get('centurion', {}).get('loaded', False)
                 tribune_loaded = roster_info.get('tribune', {}).get('loaded', False)
                 senator_loaded = roster_info.get('senator', {}).get('loaded', False)
 
                 # If rosters aren't loaded, use suffix as fallback
-                if not tribune_loaded and not senator_loaded:
+                if not centurion_loaded and not tribune_loaded and not senator_loaded:
                     logger.debug(
                         f"Contact {callsign} with SKCC#{skcc_num}: "
-                        f"Using T/S suffix validation (rosters not loaded)"
+                        f"Using C/T/S suffix validation (rosters not loaded)"
                     )
-                    is_valid_tribune_senator = True
+                    is_valid_centurion_or_higher = True
                 else:
                     # Rosters are loaded but member not found - reject
                     logger.debug(
                         f"Contact {callsign} with SKCC#{skcc_num} not valid: "
-                        f"was not Tribune/Senator on {qso_date}"
+                        f"was not Centurion/Tribune/Senator on {qso_date}"
                     )
             else:
                 logger.debug(
                     f"Contact {callsign} with SKCC#{skcc_num} not valid: "
-                    f"was not Tribune/Senator on {qso_date}"
+                    f"was not Centurion/Tribune/Senator on {qso_date}"
                 )
 
-        if not is_valid_tribune_senator:
+        if not is_valid_centurion_or_higher:
             return False
 
         # CRITICAL RULE: "The QSO date must be on or after both participants' Centurion Award date"
@@ -197,14 +198,14 @@ class TribuneAward(SKCCAwardBase):
         """
         Calculate Tribune award progress
 
-        Counts unique Tribune/Senator SKCC numbers contacted.
+        Counts unique Centurion/Tribune/Senator SKCC numbers contacted.
 
         Args:
             contacts: List of contact records
 
         Returns:
             {
-                'current': int,        # Unique Tribune members contacted
+                'current': int,        # Unique Centurion/Tribune/Senator members contacted
                 'required': int,       # Always 50 for base award
                 'achieved': bool,      # True if Centurion AND 50+ members
                 'progress_pct': float, # Percentage toward 50
@@ -272,7 +273,7 @@ class TribuneAward(SKCCAwardBase):
             'name': 'SKCC Tribune',
             'description': 'Contact 50+ Centurions/Tribunes/Senators (must be Centurion first)',
             'base_requirement': 50,
-            'base_units': 'unique Tribune/Senator members',
+            'base_units': 'unique Centurion/Tribune/Senator members',
             'prerequisite': 'Must achieve Centurion first (100+ SKCC members)',
             'prerequisite_requirement': 100,
             'modes': ['CW'],
@@ -284,7 +285,7 @@ class TribuneAward(SKCCAwardBase):
             'special_rules': [
                 'Must be Centurion before Tribune contacts count',
                 'Special event calls excluded after October 1, 2008',
-                'Remote station must be Tribune or Senator (from official list)',
+                'Remote station must be Centurion, Tribune or Senator (from official list)',
                 'Each SKCC number counts only once'
             ],
             'endorsements_available': True,
