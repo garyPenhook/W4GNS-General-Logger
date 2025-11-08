@@ -320,7 +320,7 @@ class EnhancedLoggingTab:
         self.dx_spots_tree.column('Comment', width=200)
 
         # Configure tag for SKCC members with C, T, or S suffix
-        self.dx_spots_tree.tag_configure('skcc_cts', background='yellow')
+        self.dx_spots_tree.tag_configure('skcc_cts', background='cyan')
 
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
