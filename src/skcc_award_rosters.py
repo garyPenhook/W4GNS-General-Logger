@@ -177,10 +177,11 @@ class SKCCAwardRosterManager:
             # Pattern matches table rows with member data
             # Typical row: <tr><td>num</td><td>call</td><td>skcc</td>...<td>date</td>...
 
-            # For Tribune, pattern is slightly different with "x#" prefix
+            # For Tribune, pattern must match both with and without endorsements
             if award_type == 'tribune':
-                # Tribune format: Award x# | Callsign | SKCC | Name | City | SPC | Awarded | ...
-                pattern = r'<td[^>]*>.*?x\d+.*?</td>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>(\d+)</td>.*?<td[^>]*>(\d{2}\s+\w+\s+\d{4})</td>'
+                # Tribune format: Award# [x#] | Callsign | SKCC | Name | City | SPC | Awarded | ...
+                # Examples: "1 x15" (with endorsement) or "5" (without endorsement)
+                pattern = r'<td[^>]*>\d+(?:\s+x\d+)?</td>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>(\d+)</td>.*?<td[^>]*>(\d{2}\s+\w+\s+\d{4})</td>'
             else:
                 # Centurion/Senator format: Award# | Callsign | SKCC | Name | City | SPC | Awarded | ...
                 pattern = r'<td[^>]*>(\d+)</td>\s*<td[^>]*>([^<]+)</td>\s*<td[^>]*>(\d+)</td>.*?<td[^>]*>(\d{2}\s+\w+\s+\d{4})</td>'
