@@ -506,7 +506,7 @@ class DXClusterTab:
             if not self.band_filters[band].get():
                 return False
 
-        # Check mode filter - try to detect mode from comment or frequency
+        # Check mode filter - CW only
         comment = spot.get('comment', '').upper()
         mode = self.extract_mode_from_comment(comment)
 
@@ -514,10 +514,9 @@ class DXClusterTab:
         if not mode:
             mode = self.guess_mode_from_frequency(frequency)
 
-        # Only filter if we detected a mode AND it's in our filters
-        if mode and mode in self.mode_filters:
-            if not self.mode_filters[mode].get():
-                return False
+        # Filter out any non-CW spots
+        if mode and mode != 'CW':
+            return False
 
         # Check continent filter - filter by SPOTTER's continent (not DX station)
         # This shows you worldwide DX, but only from spotters in selected continents
