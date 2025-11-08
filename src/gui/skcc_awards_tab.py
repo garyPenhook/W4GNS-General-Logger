@@ -3,7 +3,8 @@ SKCC Awards Tab - Display Straight Key Century Club award progress
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext, messagebox, filedialog
+from datetime import datetime
 from src.skcc_awards import (
     CenturionAward, TribuneAward, SenatorAward,
     TripleKeyAward, RagChewAward, CanadianMapleAward,
@@ -13,6 +14,7 @@ from src.skcc_awards import (
 )
 from src.skcc_roster import get_roster_manager
 from src.skcc_award_rosters import get_award_roster_manager
+from src.skcc_awards.award_application import AwardApplicationGenerator
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
 
 
@@ -26,6 +28,9 @@ class SKCCAwardsTab:
         # Initialize roster managers
         self.roster_manager = get_roster_manager()
         self.award_rosters = get_award_roster_manager(database=self.database)
+
+        # Initialize award application generator
+        self.app_generator = AwardApplicationGenerator(database, config)
 
         # Initialize award instances
         self.awards = {
@@ -124,6 +129,10 @@ class SKCCAwardsTab:
                                                           length=300, mode='determinate')
         self.centurion_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
+        # Generate Application button
+        ttk.Button(centurion_frame, text="📄 Generate Award Application",
+                  command=self.generate_centurion_application).pack(anchor='w', pady=(10, 0))
+
         # Tribune
         tribune_frame = ttk.LabelFrame(self.core_frame, text="Tribune Award", padding=10)
         tribune_frame.pack(fill='x', padx=10, pady=5)
@@ -154,6 +163,10 @@ class SKCCAwardsTab:
                                                         length=300, mode='determinate')
         self.tribune_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
+        # Generate Application button
+        ttk.Button(tribune_frame, text="📄 Generate Award Application",
+                  command=self.generate_tribune_application).pack(anchor='w', pady=(10, 0))
+
         # Senator
         senator_frame = ttk.LabelFrame(self.core_frame, text="Senator Award", padding=10)
         senator_frame.pack(fill='x', padx=10, pady=5)
@@ -183,6 +196,10 @@ class SKCCAwardsTab:
         self.senator_endorsement_bar = ttk.Progressbar(endorsement_senator_frame,
                                                         length=300, mode='determinate')
         self.senator_endorsement_bar.pack(anchor='w', pady=(2, 0))
+
+        # Generate Application button
+        ttk.Button(senator_frame, text="📄 Generate Award Application",
+                  command=self.generate_senator_application).pack(anchor='w', pady=(10, 0))
 
     def create_specialty_awards_display(self):
         """Create display for specialty awards (Triple Key, Rag Chew, PFX, Canadian Maple)"""
@@ -839,6 +856,90 @@ class SKCCAwardsTab:
             report += f"\n✅ Configuration looks good!\n"
             report += f"\nIf awards still don't show, click 'Refresh Awards'."
             messagebox.showinfo("SKCC Awards Diagnostic", report)
+
+    def generate_centurion_application(self):
+        """Generate Centurion award application"""
+        self._generate_award_application('centurion', 'Centurion')
+
+    def generate_tribune_application(self):
+        """Generate Tribune award application"""
+        self._generate_award_application('tribune', 'Tribune')
+
+    def generate_senator_application(self):
+        """Generate Senator award application"""
+        self._generate_award_application('senator', 'Senator')
+
+    def _generate_award_application(self, award_type: str, award_name: str):
+        """
+        Generate award application report and save to file
+
+        Args:
+            award_type: Type of award ('centurion', 'tribune', 'senator')
+            award_name: Display name of the award
+        """
+        # Get all contacts
+        all_contacts = self.database.get_all_contacts(limit=999999)
+        contacts_list = [dict(c) for c in all_contacts]
+
+        # Get qualifying contacts for this award
+        award_instance = self.awards[award_type]
+        qualifying_contacts = []
+
+        for contact in contacts_list:
+            if award_instance.validate(contact):
+                qualifying_contacts.append(contact)
+
+        if not qualifying_contacts:
+            messagebox.showwarning(
+                "No Qualifying Contacts",
+                f"No contacts found that qualify for the {award_name} award.\n\n"
+                f"Make sure you have:\n"
+                f"- Logged contacts with SKCC members\n"
+                f"- Used CW mode\n"
+                f"- Recorded key types\n"
+                f"- Set your SKCC configuration in Settings"
+            )
+            return
+
+        # Sort by date
+        qualifying_contacts.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
+
+        # Generate the report
+        if award_type == 'centurion':
+            report = self.app_generator.generate_centurion_report(qualifying_contacts)
+        elif award_type == 'tribune':
+            report = self.app_generator.generate_tribune_report(qualifying_contacts)
+        elif award_type == 'senator':
+            report = self.app_generator.generate_senator_report(qualifying_contacts)
+
+        # Ask user where to save
+        callsign = self.config.get('callsign', 'UNKNOWN')
+        default_filename = f"SKCC_{award_name}_{callsign}_{datetime.now().strftime('%Y%m%d')}.txt"
+
+        filename = filedialog.asksaveasfilename(
+            title=f"Save {award_name} Award Application",
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            initialfile=default_filename
+        )
+
+        if not filename:
+            return  # User cancelled
+
+        # Save the report
+        if self.app_generator.save_report_to_file(report, filename):
+            messagebox.showinfo(
+                "Application Generated",
+                f"{award_name} award application generated successfully!\n\n"
+                f"File: {filename}\n\n"
+                f"Qualifying contacts: {len(qualifying_contacts)}\n\n"
+                f"You can now submit this file to the SKCC awards manager."
+            )
+        else:
+            messagebox.showerror(
+                "Error",
+                f"Failed to save award application to:\n{filename}"
+            )
 
     def get_frame(self):
         """Return the main frame"""
