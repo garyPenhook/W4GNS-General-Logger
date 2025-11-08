@@ -122,26 +122,12 @@ class DXClusterTab:
         ttk.Button(band_row, text="Clear Bands",
                   command=lambda: self.toggle_all_filters(self.band_filters, False)).pack(side='left')
 
-        # Mode filters
-        mode_row = ttk.Frame(filter_frame)
-        mode_row.pack(fill='x', pady=2)
-
-        ttk.Label(mode_row, text="Modes:").pack(side='left', padx=(0, 5))
-
+        # Mode filters - CW only
         self.mode_filters = {}
-        modes = ['CW', 'SSB', 'RTTY', 'FT8', 'FT4', 'PSK', 'DIGI']
+        modes = ['CW']
         for mode in modes:
-            # Load saved filter state or default to True
-            saved_state = self.config.get(f'dx_filter.mode.{mode}', True)
-            var = tk.BooleanVar(value=saved_state)
+            var = tk.BooleanVar(value=True)
             self.mode_filters[mode] = var
-            ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.save_and_apply_filters).pack(side='left', padx=2)
-
-        ttk.Button(mode_row, text="All Modes",
-                  command=lambda: self.toggle_all_filters(self.mode_filters, True)).pack(side='left', padx=5)
-        ttk.Button(mode_row, text="Clear Modes",
-                  command=lambda: self.toggle_all_filters(self.mode_filters, False)).pack(side='left')
 
         # Continent filters (by spotter location)
         continent_row = ttk.Frame(filter_frame)

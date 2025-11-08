@@ -142,21 +142,12 @@ class CombinedSpotsTab:
             ttk.Checkbutton(band_row, text=band, variable=var,
                            command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
-        # Mode filters (compact)
-        mode_row = ttk.Frame(pota_filter)
-        mode_row.pack(fill='x', pady=2)
-
-        ttk.Label(mode_row, text="Modes:").pack(side='left', padx=2)
-
+        # Mode filters - CW only
         self.pota_mode_filters = {}
-        modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'DIGI']
+        modes = ['CW']
         for mode in modes:
-            # Load saved filter state or default to True
-            saved_state = self.config.get(f'pota_filter.mode.{mode}', True)
-            var = tk.BooleanVar(value=saved_state)
+            var = tk.BooleanVar(value=True)
             self.pota_mode_filters[mode] = var
-            ttk.Checkbutton(mode_row, text=mode, variable=var,
-                           command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
         # Location filter
         loc_row = ttk.Frame(pota_filter)

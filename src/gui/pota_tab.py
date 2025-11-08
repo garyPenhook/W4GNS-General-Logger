@@ -75,12 +75,11 @@ class POTATab:
         ttk.Button(band_row, text="Clear Bands",
                   command=lambda: self.toggle_all_filters(self.band_filters, False)).pack(side='left')
 
-        # Mode filters - defaulted to CW only (no UI controls to save space)
+        # Mode filters - CW only
         self.mode_filters = {}
-        modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'RTTY', 'PSK', 'DIGI']
+        modes = ['CW']
         for mode in modes:
-            # Default to CW only, all others disabled
-            var = tk.BooleanVar(value=(mode == 'CW'))
+            var = tk.BooleanVar(value=True)
             self.mode_filters[mode] = var
 
         # Search/filter by location

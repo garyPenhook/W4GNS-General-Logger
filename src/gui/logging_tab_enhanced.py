@@ -108,10 +108,9 @@ class EnhancedLoggingTab:
         band_combo.pack(side='left', padx=5)
 
         ttk.Label(row1, text="Mode:", width=6, anchor='e').pack(side='left', padx=(10, 0))
-        self.mode_var = tk.StringVar()
-        mode_combo = ttk.Combobox(row1, textvariable=self.mode_var, width=10)
-        mode_combo['values'] = ('SSB', 'CW', 'FT8', 'FT4', 'RTTY', 'PSK31', 'PSK63',
-                               'MFSK', 'JT65', 'JT9', 'AM', 'FM', 'DATA')
+        self.mode_var = tk.StringVar(value='CW')
+        mode_combo = ttk.Combobox(row1, textvariable=self.mode_var, width=10, state='readonly')
+        mode_combo['values'] = ('CW',)
         mode_combo.pack(side='left', padx=5)
 
         # Row 2: Date, Time ON, Time OFF, Power, RST
@@ -391,12 +390,11 @@ class EnhancedLoggingTab:
             ttk.Checkbutton(band_row, text=band, variable=var,
                            command=self.save_and_apply_pota_filters).pack(side='left', padx=1)
 
-        # Mode filters - defaulted to CW only (no UI to save space)
+        # Mode filters - CW only
         self.pota_mode_filters = {}
-        modes = ['CW', 'SSB', 'FM', 'FT8', 'FT4', 'DIGI']
+        modes = ['CW']
         for mode in modes:
-            # Default to CW only to save space
-            var = tk.BooleanVar(value=(mode == 'CW'))
+            var = tk.BooleanVar(value=True)
             self.pota_mode_filters[mode] = var
 
         # POTA Spots display
