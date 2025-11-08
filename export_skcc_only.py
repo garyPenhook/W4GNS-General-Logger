@@ -37,7 +37,7 @@ def export_skcc_contacts(output_file=None, db_path=None):
             rst_sent, rst_rcvd, power, name, qth, gridsquare, county,
             state, country, continent, cq_zone, itu_zone, dxcc,
             my_gridsquare, comment, skcc_number, my_skcc_number,
-            dxcc_entity
+            dxcc_entity, key_type, duration_minutes, power_watts, distance_nm
         FROM contacts
         WHERE skcc_number IS NOT NULL AND skcc_number != ''
         ORDER BY date, time_on
@@ -114,6 +114,10 @@ def export_skcc_contacts(output_file=None, db_path=None):
         COL_SKCC_NUMBER = 22
         COL_MY_SKCC_NUMBER = 23
         COL_DXCC_ENTITY = 24
+        COL_KEY_TYPE = 25
+        COL_DURATION_MINUTES = 26
+        COL_POWER_WATTS = 27
+        COL_DISTANCE_NM = 28
 
         # Write each contact
         for contact in contacts:
@@ -128,10 +132,55 @@ def export_skcc_contacts(output_file=None, db_path=None):
             callsign = contact[COL_CALLSIGN].upper()
             fields.append(f"<CALL:{len(callsign)}>{callsign}")
 
-            # Comment
-            if contact[COL_COMMENT]:
-                comment = contact[COL_COMMENT]
-                fields.append(f"<COMMENT:{len(comment)}>{comment}")
+            # Build SKCC-enhanced comment field for SKCCLogger
+            # SKCCLogger expects: "SKCC {number} {key_code} {state/country}"
+            comment_parts = []
+
+            # Get existing comment and clean it
+            existing_comment = contact[COL_COMMENT]
+            if existing_comment:
+                # Strip out any old SKCC data (format: "SKCC: 12345 - Name - State")
+                import re
+                cleaned = str(existing_comment)
+                patterns = [
+                    r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',
+                    r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)(?:\s+[A-Z]{2,})?',
+                    r'SKCC\s+\d+[CTS]?',
+                ]
+                for pattern in patterns:
+                    cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+                cleaned = ' '.join(cleaned.split()).strip()
+                if cleaned:
+                    comment_parts.append(cleaned)
+
+            # Add SKCC data in SKCCLogger format
+            skcc_num = contact[COL_SKCC_NUMBER]
+            key_type = contact[COL_KEY_TYPE]
+            state = contact[COL_STATE]
+            country = contact[COL_COUNTRY]
+
+            if skcc_num:
+                # Get key type abbreviation
+                key_code = ''
+                if key_type:
+                    key_map = {'STRAIGHT': 'ST', 'BUG': 'BG', 'SIDESWIPER': 'SS'}
+                    key_code = key_map.get(str(key_type).upper().strip(), '')
+
+                # Format: "SKCC 12345 BG MD" or "SKCC 12345 BG Canada"
+                skcc_comment = f"SKCC {skcc_num}"
+                if key_code:
+                    skcc_comment += f" {key_code}"
+                if state:
+                    skcc_comment += f" {state}"
+                elif country:
+                    skcc_comment += f" {country}"
+
+                comment_parts.append(skcc_comment)
+
+            # Write combined comment
+            if comment_parts:
+                full_comment = " ".join(comment_parts)
+                fields.append(f"<COMMENT:{len(full_comment)}>{full_comment}")
 
             # Country
             if contact[COL_COUNTRY]:
@@ -190,9 +239,38 @@ def export_skcc_contacts(output_file=None, db_path=None):
                 rst_sent = contact[COL_RST_SENT]
                 fields.append(f"<RST_SENT:{len(rst_sent)}>{rst_sent}")
 
-            # SKCC Number (CRITICAL - this is what SKCC Logger needs)
+            # SKCC Number (CRITICAL - export in multiple formats for compatibility)
             skcc = contact[COL_SKCC_NUMBER]
             fields.append(f"<SKCC:{len(skcc)}>{skcc}")
+            fields.append(f"<APP_SKCC_NUMBER:{len(skcc)}>{skcc}")
+            fields.append(f"<APP_SKCCLOGGER_NUMBER:{len(skcc)}>{skcc}")
+
+            # SKCC Key Type (for award validation)
+            if contact[COL_KEY_TYPE]:
+                key_type = str(contact[COL_KEY_TYPE]).strip()
+                # Export abbreviated code for SKCCLogger
+                key_map = {'STRAIGHT': 'ST', 'BUG': 'BG', 'SIDESWIPER': 'SS'}
+                key_code = key_map.get(key_type.upper(), key_type)
+                fields.append(f"<APP_SKCCLOGGER_KEYTYPE:{len(key_code)}>{key_code}")
+                # Also export full name for other programs
+                fields.append(f"<APP_SKCC_KEY_TYPE:{len(key_type)}>{key_type}")
+
+            # SKCC-specific award fields
+            if contact[COL_MY_SKCC_NUMBER]:
+                my_skcc = str(contact[COL_MY_SKCC_NUMBER])
+                fields.append(f"<APP_SKCC_MY_NUMBER:{len(my_skcc)}>{my_skcc}")
+
+            if contact[COL_DURATION_MINUTES]:
+                duration = str(contact[COL_DURATION_MINUTES])
+                fields.append(f"<APP_SKCC_DURATION:{len(duration)}>{duration}")
+
+            if contact[COL_POWER_WATTS]:
+                pwr_watts = str(contact[COL_POWER_WATTS])
+                fields.append(f"<APP_SKCC_POWER:{len(pwr_watts)}>{pwr_watts}")
+
+            if contact[COL_DISTANCE_NM]:
+                distance = str(contact[COL_DISTANCE_NM])
+                fields.append(f"<APP_SKCC_DISTANCE:{len(distance)}>{distance}")
 
             # State
             if contact[COL_STATE]:
