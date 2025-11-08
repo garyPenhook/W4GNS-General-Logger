@@ -673,8 +673,8 @@ https://www.ng3k.com/Misc/cluster.html
 
                 roster_mgr = get_award_roster_manager(database=self.database)
 
-                # Download all rosters (uses 7-day cache, won't re-download if recent)
-                results = roster_mgr.download_all_rosters(force=False)
+                # Download all rosters fresh on every startup for precise validation
+                results = roster_mgr.download_all_rosters(force=True)
 
                 # Log results
                 success_count = sum(1 for success in results.values() if success)
