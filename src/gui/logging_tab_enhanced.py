@@ -827,6 +827,12 @@ class EnhancedLoggingTab:
             else:
                 messagebox.showinfo("Success", f"Contact with {callsign} logged!")
 
+            # Remember last used key type for next QSO
+            key_type = self.key_type_var.get()
+            if key_type:
+                self.config.set('logging.last_key_type', key_type)
+                self.config.save()
+
             self.clear_form()
 
             # Enable manual QRZ upload button if configured
@@ -896,7 +902,9 @@ class EnhancedLoggingTab:
         self.pota_var.set('')
         # Clear SKCC fields
         self.skcc_number_var.set('')
-        self.key_type_var.set('')
+        # Restore last used key type (remember for next QSO)
+        last_key_type = self.config.get('logging.last_key_type', '')
+        self.key_type_var.set(last_key_type)
         self.duration_var.set('')
         # Keep my_skcc_number_var (don't clear operator's own number)
         self.notes_var.set('')
