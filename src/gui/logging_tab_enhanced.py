@@ -319,6 +319,9 @@ class EnhancedLoggingTab:
         self.dx_spots_tree.column('Frequency', width=80)
         self.dx_spots_tree.column('Comment', width=200)
 
+        # Configure tag for SKCC members with C, T, or S suffix
+        self.dx_spots_tree.tag_configure('skcc_cts', background='yellow')
+
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
                               command=self.dx_spots_tree.yview)
@@ -907,14 +910,25 @@ class EnhancedLoggingTab:
     # DX SPOTS METHODS
     def add_dx_spot(self, spot_data):
         """Add a DX spot to the display (called from DX cluster tab)"""
+        callsign = spot_data.get('callsign', '')
+
+        # Check if station is SKCC member with C, T, or S suffix
+        tags = ()
+        if callsign and self.skcc_roster:
+            skcc_number = self.skcc_roster.get_skcc_number(callsign)
+            if skcc_number:
+                # Check if SKCC number ends with C, T, or S
+                if skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
+                    tags = ('skcc_cts',)
+
         self.dx_spots_tree.insert('', 0, values=(
-            spot_data.get('callsign', ''),
+            callsign,
             spot_data.get('country', ''),
             spot_data.get('mode', ''),
             spot_data.get('band', ''),
             spot_data.get('frequency', ''),
             spot_data.get('comment', '')
-        ))
+        ), tags=tags)
 
         # Keep only the most recent 100 spots
         children = self.dx_spots_tree.get_children()
