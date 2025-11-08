@@ -170,6 +170,32 @@ class ADIFGenerator:
         """Generate a single ADIF record from contact data"""
         fields = []
 
+        # Build SKCC-enhanced comment field for SKCCLogger compatibility
+        # SKCCLogger expects SKCC data in the COMMENT field
+        comment_parts = []
+
+        # Get existing comment/notes
+        existing_comment = contact.get('comment', '') or contact.get('comments', '') or contact.get('notes', '')
+        if existing_comment:
+            comment_parts.append(str(existing_comment).strip())
+
+        # Add SKCC data to comment for SKCCLogger
+        skcc_number = contact.get('skcc_number', '')
+        key_type = contact.get('key_type', '')
+
+        if skcc_number:
+            skcc_number = str(skcc_number).strip()
+            key_code = self._get_key_type_code(key_type) if key_type else ''
+
+            # Format: "SKCC 12345 BG" or "SKCC 12345" if no key type
+            skcc_comment = f"SKCC {skcc_number}"
+            if key_code:
+                skcc_comment += f" {key_code}"
+            comment_parts.append(skcc_comment)
+
+        # Combine comment parts
+        full_comment = " ".join(comment_parts)
+
         # Map database fields to ADIF fields
         field_map = {
             'callsign': 'CALL',
@@ -199,9 +225,6 @@ class ADIFGenerator:
             'sota': 'SOTA_REF',
             'pota': 'POTA_REF',
             'my_gridsquare': 'MY_GRIDSQUARE',
-            'comment': 'COMMENT',
-            'comments': 'COMMENT',  # Support alternate field name
-            'notes': 'NOTES',
             # SKCC-specific fields (user-defined ADIF fields)
             'my_skcc_number': 'APP_SKCC_MY_NUMBER',
             'duration_minutes': 'APP_SKCC_DURATION',
@@ -239,29 +262,29 @@ class ADIFGenerator:
 
             fields.append(f"<{adif_field}:{len(value)}>{value}")
 
+        # Add SKCC-enhanced comment field (SKCCLogger reads this)
+        if full_comment:
+            fields.append(f"<COMMENT:{len(full_comment)}>{full_comment}")
+
         # Export SKCC number using BOTH standard SKCC field and SKCCLogger format
         # This ensures compatibility with both SKCCLogger and other programs
-        skcc_number = contact.get('skcc_number', '')
         if skcc_number:
-            skcc_number = str(skcc_number).strip()
-            if skcc_number:
-                # Standard ADIF SKCC field (used by SKCCLogger)
-                fields.append(f"<SKCC:{len(skcc_number)}>{skcc_number}")
-                # Also include APP fields for other programs
-                fields.append(f"<APP_SKCC_NUMBER:{len(skcc_number)}>{skcc_number}")
-                fields.append(f"<APP_SKCCLOGGER_NUMBER:{len(skcc_number)}>{skcc_number}")
+            # Standard ADIF SKCC field (used by SKCCLogger)
+            fields.append(f"<SKCC:{len(skcc_number)}>{skcc_number}")
+            # Also include APP fields for other programs
+            fields.append(f"<APP_SKCC_NUMBER:{len(skcc_number)}>{skcc_number}")
+            fields.append(f"<APP_SKCCLOGGER_NUMBER:{len(skcc_number)}>{skcc_number}")
 
         # Export key type using SKCCLogger format
-        key_type = contact.get('key_type', '')
         if key_type:
-            key_type = str(key_type).strip()
-            if key_type:
+            key_type_str = str(key_type).strip()
+            if key_type_str:
                 # SKCCLogger expects abbreviated codes
-                key_code = self._get_key_type_code(key_type)
+                key_code = self._get_key_type_code(key_type_str)
                 # Export using SKCCLogger field name
                 fields.append(f"<APP_SKCCLOGGER_KEYTYPE:{len(key_code)}>{key_code}")
                 # Also include full name for other programs
-                fields.append(f"<APP_SKCC_KEY_TYPE:{len(key_type)}>{key_type}")
+                fields.append(f"<APP_SKCC_KEY_TYPE:{len(key_type_str)}>{key_type_str}")
 
         # Add end-of-record marker
         fields.append("<EOR>")
