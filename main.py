@@ -23,6 +23,7 @@ from src.gui.skcc_awards_tab import SKCCAwardsTab
 from src.gui.space_weather_tab import SpaceWeatherTab
 from src.gui.weather_tab import WeatherTab
 from src.gui.settings_tab import SettingsTab
+from src.gui.date_range_dialog import DateRangeDialog
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
 
@@ -82,6 +83,7 @@ class W4GNSLogger:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Export Log (ADIF)...", command=self.export_adif)
+        file_menu.add_command(label="Export by Date/Time Range (ADIF)...", command=self.export_adif_by_date_range)
         file_menu.add_command(label="Export SKCC Contacts (ADIF)...", command=self.export_skcc_adif)
         file_menu.add_command(label="Import Log (ADIF)...", command=self.import_adif)
         file_menu.add_separator()
@@ -159,6 +161,84 @@ class W4GNSLogger:
                 f"Successfully exported {len(contacts)} contacts to:\n{filename}"
             )
             self.status_bar.config(text=f"Exported {len(contacts)} contacts to ADIF")
+        except Exception as e:
+            messagebox.showerror("Export Failed", f"Failed to export log:\n{str(e)}")
+
+    def export_adif_by_date_range(self):
+        """Export contacts to ADIF format filtered by date/time range"""
+        # Show date range selection dialog
+        dialog = DateRangeDialog(self.root)
+        result = dialog.show()
+
+        if not result:
+            return  # User cancelled
+
+        # Get contacts within the specified date/time range
+        contacts = self.database.get_contacts_by_date_range(
+            result['start_date'],
+            result['end_date'],
+            result['start_time'],
+            result['end_time']
+        )
+
+        if not contacts:
+            # Build a friendly date range string for the message
+            start_str = result['start_date']
+            if result['start_time']:
+                start_str += f" {result['start_time']}"
+            end_str = result['end_date']
+            if result['end_time']:
+                end_str += f" {result['end_time']}"
+
+            messagebox.showwarning(
+                "No Contacts",
+                f"No contacts found in the specified date/time range:\n\n"
+                f"From: {start_str}\n"
+                f"To: {end_str}"
+            )
+            return
+
+        # Build default filename with date range
+        from datetime import datetime
+        start_date_formatted = result['start_date'].replace('-', '')
+        end_date_formatted = result['end_date'].replace('-', '')
+        default_filename = f"contacts_{start_date_formatted}_{end_date_formatted}.adi"
+
+        # Ask user for save location
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".adi",
+            initialfile=default_filename,
+            filetypes=[
+                ("ADIF files", "*.adi"),
+                ("ADIF files", "*.adif"),
+                ("All files", "*.*")
+            ],
+            title="Export Contacts by Date/Time Range to ADIF"
+        )
+
+        if not filename:
+            return  # User cancelled
+
+        try:
+            # Export to ADIF
+            export_contacts_to_adif(contacts, filename)
+
+            # Build a friendly date range string for the message
+            start_str = result['start_date']
+            if result['start_time']:
+                start_str += f" {result['start_time']}"
+            end_str = result['end_date']
+            if result['end_time']:
+                end_str += f" {result['end_time']}"
+
+            messagebox.showinfo(
+                "Export Successful",
+                f"Successfully exported {len(contacts)} contacts to:\n{filename}\n\n"
+                f"Date/Time Range:\n"
+                f"From: {start_str}\n"
+                f"To: {end_str}"
+            )
+            self.status_bar.config(text=f"Exported {len(contacts)} contacts from date/time range to ADIF")
         except Exception as e:
             messagebox.showerror("Export Failed", f"Failed to export log:\n{str(e)}")
 
