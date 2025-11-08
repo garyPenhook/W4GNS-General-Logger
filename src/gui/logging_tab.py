@@ -77,9 +77,9 @@ class LoggingTab:
         band_combo.pack(side='left', padx=5)
 
         ttk.Label(row2, text="Mode:").pack(side='left', padx=(20, 0))
-        self.mode_var = tk.StringVar()
-        mode_combo = ttk.Combobox(row2, textvariable=self.mode_var, width=10)
-        mode_combo['values'] = ('SSB', 'CW', 'FT8', 'FT4', 'RTTY', 'PSK31', 'AM', 'FM')
+        self.mode_var = tk.StringVar(value='CW')
+        mode_combo = ttk.Combobox(row2, textvariable=self.mode_var, width=10, state='readonly')
+        mode_combo['values'] = ('CW',)
         mode_combo.pack(side='left', padx=5)
 
         # Row 3: RST
