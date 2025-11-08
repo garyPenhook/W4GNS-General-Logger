@@ -203,13 +203,10 @@ class ADIFGenerator:
             'comments': 'COMMENT',  # Support alternate field name
             'notes': 'NOTES',
             # SKCC-specific fields (user-defined ADIF fields)
-            'skcc_number': 'APP_SKCC_NUMBER',
             'my_skcc_number': 'APP_SKCC_MY_NUMBER',
-            'key_type': 'APP_SKCC_KEY_TYPE',
             'duration_minutes': 'APP_SKCC_DURATION',
             'distance_nm': 'APP_SKCC_DISTANCE',
             'distance_miles': 'APP_SKCC_DISTANCE',  # Support alternate field name
-            'power_watts': 'APP_SKCC_POWER',
             'dxcc_entity': 'DXCC_ENTITY'
         }
 
@@ -242,10 +239,51 @@ class ADIFGenerator:
 
             fields.append(f"<{adif_field}:{len(value)}>{value}")
 
+        # Export SKCC number using BOTH standard SKCC field and SKCCLogger format
+        # This ensures compatibility with both SKCCLogger and other programs
+        skcc_number = contact.get('skcc_number', '')
+        if skcc_number:
+            skcc_number = str(skcc_number).strip()
+            if skcc_number:
+                # Standard ADIF SKCC field (used by SKCCLogger)
+                fields.append(f"<SKCC:{len(skcc_number)}>{skcc_number}")
+                # Also include APP fields for other programs
+                fields.append(f"<APP_SKCC_NUMBER:{len(skcc_number)}>{skcc_number}")
+                fields.append(f"<APP_SKCCLOGGER_NUMBER:{len(skcc_number)}>{skcc_number}")
+
+        # Export key type using SKCCLogger format
+        key_type = contact.get('key_type', '')
+        if key_type:
+            key_type = str(key_type).strip()
+            if key_type:
+                # SKCCLogger expects abbreviated codes
+                key_code = self._get_key_type_code(key_type)
+                # Export using SKCCLogger field name
+                fields.append(f"<APP_SKCCLOGGER_KEYTYPE:{len(key_code)}>{key_code}")
+                # Also include full name for other programs
+                fields.append(f"<APP_SKCC_KEY_TYPE:{len(key_type)}>{key_type}")
+
         # Add end-of-record marker
         fields.append("<EOR>")
 
         return " ".join(fields)
+
+    def _get_key_type_code(self, key_type):
+        """
+        Convert full key type names to SKCCLogger abbreviated codes
+
+        Args:
+            key_type: Full key type name (STRAIGHT, BUG, SIDESWIPER)
+
+        Returns:
+            Abbreviated code (ST, BG, SS)
+        """
+        code_map = {
+            'STRAIGHT': 'ST',
+            'BUG': 'BG',
+            'SIDESWIPER': 'SS'
+        }
+        return code_map.get(key_type.upper().strip(), key_type)
 
 
 def export_contacts_to_adif(contacts, filename, program_name="W4GNS General Logger"):
