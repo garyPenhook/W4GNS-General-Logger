@@ -14,6 +14,53 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.database import Database
 
+def get_country_code(country):
+    """Convert country name to 3-letter code for SKCC logger format"""
+    if not country:
+        return ''
+
+    country_codes = {
+        'UNITED STATES': 'USA',
+        'CANADA': 'CAN',
+        'MEXICO': 'MEX',
+        'ENGLAND': 'ENG',
+        'SCOTLAND': 'SCO',
+        'WALES': 'WAL',
+        'NORTHERN IRELAND': 'NIR',
+        'IRELAND': 'IRL',
+        'GERMANY': 'DEU',
+        'FRANCE': 'FRA',
+        'ITALY': 'ITA',
+        'SPAIN': 'ESP',
+        'PORTUGAL': 'PRT',
+        'NETHERLANDS': 'NLD',
+        'BELGIUM': 'BEL',
+        'AUSTRIA': 'AUT',
+        'SWITZERLAND': 'CHE',
+        'DENMARK': 'DNK',
+        'SWEDEN': 'SWE',
+        'NORWAY': 'NOR',
+        'FINLAND': 'FIN',
+        'POLAND': 'POL',
+        'CZECH REPUBLIC': 'CZE',
+        'HUNGARY': 'HUN',
+        'GREECE': 'GRC',
+        'TURKEY': 'TUR',
+        'RUSSIA': 'RUS',
+        'UKRAINE': 'UKR',
+        'AUSTRALIA': 'AUS',
+        'NEW ZEALAND': 'NZL',
+        'JAPAN': 'JPN',
+        'CHINA': 'CHN',
+        'SOUTH KOREA': 'KOR',
+        'BRAZIL': 'BRA',
+        'ARGENTINA': 'ARG',
+        'CHILE': 'CHL',
+    }
+
+    country_upper = country.upper()
+    return country_codes.get(country_upper, country[:3].upper())
+
 def export_skcc_contacts(output_file=None, db_path=None):
     """
     Export SKCC contacts to ADIF file
@@ -34,7 +81,7 @@ def export_skcc_contacts(output_file=None, db_path=None):
     cursor.execute('''
         SELECT
             callsign, date, time_on, time_off, frequency, band, mode,
-            rst_sent, rst_rcvd, power, name, qth, gridsquare, county,
+            rst_sent, rst_rcvd, power, name, first_name, qth, gridsquare, county,
             state, country, continent, cq_zone, itu_zone, dxcc,
             my_gridsquare, comment, skcc_number, my_skcc_number,
             dxcc_entity, key_type, duration_minutes, power_watts, distance_nm
@@ -106,24 +153,25 @@ def export_skcc_contacts(output_file=None, db_path=None):
         COL_RST_RCVD = 8
         COL_POWER = 9
         COL_NAME = 10
-        COL_QTH = 11
-        COL_GRIDSQUARE = 12
-        COL_COUNTY = 13
-        COL_STATE = 14
-        COL_COUNTRY = 15
-        COL_CONTINENT = 16
-        COL_CQ_ZONE = 17
-        COL_ITU_ZONE = 18
-        COL_DXCC = 19
-        COL_MY_GRIDSQUARE = 20
-        COL_COMMENT = 21
-        COL_SKCC_NUMBER = 22
-        COL_MY_SKCC_NUMBER = 23
-        COL_DXCC_ENTITY = 24
-        COL_KEY_TYPE = 25
-        COL_DURATION_MINUTES = 26
-        COL_POWER_WATTS = 27
-        COL_DISTANCE_NM = 28
+        COL_FIRST_NAME = 11
+        COL_QTH = 12
+        COL_GRIDSQUARE = 13
+        COL_COUNTY = 14
+        COL_STATE = 15
+        COL_COUNTRY = 16
+        COL_CONTINENT = 17
+        COL_CQ_ZONE = 18
+        COL_ITU_ZONE = 19
+        COL_DXCC = 20
+        COL_MY_GRIDSQUARE = 21
+        COL_COMMENT = 22
+        COL_SKCC_NUMBER = 23
+        COL_MY_SKCC_NUMBER = 24
+        COL_DXCC_ENTITY = 25
+        COL_KEY_TYPE = 26
+        COL_DURATION_MINUTES = 27
+        COL_POWER_WATTS = 28
+        COL_DISTANCE_NM = 29
 
         # Write each contact
         for contact in contacts:
@@ -139,19 +187,22 @@ def export_skcc_contacts(output_file=None, db_path=None):
             fields.append(f"<CALL:{len(callsign)}>{callsign}")
 
             # Build SKCC-enhanced comment field for SKCCLogger
-            # SKCCLogger expects: "SKCC {number} {key_code} {state/country}"
+            # SKCCLogger expects: "SKCC:contacts_skcc_number-first_name-state_or_3letter_country_name"
             comment_parts = []
 
             # Get existing comment and clean it
             existing_comment = contact[COL_COMMENT]
             if existing_comment:
-                # Strip out any old SKCC data (format: "SKCC: 12345 - Name - State")
+                # Strip out any old SKCC data (both old and new formats)
                 import re
                 cleaned = str(existing_comment)
                 patterns = [
-                    r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',
-                    r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)(?:\s+[A-Z]{2,})?',
-                    r'SKCC\s+\d+[CTS]?',
+                    r'SKCC:\d+[CTS]?-[^-\s]+-[A-Z]{2,3}',  # New format: SKCC:12345-Ron-MD
+                    r'SKCC:\d+[CTS]?-[^-\s]+',  # New format partial: SKCC:12345-Ron
+                    r'SKCC:\d+[CTS]?',  # New format minimal: SKCC:12345
+                    r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',  # Old format: SKCC: 12345 - Name - State
+                    r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)(?:\s+[A-Z]{2,})?',  # Old format: SKCC 12345 BG MD
+                    r'SKCC\s+\d+[CTS]?',  # Old format minimal: SKCC 12345
                 ]
                 for pattern in patterns:
                     cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
@@ -161,25 +212,23 @@ def export_skcc_contacts(output_file=None, db_path=None):
 
             # Add SKCC data in SKCCLogger format
             skcc_num = contact[COL_SKCC_NUMBER]
-            key_type = contact[COL_KEY_TYPE]
+            first_name = contact[COL_FIRST_NAME]
             state = contact[COL_STATE]
             country = contact[COL_COUNTRY]
 
             if skcc_num:
-                # Get key type abbreviation
-                key_code = ''
-                if key_type:
-                    key_map = {'STRAIGHT': 'ST', 'BUG': 'BG', 'SIDESWIPER': 'SS'}
-                    key_code = key_map.get(str(key_type).upper().strip(), '')
+                # Format: "SKCC:12345-Ron-MD" (with state) or "SKCC:12345-Ron-CAN" (with 3-letter country code)
+                skcc_comment = f"SKCC:{skcc_num}"
 
-                # Format: "SKCC 12345 BG MD" or "SKCC 12345 BG Canada"
-                skcc_comment = f"SKCC {skcc_num}"
-                if key_code:
-                    skcc_comment += f" {key_code}"
+                if first_name:
+                    skcc_comment += f"-{first_name}"
+
+                # Add state (for US/Canada/etc) or 3-letter country code (for DX)
                 if state:
-                    skcc_comment += f" {state}"
+                    skcc_comment += f"-{state}"
                 elif country:
-                    skcc_comment += f" {country}"
+                    country_code = get_country_code(country)
+                    skcc_comment += f"-{country_code}"
 
                 comment_parts.append(skcc_comment)
 

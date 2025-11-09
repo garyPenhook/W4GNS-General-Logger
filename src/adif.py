@@ -148,6 +148,52 @@ class ADIFGenerator:
 
     def __init__(self):
         self.version = "3.1.4"
+        # Country to 3-letter code mapping for SKCC logger
+        self.country_codes = {
+            'UNITED STATES': 'USA',
+            'CANADA': 'CAN',
+            'MEXICO': 'MEX',
+            'ENGLAND': 'ENG',
+            'SCOTLAND': 'SCO',
+            'WALES': 'WAL',
+            'NORTHERN IRELAND': 'NIR',
+            'IRELAND': 'IRL',
+            'GERMANY': 'DEU',
+            'FRANCE': 'FRA',
+            'ITALY': 'ITA',
+            'SPAIN': 'ESP',
+            'PORTUGAL': 'PRT',
+            'NETHERLANDS': 'NLD',
+            'BELGIUM': 'BEL',
+            'AUSTRIA': 'AUT',
+            'SWITZERLAND': 'CHE',
+            'DENMARK': 'DNK',
+            'SWEDEN': 'SWE',
+            'NORWAY': 'NOR',
+            'FINLAND': 'FIN',
+            'POLAND': 'POL',
+            'CZECH REPUBLIC': 'CZE',
+            'HUNGARY': 'HUN',
+            'GREECE': 'GRC',
+            'TURKEY': 'TUR',
+            'RUSSIA': 'RUS',
+            'UKRAINE': 'UKR',
+            'AUSTRALIA': 'AUS',
+            'NEW ZEALAND': 'NZL',
+            'JAPAN': 'JPN',
+            'CHINA': 'CHN',
+            'SOUTH KOREA': 'KOR',
+            'BRAZIL': 'BRA',
+            'ARGENTINA': 'ARG',
+            'CHILE': 'CHL',
+        }
+
+    def _get_country_code(self, country):
+        """Convert country name to 3-letter code for SKCC logger format"""
+        if not country:
+            return ''
+        country_upper = country.upper()
+        return self.country_codes.get(country_upper, country[:3].upper())
 
     def generate_file(self, filename, contacts, program_name="W4GNS General Logger", program_version="1.0.0"):
         """Generate an ADIF file from list of contact records"""
@@ -183,28 +229,28 @@ class ADIFGenerator:
                 comment_parts.append(cleaned_comment)
 
         # Add SKCC data to comment for SKCCLogger in correct format
-        # SKCCLogger expects: "SKCC {number} {key_code} {state/country}"
+        # SKCCLogger expects: "SKCC:contacts_skcc_number-first_name-state_or_3letter_country_name"
         skcc_number = contact.get('skcc_number', '')
         key_type = contact.get('key_type', '')
 
         if skcc_number:
             skcc_number = str(skcc_number).strip()
-            key_code = self._get_key_type_code(key_type) if key_type else ''
-
-            # Get state or country for SKCCLogger
+            first_name = contact.get('first_name', '').strip()
             state = contact.get('state', '').strip()
             country = contact.get('country', '').strip()
 
-            # Format: "SKCC 12345 BG MD" (with state) or "SKCC 12345 BG Canada" (with country)
-            skcc_comment = f"SKCC {skcc_number}"
-            if key_code:
-                skcc_comment += f" {key_code}"
+            # Format: "SKCC:12345-Ron-MD" (with state) or "SKCC:12345-Ron-CAN" (with 3-letter country code)
+            skcc_comment = f"SKCC:{skcc_number}"
 
-            # Add state (for US) or country (for DX) - SKCCLogger requires this
+            if first_name:
+                skcc_comment += f"-{first_name}"
+
+            # Add state (for US/Canada/etc) or 3-letter country code (for DX)
             if state:
-                skcc_comment += f" {state}"
+                skcc_comment += f"-{state}"
             elif country:
-                skcc_comment += f" {country}"
+                country_code = self._get_country_code(country)
+                skcc_comment += f"-{country_code}"
 
             comment_parts.append(skcc_comment)
 
@@ -335,13 +381,11 @@ class ADIFGenerator:
         """
         Strip SKCC-formatted data from existing comments
 
-        Removes old SKCC comment patterns like:
-        - "SKCC: 12345"
-        - "SKCC: 12345S - Ron - MD"
-        - "SKCC 12345"
-        - "SKCC 12345 BG"
-        - "SKCC 12345 BG MD" (with state)
-        - "SKCC 12345 BG Canada" (with country)
+        Removes SKCC comment patterns like:
+        - New format: "SKCC:12345-Ron-MD" or "SKCC:12345T-Ron-CAN"
+        - Old format: "SKCC: 12345S - Ron - MD"
+        - Old format: "SKCC 12345 BG MD" (with state)
+        - Old format: "SKCC 12345 BG Canada" (with country)
 
         Args:
             comment: Original comment string
@@ -353,15 +397,16 @@ class ADIFGenerator:
             return ''
 
         # Pattern to match SKCC data in various formats:
-        # - "SKCC: 12345" or "SKCC 12345" (with optional colon)
-        # - Followed by optional suffix letter (C, T, S)
-        # - Followed by optional " - Name - State" or similar
-        # - Followed by optional key type codes (BG, ST, SS)
-        # - Followed by optional state/country
+        # - New format: "SKCC:12345-Name-State" or "SKCC:12345T-Name-CAN"
+        # - Old format: "SKCC: 12345S - Name - State"
+        # - Old format: "SKCC 12345 BG MD" (with key type codes)
         patterns = [
-            r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',  # SKCC: 12345S - Name - State
-            r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)(?:\s+[A-Z]{2,})?',  # SKCC 12345S BG MD or SKCC 12345 BG Canada
-            r'SKCC\s+\d+[CTS]?',  # SKCC 12345S
+            r'SKCC:\d+[CTS]?-[^-\s]+-[A-Z]{2,3}',  # New format: SKCC:12345-Ron-MD or SKCC:12345T-Ron-CAN
+            r'SKCC:\d+[CTS]?-[^-\s]+',  # New format partial: SKCC:12345-Ron
+            r'SKCC:\d+[CTS]?',  # New format minimal: SKCC:12345
+            r'SKCC:\s*\d+[CTS]?\s*(?:-\s*[^-]*(?:-\s*[^-]*)?)?',  # Old format: SKCC: 12345S - Name - State
+            r'SKCC\s+\d+[CTS]?\s+(?:BG|ST|SS)(?:\s+[A-Z]{2,})?',  # Old format: SKCC 12345S BG MD or SKCC 12345 BG Canada
+            r'SKCC\s+\d+[CTS]?',  # Old format minimal: SKCC 12345S
         ]
 
         cleaned = comment
