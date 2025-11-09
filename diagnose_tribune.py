@@ -108,7 +108,7 @@ def diagnose_tribune_contacts(db_path=None):
             print(f"\n... and {len(reasons) - 20} more rejected contacts")
 
     print(f"\n{'='*80}")
-    print(f"UNIQUE TRIBUNE/SENATOR MEMBERS CONTACTED: {len(unique_valid)}")
+    print(f"UNIQUE CENTURION/TRIBUNE/SENATOR MEMBERS CONTACTED: {len(unique_valid)}")
     print(f"{'='*80}")
 
     db.close()
@@ -150,9 +150,9 @@ def get_rejection_reason(tribune, contact):
     if tribune.user_join_date and qso_date < tribune.user_join_date:
         return f"QSO before user join date ({tribune.user_join_date})"
 
-    # Check if contact was Tribune/Senator at time of QSO
-    if not tribune.award_rosters.was_tribune_or_senator_on_date(skcc_num, qso_date):
-        return f"NOT Tribune/Senator on {qso_date} (SKCC#{skcc_num})"
+    # Check if contact was Centurion/Tribune/Senator at time of QSO
+    if not tribune.award_rosters.was_centurion_or_higher_on_date(skcc_num, qso_date):
+        return f"NOT Centurion/Tribune/Senator on {qso_date} (SKCC#{skcc_num})"
 
     # Check user's Centurion date
     if tribune.user_centurion_date and qso_date < tribune.user_centurion_date:
