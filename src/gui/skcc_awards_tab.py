@@ -906,8 +906,24 @@ class SKCCAwardsTab:
             )
             return
 
-        # Sort by date
+        # Sort by date (earliest first)
         qualifying_contacts.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
+
+        # CRITICAL: Deduplicate by SKCC number (keep only first QSO with each unique member)
+        # Per SKCC rules: "Each call sign counts only once (per category)"
+        from src.utils.skcc_number import extract_base_skcc_number
+        seen_skcc_numbers = set()
+        deduplicated_contacts = []
+
+        for contact in qualifying_contacts:
+            skcc_number = contact.get('skcc_number', '').strip()
+            if skcc_number:
+                base_number = extract_base_skcc_number(skcc_number)
+                if base_number and base_number not in seen_skcc_numbers:
+                    seen_skcc_numbers.add(base_number)
+                    deduplicated_contacts.append(contact)
+
+        qualifying_contacts = deduplicated_contacts
 
         # Generate the report
         if award_type == 'centurion':
