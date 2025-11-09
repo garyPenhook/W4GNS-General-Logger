@@ -25,6 +25,11 @@ class SKCCAwardsTab:
         self.config = config
         self.frame = ttk.Frame(parent)
 
+        # CRITICAL: Attach config to database so award instances can access it
+        # Tribune/Senator awards need to read user's Centurion/Tribune dates from config
+        # to filter contacts by achievement dates
+        self.database.config = config
+
         # Initialize roster managers
         self.roster_manager = get_roster_manager()
         self.award_rosters = get_award_roster_manager(database=self.database)
