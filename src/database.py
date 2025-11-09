@@ -133,6 +133,7 @@ class Database:
             'pota': 'TEXT',
             'my_gridsquare': 'TEXT',
             'comment': 'TEXT',
+            'first_name': 'TEXT',            # First name for SKCC comment format
             # SKCC-specific fields
             'skcc_number': 'TEXT',           # Remote station's SKCC number (e.g., "12345T")
             'my_skcc_number': 'TEXT',        # Operator's SKCC number
@@ -226,11 +227,11 @@ class Database:
             cursor.execute('''
                 INSERT INTO contacts
                 (callsign, date, time_on, time_off, frequency, band, mode,
-                 rst_sent, rst_rcvd, power, name, qth, gridsquare, county, state,
+                 rst_sent, rst_rcvd, power, name, first_name, qth, gridsquare, county, state,
                  country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
                  my_gridsquare, comment, notes,
                  skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, distance_nm, dxcc_entity)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 contact_data.get('callsign', ''),
                 contact_data.get('date', ''),
@@ -243,6 +244,7 @@ class Database:
                 contact_data.get('rst_rcvd', ''),
                 contact_data.get('power', ''),
                 contact_data.get('name', ''),
+                contact_data.get('first_name', ''),
                 contact_data.get('qth', ''),
                 contact_data.get('gridsquare', ''),
                 contact_data.get('county', ''),

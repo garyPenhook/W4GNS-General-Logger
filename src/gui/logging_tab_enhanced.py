@@ -152,6 +152,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row3, text="Name:", width=12, anchor='e').pack(side='left')
         self.name_var = tk.StringVar()
+        self.first_name_var = tk.StringVar()  # Store first name separately for SKCC comments
         ttk.Entry(row3, textvariable=self.name_var, width=20).pack(side='left', padx=5)
 
         ttk.Label(row3, text="QTH:", width=10, anchor='e').pack(side='left', padx=(20, 0))
@@ -617,9 +618,13 @@ class EnhancedLoggingTab:
             if data:
                 # Populate fields from QRZ data
                 if 'name' in data and data['name']:
-                    # Combine first and last name
+                    # Combine first and last name for display
                     name = data.get('first_name', '') + ' ' + data.get('name', '')
                     self.name_var.set(name.strip())
+
+                    # Store first_name separately for SKCC comment format
+                    if 'first_name' in data:
+                        self.first_name_var.set(data['first_name'])
 
                 if 'gridsquare' in data:
                     self.grid_var.set(data['gridsquare'])
@@ -793,6 +798,7 @@ class EnhancedLoggingTab:
             'rst_rcvd': self.rst_rcvd_var.get(),
             'power': self.power_var.get(),
             'name': self.name_var.get(),
+            'first_name': self.first_name_var.get(),
             'qth': self.qth_var.get(),
             'gridsquare': self.grid_var.get(),
             'county': self.county_var.get(),
@@ -889,6 +895,7 @@ class EnhancedLoggingTab:
         self.rst_rcvd_var.set(self.config.get('default_rst', '59'))
         self.power_var.set(self.config.get('default_power', '100'))
         self.name_var.set('')
+        self.first_name_var.set('')
         self.qth_var.set('')
         self.grid_var.set('')
         self.county_var.set('')
