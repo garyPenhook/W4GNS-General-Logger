@@ -63,6 +63,11 @@ class SettingsTab:
         self.callsign_var = tk.StringVar(value=self.config.get('callsign', ''))
         ttk.Entry(row1, textvariable=self.callsign_var, width=15).pack(side='left', padx=5)
 
+        ttk.Label(row1, text="Operator Name:").pack(side='left', padx=(20, 0))
+        self.operator_name_var = tk.StringVar(value=self.config.get('operator_name', ''))
+        ttk.Entry(row1, textvariable=self.operator_name_var, width=25).pack(side='left', padx=5)
+        ttk.Label(row1, text="(for award applications)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
         row2 = ttk.Frame(station_frame)
         row2.pack(fill='x', pady=5)
         ttk.Label(row2, text="Grid Square:").pack(side='left')
@@ -721,6 +726,7 @@ Cluster list sources:
     def save_settings(self):
         """Save settings to config"""
         self.config.set('callsign', self.callsign_var.get().strip().upper())
+        self.config.set('operator_name', self.operator_name_var.get().strip())
         self.config.set('gridsquare', self.grid_var.get().strip().upper())
         self.config.set('skcc_number', self.skcc_number_var.get().strip().upper())
         self.config.set('default_rst', self.rst_var.get())
