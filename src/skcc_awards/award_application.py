@@ -138,7 +138,7 @@ class AwardApplicationGenerator:
         # Contact rows
         for i, contact in enumerate(contacts, 1):
             qso_date = contact.get('date', '')
-            callsign = contact.get('callsign', '')
+            contact_callsign = contact.get('callsign', '')
             skcc_num = contact.get('skcc_number', '')
             contact_name = contact.get('name', '')
             state = contact.get('state', '')
@@ -156,7 +156,7 @@ class AwardApplicationGenerator:
             row = (
                 f"{i:<6} "
                 f"{qso_date:<12} "
-                f"{callsign:<13} "
+                f"{contact_callsign:<13} "
                 f"{skcc_num:<8} "
                 f"{contact_name:<12} "
                 f"{state:<12} "
