@@ -10,7 +10,7 @@ from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
 from src.skcc_roster import SKCCRosterManager
-from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
+from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color, get_spot_highlight_color
 
 
 class EnhancedLoggingTab:
@@ -321,7 +321,7 @@ class EnhancedLoggingTab:
         self.dx_spots_tree.column('Comment', width=200)
 
         # Configure tag for SKCC members with C, T, or S suffix
-        self.dx_spots_tree.tag_configure('skcc_cts', background='cyan')
+        self.dx_spots_tree.tag_configure('skcc_cts', background=get_spot_highlight_color(self.config))
 
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
