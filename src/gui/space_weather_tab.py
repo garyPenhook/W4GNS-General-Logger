@@ -16,7 +16,7 @@ class SpaceWeatherTab:
         self.database = database
         self.config = config
         self.frame = ttk.Frame(parent)
-        self.client = SpaceWeatherClient()
+        self.client = SpaceWeatherClient(self.config)
         self.data = None
         self.donki_events = None
         self.auto_refresh = True

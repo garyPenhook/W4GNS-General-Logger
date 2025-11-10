@@ -25,19 +25,29 @@ class SpaceWeatherClient:
 
     # NASA DONKI (Database Of Notifications, Knowledge, Information) APIs
     DONKI_BASE_URL = "https://api.nasa.gov/DONKI"
-    DONKI_API_KEY = "DEMO_KEY"  # Free public API key
     DONKI_FLARES = f"{DONKI_BASE_URL}/FLR"
     DONKI_CME = f"{DONKI_BASE_URL}/CME"
     DONKI_GST = f"{DONKI_BASE_URL}/GST"
     DONKI_SEP = f"{DONKI_BASE_URL}/SEP"
 
-    def __init__(self):
+    def __init__(self, config=None):
+        self.config = config
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'W4GNS-General-Logger/1.0'
         })
         self.cache = {}
-        self.cache_timeout = 300  # 5 minutes
+        self.cache_timeout = 300  # 5 minutes for HamQSL/NOAA
+
+        # Get NASA API key from config (fallback to DEMO_KEY)
+        self.nasa_api_key = "DEMO_KEY"
+        if config:
+            self.nasa_api_key = config.get('nasa.api_key', 'DEMO_KEY')
+            # DONKI cache timeout in seconds (default 24 hours)
+            donki_cache_hours = config.get('nasa.donki_cache_hours', 24)
+            self.donki_cache_timeout = donki_cache_hours * 3600
+        else:
+            self.donki_cache_timeout = 86400  # 24 hours default
 
     def get_hamqsl_data(self):
         """
@@ -317,11 +327,12 @@ class SpaceWeatherClient:
             - sep_events: List of solar energetic particle events
             - updated: Timestamp of data fetch
         """
-        # Check cache
+        # Check cache (use longer timeout for DONKI)
         cache_key = 'donki_events'
         if cache_key in self.cache:
             cached_time, cached_data = self.cache[cache_key]
-            if (datetime.now() - cached_time).seconds < self.cache_timeout:
+            elapsed = (datetime.now() - cached_time).total_seconds()
+            if elapsed < self.donki_cache_timeout:
                 return cached_data
 
         # Calculate date range
@@ -331,7 +342,7 @@ class SpaceWeatherClient:
         date_params = {
             'startDate': start_date.strftime('%Y-%m-%d'),
             'endDate': end_date.strftime('%Y-%m-%d'),
-            'api_key': self.DONKI_API_KEY
+            'api_key': self.nasa_api_key
         }
 
         events = {
@@ -361,6 +372,11 @@ class SpaceWeatherClient:
                         'region': flare.get('activeRegionNum', 'N/A'),
                         'linked_events': len(linked) > 0 if linked else False
                     })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                print("NASA API rate limit exceeded. Using cached data if available. Get your free API key at https://api.nasa.gov/")
+            else:
+                print(f"HTTP Error fetching DONKI solar flares: {e}")
         except Exception as e:
             print(f"Error fetching DONKI solar flares: {e}")
 
@@ -387,6 +403,11 @@ class SpaceWeatherClient:
                     'note': cme.get('note', ''),
                     'linked_events': len(linked) > 0 if linked else False
                 })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                print("NASA API rate limit exceeded (CME data). Using cached data if available.")
+            else:
+                print(f"HTTP Error fetching DONKI CMEs: {e}")
         except Exception as e:
             print(f"Error fetching DONKI CMEs: {e}")
 
@@ -409,6 +430,11 @@ class SpaceWeatherClient:
                     'max_kp': max_kp,
                     'linked_events': len(linked) > 0 if linked else False
                 })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                print("NASA API rate limit exceeded (Geomagnetic storm data). Using cached data if available.")
+            else:
+                print(f"HTTP Error fetching DONKI geomagnetic storms: {e}")
         except Exception as e:
             print(f"Error fetching DONKI geomagnetic storms: {e}")
 
@@ -425,6 +451,11 @@ class SpaceWeatherClient:
                     'instruments': ', '.join([i.get('displayName', '') for i in sep.get('instruments', [])[:2]]),
                     'linked_events': len(linked) > 0 if linked else False
                 })
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                print("NASA API rate limit exceeded (SEP data). Using cached data if available.")
+            else:
+                print(f"HTTP Error fetching DONKI SEP events: {e}")
         except Exception as e:
             print(f"Error fetching DONKI SEP events: {e}")
 
