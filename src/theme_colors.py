@@ -55,3 +55,8 @@ def get_info_color(config=None):
 def get_muted_color(config=None):
     """Get theme-appropriate gray for muted/secondary text"""
     return get_semantic_color('muted', config)
+
+
+def get_spot_highlight_color(config=None):
+    """Get theme-appropriate color for DX spot highlighting (good text contrast)"""
+    return get_semantic_color('spot_highlight', config)

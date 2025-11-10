@@ -30,7 +30,8 @@ THEMES = {
         'error': '#c00000',        # Red for errors/not achieved
         'warning': '#ff8c00',      # Orange for warnings
         'info': '#0078d7',         # Blue for info
-        'muted': '#808080'         # Gray for muted/disabled text
+        'muted': '#808080',        # Gray for muted/disabled text
+        'spot_highlight': '#fff3cd'  # Light amber for DX spot highlighting
     },
     'dark': {
         'bg': '#2b2b2b',
@@ -53,7 +54,8 @@ THEMES = {
         'error': '#ef5350',        # Lighter red for dark bg
         'warning': '#ffa726',      # Lighter orange for dark bg
         'info': '#42a5f5',         # Lighter blue for dark bg
-        'muted': '#9e9e9e'         # Lighter gray for dark bg
+        'muted': '#9e9e9e',        # Lighter gray for dark bg
+        'spot_highlight': '#5d4a00'  # Dark amber for DX spot highlighting (good contrast with light text)
     }
 }
 
