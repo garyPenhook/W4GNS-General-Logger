@@ -235,9 +235,9 @@ class ADIFGenerator:
 
         if skcc_number:
             skcc_number = str(skcc_number).strip()
-            first_name = contact.get('first_name', '').strip()
-            state = contact.get('state', '').strip()
-            country = contact.get('country', '').strip()
+            first_name = (contact.get('first_name') or '').strip()
+            state = (contact.get('state') or '').strip()
+            country = (contact.get('country') or '').strip()
 
             # Format: "SKCC:12345-Ron-MD" (with state) or "SKCC:12345-Ron-CAN" (with 3-letter country code)
             skcc_comment = f"SKCC:{skcc_number}"
