@@ -39,6 +39,7 @@ class EnhancedLoggingTab:
         self.callsign_entry.bind('<FocusOut>', self.on_callsign_changed)
         self.callsign_entry.bind('<Return>', lambda e: self.freq_entry.focus())
         self.callsign_entry.bind('<KeyRelease>', self.on_callsign_keypress)
+        self.callsign_entry.bind('<Tab>', self.on_callsign_tab)
 
         # Set up frequency/band correlation
         self.freq_entry.bind('<FocusOut>', self.on_frequency_changed)
@@ -459,21 +460,29 @@ class EnhancedLoggingTab:
         self.frame.after(1000, self.update_clock)
 
     def on_callsign_keypress(self, event=None):
-        """Capture time_on when first character is entered in callsign field"""
+        """Display previous QSOs as user types in callsign field"""
         callsign = self.callsign_var.get().strip()
-
-        # If callsign has content and time_on hasn't been captured yet
-        if callsign and not self.time_on_captured:
-            current_time = datetime.utcnow().strftime("%H:%M")
-            self.time_on_var.set(current_time)
-            self.time_on_captured = True
-            print(f"Time ON captured: {current_time}")
 
         # Display previous QSOs as user types (if at least 3 characters)
         if len(callsign) >= 3:
             self.display_previous_qsos(callsign.upper())
         else:
             self.clear_previous_qsos()
+
+    def on_callsign_tab(self, event=None):
+        """Capture time_on when Tab is pressed after entering callsign"""
+        callsign = self.callsign_var.get().strip()
+
+        # Capture time_on if callsign has content and time hasn't been captured yet
+        if callsign and not self.time_on_captured:
+            current_time = datetime.utcnow().strftime("%H:%M")
+            self.time_on_var.set(current_time)
+            self.time_on_captured = True
+            print(f"Time ON captured: {current_time}")
+
+        # Move focus to frequency entry
+        self.freq_entry.focus()
+        return 'break'  # Prevent default Tab behavior
 
     def on_callsign_changed(self, event=None):
         """Handle callsign field change - auto lookup if enabled"""
