@@ -309,7 +309,8 @@ W4GNS-General-Logger/
 ├── requirements.txt                 # Python dependencies
 ├── README.md                        # This file
 ├── LICENSE                          # MIT License
-├── GOOGLE_DRIVE_BACKUP_SETUP.md     # Google Drive setup guide
+├── docs/                            # Documentation
+│   └── GOOGLE_DRIVE_BACKUP_SETUP.md # Google Drive setup guide
 └── src/
     ├── __init__.py
     ├── config.py                    # Configuration management
