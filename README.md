@@ -45,11 +45,26 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Cache spots in local database
 - **SKCC member highlighting**: Spots for SKCC members with **Centurion (C)**, **Tribune (T)**, or **Senator (S)** suffixes are highlighted in **cyan** on the Logging tab
 
+### ☀️ **Space Weather Integration**
+- **Real-time solar and geomagnetic conditions** affecting HF propagation
+- **NASA DONKI integration** for space weather event alerts:
+  - Solar flare alerts (M-class and X-class)
+  - Coronal Mass Ejection (CME) tracking
+  - Geomagnetic storm warnings
+  - Solar Energetic Particle (SEP) events
+- **HF band condition forecasts** for day and night
+- **Solar metrics**: Solar Flux Index, Sunspot Number, K-Index, A-Index, Solar Wind, X-Ray Flux
+- **Configurable NASA API key** with 24-hour caching to minimize API calls
+- Data from HamQSL.com (N0NBH), NOAA SWPC, and NASA DONKI
+- Auto-refresh every 5 minutes
+
 ### ⚙️ **Configuration & Preferences**
 - **Station Information**: Callsign, grid square, default power, default RST
 - **QRZ Integration**: Username, password, API key, auto-upload toggle
+- **NASA Space Weather**: API key configuration for DONKI event alerts
 - **Logging Preferences**: Auto-lookup, duplicate warnings, auto time-off
 - **DX Cluster Preferences**: Auto-connect, spot filtering (CW/SSB/Digital)
+- **Google Drive Auto-Backup**: Automatic cloud backups with OAuth authentication
 - All settings persist across sessions
 - Test QRZ connection before saving credentials
 
@@ -104,7 +119,9 @@ These clusters provide automated CW spot detection via remote receivers.
 
 - Python 3.12 or higher
 - tkinter (included with Python)
-- Standard Python library only - no external dependencies!
+- External dependencies (see requirements.txt):
+  - `requests` - For POTA API and NASA space weather data
+  - `google-auth`, `google-auth-oauthlib`, `google-auth-httplib2`, `google-api-python-client` - For Google Drive auto-backup (optional)
 
 ## Installation
 
@@ -114,7 +131,18 @@ These clusters provide automated CW spot detection via remote receivers.
    cd W4GNS-General-Logger
    ```
 
-2. **Run the application:**
+2. **Install dependencies:**
+   ```bash
+   # Recommended: Use a virtual environment
+   python3 -m venv venv
+   source venv/bin/activate  # On Linux/Mac
+   # OR on Windows: venv\Scripts\activate
+
+   # Install required packages
+   pip install -r requirements.txt
+   ```
+
+3. **Run the application:**
    ```bash
    python3 main.py
    ```
@@ -143,6 +171,16 @@ These clusters provide automated CW spot detection via remote receivers.
 5. Enable "Auto-upload" if you want contacts automatically uploaded to QRZ Logbook
 6. Click "Test QRZ Connection" to verify credentials
 7. Click "Save Settings"
+
+**NASA Space Weather Setup (Optional):**
+1. Go to **Settings** → **NASA Space Weather API**
+2. Get a free API key from [https://api.nasa.gov/](https://api.nasa.gov/) (no rate limits)
+3. Enter your NASA API key
+4. Adjust cache duration if desired (default: 24 hours)
+5. Click "Save Settings"
+6. View real-time space weather in the **Space Weather** tab
+
+**Note:** The app includes a default API key, but getting your own is recommended for best performance.
 
 **Logging Preferences:**
 1. Toggle "Auto-lookup" for automatic callsign information retrieval
@@ -271,6 +309,7 @@ W4GNS-General-Logger/
 ├── requirements.txt                 # Python dependencies
 ├── README.md                        # This file
 ├── LICENSE                          # MIT License
+├── GOOGLE_DRIVE_BACKUP_SETUP.md     # Google Drive setup guide
 └── src/
     ├── __init__.py
     ├── config.py                    # Configuration management
@@ -278,6 +317,8 @@ W4GNS-General-Logger/
     ├── adif.py                      # ADIF 3.x import/export
     ├── dxcc.py                      # DXCC prefix lookup (40+ entities)
     ├── qrz.py                       # QRZ.com API integration
+    ├── space_weather.py             # NASA DONKI & NOAA space weather
+    ├── google_drive_backup.py       # Google Drive OAuth backup
     ├── dx_clusters.py               # DX cluster definitions
     ├── dx_client.py                 # Telnet client for clusters
     └── gui/
@@ -319,6 +360,10 @@ Example configuration:
     "auto_upload": false,
     "enable_lookup": true
   },
+  "nasa": {
+    "api_key": "YOUR_NASA_API_KEY",
+    "donki_cache_hours": 24
+  },
   "logging": {
     "auto_lookup": true,
     "warn_duplicates": true,
@@ -330,6 +375,13 @@ Example configuration:
     "show_cw_spots": true,
     "show_ssb_spots": true,
     "show_digital_spots": true
+  },
+  "google_drive": {
+    "enabled": false,
+    "backup_interval_hours": 24,
+    "max_backups": 30,
+    "include_config": true,
+    "last_backup": null
   },
   "window": {
     "width": 1200,
@@ -346,13 +398,16 @@ Built with:
 - **sqlite3** - Fast local database with 25+ fields
 - **telnetlib** - DX cluster telnet connections
 - **urllib** - QRZ.com API integration
-- **Standard library only** - No external dependencies!
+- **requests** - HTTP client for NASA and POTA APIs
+- **Google Drive API** - Optional cloud backup integration
 
 **Modules:**
 - `dxcc.py` - 40+ DXCC entities with prefix matching
 - `qrz.py` - QRZ XML API and Logbook upload
 - `adif.py` - Complete ADIF 3.x parser/generator
 - `database.py` - SQLite ORM with duplicate detection
+- `space_weather.py` - NASA DONKI and NOAA space weather integration
+- `google_drive_backup.py` - OAuth-based cloud backup system
 - `logging_tab_enhanced.py` - Log4OM-inspired interface
 
 ## Future Enhancements
@@ -367,7 +422,8 @@ Completed features:
 - [x] Log4OM-style interface ✅
 - [x] SKCC awards tracking (all 11 awards) ✅
 - [x] ARRL awards tracking ✅
-- [x] Space weather integration ✅
+- [x] Space weather integration with NASA DONKI ✅
+- [x] Google Drive automatic backups ✅
 - [x] Dark/Light themes ✅
 
 Potential future features:
@@ -427,6 +483,15 @@ Potential future features:
 - Existing databases will auto-upgrade to new schema
 - Delete `logger.db` to start fresh (backup first!)
 - Export to ADIF before deleting for safety
+
+**Space weather not loading / NASA API errors:**
+- Check your internet connection
+- Verify NASA API key is configured in Settings
+- Get a free API key at [https://api.nasa.gov/](https://api.nasa.gov/)
+- Default DEMO_KEY has strict rate limits (30 requests/hour)
+- Personal API key has higher limits (1000 requests/hour)
+- Data is cached for 24 hours to minimize API calls
+- Check console for specific error messages
 
 ## License
 
