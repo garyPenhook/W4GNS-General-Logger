@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from src.qrz import test_qrz_login
 from src.theme_colors import get_error_color, get_info_color, get_muted_color, get_success_color, get_warning_color
+from src.google_drive_backup import GoogleDriveBackup, format_file_size, format_timestamp
 
 
 class SettingsTab:
@@ -22,11 +23,23 @@ class SettingsTab:
         self.roster_manager = get_roster_manager()
         self.award_rosters = get_award_roster_manager(database=database) if database else None
 
+        # Initialize Google Drive backup manager
+        self.gdrive_backup = None
+        if GoogleDriveBackup.is_available():
+            try:
+                self.gdrive_backup = GoogleDriveBackup(config, database.db_path if database else None)
+            except Exception as e:
+                print(f"Google Drive backup initialization failed: {e}")
+
         self.create_widgets()
 
         # CRITICAL: Auto-download rosters on EVERY startup for accurate award validation
         # Delay start until after main loop is running to avoid threading errors
         self.parent.after(100, self.auto_download_rosters_on_startup)
+
+        # Start auto backup if enabled
+        if self.gdrive_backup and self.config.get('google_drive.enabled', False):
+            self.gdrive_backup.start_auto_backup()
 
     def create_widgets(self):
         """Create the settings interface"""
@@ -320,6 +333,9 @@ class SettingsTab:
 
         ttk.Label(backup_frame, text="Restore will replace current database with a backup file",
                  font=('', 8), foreground=get_error_color(self.config)).pack(anchor='w', pady=(0, 5))
+
+        # Google Drive Backup Settings
+        self.create_google_drive_section(scrollable_frame)
 
         # DX Cluster Settings
         cluster_frame = ttk.LabelFrame(scrollable_frame, text="DX Cluster Preferences", padding=10)
@@ -1093,3 +1109,274 @@ Cluster list sources:
     def get_frame(self):
         """Return the frame widget"""
         return self.frame
+
+    def create_google_drive_section(self, parent):
+        """Create Google Drive backup configuration section"""
+        gdrive_frame = ttk.LabelFrame(parent, text="Google Drive Auto-Backup", padding=10)
+        gdrive_frame.pack(fill='x', padx=10, pady=5)
+
+        # Check if Google Drive API is available
+        if not GoogleDriveBackup.is_available():
+            warning_label = ttk.Label(gdrive_frame,
+                                     text="⚠️ Google Drive API not installed. Run: pip install -r requirements.txt",
+                                     foreground=get_warning_color(self.config))
+            warning_label.pack(anchor='w', pady=5)
+            return
+
+        if not self.gdrive_backup:
+            error_label = ttk.Label(gdrive_frame,
+                                   text="❌ Google Drive backup initialization failed",
+                                   foreground=get_error_color(self.config))
+            error_label.pack(anchor='w', pady=5)
+            return
+
+        # Enable/Disable Google Drive backups
+        self.gdrive_enabled_var = tk.BooleanVar(value=self.config.get('google_drive.enabled', False))
+        enable_check = ttk.Checkbutton(gdrive_frame, text="Enable automatic Google Drive backups",
+                                      variable=self.gdrive_enabled_var,
+                                      command=self.toggle_gdrive_backup)
+        enable_check.pack(anchor='w', pady=5)
+
+        # Authentication status
+        auth_frame = ttk.Frame(gdrive_frame)
+        auth_frame.pack(fill='x', pady=5)
+
+        ttk.Label(auth_frame, text="Status:", font=('', 10, 'bold')).pack(side='left')
+        self.gdrive_status_label = ttk.Label(auth_frame, text="Not authenticated", foreground=get_warning_color(self.config))
+        self.gdrive_status_label.pack(side='left', padx=10)
+
+        auth_btn_frame = ttk.Frame(auth_frame)
+        auth_btn_frame.pack(side='left', padx=10)
+
+        ttk.Button(auth_btn_frame, text="Connect to Google Drive",
+                  command=self.authenticate_gdrive).pack(side='left', padx=2)
+        ttk.Button(auth_btn_frame, text="Disconnect",
+                  command=self.disconnect_gdrive).pack(side='left', padx=2)
+
+        # Backup configuration
+        config_frame = ttk.LabelFrame(gdrive_frame, text="Backup Settings", padding=5)
+        config_frame.pack(fill='x', pady=10)
+
+        # Backup interval
+        interval_row = ttk.Frame(config_frame)
+        interval_row.pack(fill='x', pady=2)
+
+        ttk.Label(interval_row, text="Backup interval:").pack(side='left')
+        self.gdrive_interval_var = tk.IntVar(value=self.config.get('google_drive.backup_interval_hours', 24))
+        interval_spin = ttk.Spinbox(interval_row, from_=1, to=168, increment=1,
+                                   textvariable=self.gdrive_interval_var, width=8)
+        interval_spin.pack(side='left', padx=5)
+        ttk.Label(interval_row, text="hours").pack(side='left')
+
+        # Max backups to keep
+        retention_row = ttk.Frame(config_frame)
+        retention_row.pack(fill='x', pady=2)
+
+        ttk.Label(retention_row, text="Keep last:").pack(side='left')
+        self.gdrive_max_backups_var = tk.IntVar(value=self.config.get('google_drive.max_backups', 30))
+        max_spin = ttk.Spinbox(retention_row, from_=5, to=100, increment=5,
+                              textvariable=self.gdrive_max_backups_var, width=8)
+        max_spin.pack(side='left', padx=5)
+        ttk.Label(retention_row, text="backups (older backups are automatically deleted)").pack(side='left')
+
+        # Include config option
+        self.gdrive_include_config_var = tk.BooleanVar(value=self.config.get('google_drive.include_config', True))
+        ttk.Checkbutton(config_frame, text="Include configuration file (config.json) in backup",
+                       variable=self.gdrive_include_config_var).pack(anchor='w', pady=2)
+
+        # Last backup info
+        last_backup_frame = ttk.Frame(gdrive_frame)
+        last_backup_frame.pack(fill='x', pady=5)
+
+        ttk.Label(last_backup_frame, text="Last backup:", font=('', 10, 'bold')).pack(side='left')
+        self.gdrive_last_backup_label = ttk.Label(last_backup_frame, text="Never", foreground=get_muted_color(self.config))
+        self.gdrive_last_backup_label.pack(side='left', padx=10)
+
+        # Manual backup buttons
+        manual_frame = ttk.Frame(gdrive_frame)
+        manual_frame.pack(fill='x', pady=5)
+
+        ttk.Button(manual_frame, text="Backup Now", command=self.gdrive_backup_now).pack(side='left', padx=5)
+        ttk.Button(manual_frame, text="View Backups", command=self.gdrive_view_backups).pack(side='left', padx=5)
+        ttk.Button(manual_frame, text="Open Google Drive Folder", command=self.gdrive_open_folder).pack(side='left', padx=5)
+
+        # Instructions
+        ttk.Label(gdrive_frame,
+                 text="Note: First-time setup requires Google OAuth authentication in your browser.",
+                 font=('', 8, 'italic'), foreground=get_muted_color(self.config)).pack(anchor='w', pady=(5, 0))
+
+        # Update status
+        self.update_gdrive_status()
+
+    def update_gdrive_status(self):
+        """Update Google Drive status display"""
+        if not self.gdrive_backup:
+            return
+
+        if self.gdrive_backup.is_authenticated:
+            self.gdrive_status_label.config(text="✓ Connected", foreground=get_success_color(self.config))
+        else:
+            self.gdrive_status_label.config(text="Not authenticated", foreground=get_warning_color(self.config))
+
+        # Update last backup time
+        last_backup = self.config.get('google_drive.last_backup')
+        if last_backup:
+            self.gdrive_last_backup_label.config(text=format_timestamp(last_backup))
+        else:
+            self.gdrive_last_backup_label.config(text="Never")
+
+    def authenticate_gdrive(self):
+        """Authenticate with Google Drive"""
+        if not self.gdrive_backup:
+            messagebox.showerror("Error", "Google Drive backup not initialized")
+            return
+
+        try:
+            messagebox.showinfo("Google Drive Authentication",
+                              "A browser window will open for Google authentication.\n\n"
+                              "Please:\n"
+                              "1. Sign in to your Google account\n"
+                              "2. Grant permissions to access Google Drive\n"
+                              "3. Complete the authorization")
+
+            self.gdrive_backup.authenticate()
+            messagebox.showinfo("Success", "Successfully authenticated with Google Drive!")
+            self.update_gdrive_status()
+
+        except FileNotFoundError as e:
+            messagebox.showerror("Credentials Not Found",
+                               f"{str(e)}\n\n"
+                               "To use Google Drive backup:\n"
+                               "1. Go to Google Cloud Console\n"
+                               "2. Create OAuth 2.0 credentials\n"
+                               "3. Download credentials as 'gdrive_credentials.json'\n"
+                               "4. Place in project root directory")
+        except Exception as e:
+            messagebox.showerror("Authentication Failed", f"Error: {str(e)}")
+
+    def disconnect_gdrive(self):
+        """Disconnect from Google Drive"""
+        if not self.gdrive_backup:
+            return
+
+        if messagebox.askyesno("Disconnect", "Disconnect from Google Drive?\n\nYou will need to re-authenticate to use backups again."):
+            self.gdrive_backup.disconnect()
+            self.update_gdrive_status()
+            messagebox.showinfo("Disconnected", "Disconnected from Google Drive")
+
+    def toggle_gdrive_backup(self):
+        """Toggle Google Drive auto-backup"""
+        enabled = self.gdrive_enabled_var.get()
+        self.config.set('google_drive.enabled', enabled)
+
+        if enabled and self.gdrive_backup:
+            if not self.gdrive_backup.is_authenticated:
+                messagebox.showwarning("Not Authenticated",
+                                     "Please authenticate with Google Drive first")
+                self.gdrive_enabled_var.set(False)
+                self.config.set('google_drive.enabled', False)
+                return
+
+            self.gdrive_backup.start_auto_backup()
+            messagebox.showinfo("Auto-Backup Enabled", "Google Drive auto-backup is now enabled")
+        elif self.gdrive_backup:
+            self.gdrive_backup.stop_auto_backup_thread()
+            messagebox.showinfo("Auto-Backup Disabled", "Google Drive auto-backup is now disabled")
+
+    def gdrive_backup_now(self):
+        """Perform manual backup to Google Drive"""
+        if not self.gdrive_backup:
+            messagebox.showerror("Error", "Google Drive backup not initialized")
+            return
+
+        if not self.gdrive_backup.is_authenticated:
+            messagebox.showwarning("Not Authenticated",
+                                 "Please authenticate with Google Drive first")
+            return
+
+        # Save current config settings
+        self.config.set('google_drive.backup_interval_hours', self.gdrive_interval_var.get())
+        self.config.set('google_drive.max_backups', self.gdrive_max_backups_var.get())
+        self.config.set('google_drive.include_config', self.gdrive_include_config_var.get())
+
+        try:
+            result = self.gdrive_backup.create_backup(include_config=self.gdrive_include_config_var.get())
+
+            if result['success']:
+                msg = f"Backup completed successfully!\n\n"
+                msg += f"Timestamp: {result['timestamp']}\n"
+                if 'database' in result:
+                    msg += f"Database: {result['database'].get('name', 'N/A')}\n"
+                if 'config' in result and result['config']['success']:
+                    msg += f"Config: {result['config'].get('name', 'N/A')}\n"
+
+                messagebox.showinfo("Backup Complete", msg)
+                self.update_gdrive_status()
+            else:
+                messagebox.showerror("Backup Failed", f"Error: {result.get('error', 'Unknown error')}")
+
+        except Exception as e:
+            messagebox.showerror("Backup Failed", f"Error: {str(e)}")
+
+    def gdrive_view_backups(self):
+        """View list of backups in Google Drive"""
+        if not self.gdrive_backup or not self.gdrive_backup.is_authenticated:
+            messagebox.showwarning("Not Authenticated", "Please authenticate with Google Drive first")
+            return
+
+        try:
+            backups = self.gdrive_backup.list_backups()
+
+            if not backups:
+                messagebox.showinfo("No Backups", "No backups found in Google Drive")
+                return
+
+            # Create window to display backups
+            backup_window = tk.Toplevel(self.parent)
+            backup_window.title("Google Drive Backups")
+            backup_window.geometry("700x400")
+
+            # Add scrollable list
+            frame = ttk.Frame(backup_window)
+            frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+            # Treeview for backups
+            columns = ('name', 'size', 'created')
+            tree = ttk.Treeview(frame, columns=columns, show='headings', height=15)
+
+            tree.heading('name', text='Filename')
+            tree.heading('size', text='Size')
+            tree.heading('created', text='Created')
+
+            tree.column('name', width=350)
+            tree.column('size', width=100)
+            tree.column('created', width=200)
+
+            scrollbar = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
+            tree.configure(yscrollcommand=scrollbar.set)
+
+            tree.pack(side='left', fill='both', expand=True)
+            scrollbar.pack(side='right', fill='y')
+
+            # Populate with backups
+            for backup in backups:
+                tree.insert('', 'end', values=(
+                    backup['name'],
+                    format_file_size(backup.get('size', 0)),
+                    format_timestamp(backup.get('createdTime', ''))
+                ))
+
+            ttk.Label(backup_window, text=f"Total backups: {len(backups)}").pack(pady=5)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to list backups: {str(e)}")
+
+    def gdrive_open_folder(self):
+        """Open Google Drive backup folder in browser"""
+        if not self.gdrive_backup or not self.gdrive_backup.backup_folder_id:
+            messagebox.showwarning("Not Authenticated", "Please authenticate with Google Drive first")
+            return
+
+        import webbrowser
+        folder_url = f"https://drive.google.com/drive/folders/{self.gdrive_backup.backup_folder_id}"
+        webbrowser.open(folder_url)

@@ -68,6 +68,13 @@ class Config:
             "window": {
                 "width": 1200,
                 "height": 750
+            },
+            "google_drive": {
+                "enabled": False,
+                "backup_interval_hours": 24,
+                "max_backups": 30,
+                "include_config": True,
+                "last_backup": None
             }
         }
 
