@@ -18,6 +18,7 @@ class SpaceWeatherTab:
         self.frame = ttk.Frame(parent)
         self.client = SpaceWeatherClient()
         self.data = None
+        self.donki_events = None
         self.auto_refresh = True
 
         self.create_widgets()
@@ -130,9 +131,42 @@ class SpaceWeatherTab:
         self.night_bands_label = ttk.Label(night_frame, text="Loading...", justify='left')
         self.night_bands_label.pack(anchor='w', pady=5)
 
+        # NASA DONKI Event Alerts Section
+        events_frame = ttk.LabelFrame(main_container, text="Space Weather Events (NASA DONKI)",
+                                     padding=10)
+        events_frame.pack(fill='both', expand=True, pady=(10, 0))
+
+        # Event summary banner
+        self.event_summary_frame = ttk.Frame(events_frame)
+        self.event_summary_frame.pack(fill='x', pady=(0, 10))
+
+        self.event_alert_label = ttk.Label(self.event_summary_frame, text="Loading events...",
+                                          font=('TkDefaultFont', 12, 'bold'))
+        self.event_alert_label.pack(side='left')
+
+        self.event_message_label = ttk.Label(self.event_summary_frame, text="",
+                                            font=('TkDefaultFont', 9))
+        self.event_message_label.pack(side='left', padx=10)
+
+        # Event details in scrollable frame
+        events_canvas = tk.Canvas(events_frame, height=200, highlightthickness=0)
+        events_scrollbar = ttk.Scrollbar(events_frame, orient="vertical", command=events_canvas.yview)
+        self.events_content_frame = ttk.Frame(events_canvas)
+
+        self.events_content_frame.bind(
+            "<Configure>",
+            lambda e: events_canvas.configure(scrollregion=events_canvas.bbox("all"))
+        )
+
+        events_canvas.create_window((0, 0), window=self.events_content_frame, anchor="nw")
+        events_canvas.configure(yscrollcommand=events_scrollbar.set)
+
+        events_canvas.pack(side="left", fill="both", expand=True)
+        events_scrollbar.pack(side="right", fill="y")
+
         # Data source attribution
         source_label = ttk.Label(main_container,
-                                text="Data from HamQSL.com (N0NBH) and NOAA Space Weather Prediction Center",
+                                text="Data from HamQSL.com (N0NBH), NOAA SWPC, and NASA DONKI",
                                 font=('TkDefaultFont', 8), foreground=get_muted_color(self.config))
         source_label.pack(pady=(10, 0))
 
@@ -230,6 +264,7 @@ class SpaceWeatherTab:
         """Refresh space weather data"""
         def fetch_data():
             self.data = self.client.get_hamqsl_data()
+            self.donki_events = self.client.get_donki_events(days=7)
             self.frame.after(0, self.update_display)
 
         # Fetch in background thread
@@ -290,6 +325,9 @@ class SpaceWeatherTab:
         # Update band conditions
         self.update_band_conditions()
 
+        # Update DONKI events
+        self.update_donki_events()
+
         # Schedule next auto-refresh (5 minutes)
         if self.auto_refresh:
             self.frame.after(300000, self.refresh_data)
@@ -323,3 +361,164 @@ class SpaceWeatherTab:
             if key in conditions_dict:
                 return conditions_dict[key]
         return "N/A"
+
+    def update_donki_events(self):
+        """Update NASA DONKI event alerts display"""
+        # Clear existing widgets
+        for widget in self.events_content_frame.winfo_children():
+            widget.destroy()
+
+        if not self.donki_events:
+            no_data_label = ttk.Label(self.events_content_frame,
+                                     text="Unable to load event data",
+                                     font=('TkDefaultFont', 10))
+            no_data_label.pack(pady=20)
+            return
+
+        # Update event summary banner
+        alert_level, alert_color, alert_message = self.client.get_event_summary(self.donki_events)
+        self.event_alert_label.config(text=alert_level, foreground=alert_color)
+        self.event_message_label.config(text=alert_message, foreground=get_muted_color(self.config))
+
+        # Display Solar Flares
+        solar_flares = self.donki_events.get('solar_flares', [])
+        if solar_flares:
+            flare_section = ttk.LabelFrame(self.events_content_frame,
+                                          text=f"Recent Solar Flares ({len(solar_flares)})",
+                                          padding=5)
+            flare_section.pack(fill='x', pady=(0, 10))
+
+            for flare in solar_flares[:5]:  # Show top 5
+                flare_frame = ttk.Frame(flare_section)
+                flare_frame.pack(fill='x', pady=2)
+
+                # Parse time
+                time_str = flare.get('peak_time', flare.get('time', ''))
+                try:
+                    dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    formatted_time = time_str[:16] if time_str else 'Unknown'
+
+                # Get severity
+                flare_class = flare.get('class', 'Unknown')
+                severity, sev_color, _ = self.client.interpret_solar_flare(flare_class)
+
+                # Display flare info
+                class_label = ttk.Label(flare_frame, text=f"Class {flare_class}",
+                                       font=('TkDefaultFont', 10, 'bold'),
+                                       foreground=sev_color, width=10)
+                class_label.pack(side='left', padx=5)
+
+                info_label = ttk.Label(flare_frame,
+                                      text=f"{formatted_time} | {flare.get('location', 'Unknown')} | AR {flare.get('region', 'N/A')}",
+                                      font=('TkDefaultFont', 9))
+                info_label.pack(side='left', padx=5)
+
+        # Display CMEs
+        cmes = self.donki_events.get('cmes', [])
+        if cmes:
+            cme_section = ttk.LabelFrame(self.events_content_frame,
+                                        text=f"Recent Coronal Mass Ejections ({len(cmes)})",
+                                        padding=5)
+            cme_section.pack(fill='x', pady=(0, 10))
+
+            for cme in cmes[:5]:  # Show top 5
+                cme_frame = ttk.Frame(cme_section)
+                cme_frame.pack(fill='x', pady=2)
+
+                # Parse time
+                time_str = cme.get('time', '')
+                try:
+                    dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    formatted_time = time_str[:16] if time_str else 'Unknown'
+
+                # Get speed interpretation
+                speed = cme.get('speed', 0)
+                speed_severity, speed_color, _ = self.client.interpret_cme_speed(speed)
+
+                # Display CME info
+                speed_label = ttk.Label(cme_frame, text=f"{int(speed)} km/s",
+                                       font=('TkDefaultFont', 10, 'bold'),
+                                       foreground=speed_color, width=10)
+                speed_label.pack(side='left', padx=5)
+
+                info_label = ttk.Label(cme_frame,
+                                      text=f"{formatted_time} | {cme.get('location', 'Unknown')}",
+                                      font=('TkDefaultFont', 9))
+                info_label.pack(side='left', padx=5)
+
+        # Display Geomagnetic Storms
+        storms = self.donki_events.get('geomagnetic_storms', [])
+        if storms:
+            storm_section = ttk.LabelFrame(self.events_content_frame,
+                                          text=f"Recent Geomagnetic Storms ({len(storms)})",
+                                          padding=5)
+            storm_section.pack(fill='x', pady=(0, 10))
+
+            for storm in storms:
+                storm_frame = ttk.Frame(storm_section)
+                storm_frame.pack(fill='x', pady=2)
+
+                # Parse time
+                time_str = storm.get('time', '')
+                try:
+                    dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    formatted_time = time_str[:16] if time_str else 'Unknown'
+
+                # Get Kp interpretation
+                max_kp = storm.get('max_kp', 0)
+                kp_int = int(max_kp)
+                kp_interp, kp_color = self.client.interpret_k_index(kp_int)
+
+                # Display storm info
+                kp_label = ttk.Label(storm_frame, text=f"Kp {max_kp:.1f}",
+                                    font=('TkDefaultFont', 10, 'bold'),
+                                    foreground=kp_color, width=10)
+                kp_label.pack(side='left', padx=5)
+
+                info_label = ttk.Label(storm_frame,
+                                      text=f"{formatted_time} | {kp_interp}",
+                                      font=('TkDefaultFont', 9))
+                info_label.pack(side='left', padx=5)
+
+        # Display SEP Events
+        sep_events = self.donki_events.get('sep_events', [])
+        if sep_events:
+            sep_section = ttk.LabelFrame(self.events_content_frame,
+                                        text=f"Solar Energetic Particle Events ({len(sep_events)})",
+                                        padding=5)
+            sep_section.pack(fill='x', pady=(0, 10))
+
+            for sep in sep_events:
+                sep_frame = ttk.Frame(sep_section)
+                sep_frame.pack(fill='x', pady=2)
+
+                # Parse time
+                time_str = sep.get('time', '')
+                try:
+                    dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                    formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                except:
+                    formatted_time = time_str[:16] if time_str else 'Unknown'
+
+                # Display SEP info
+                time_label = ttk.Label(sep_frame, text=formatted_time,
+                                      font=('TkDefaultFont', 10), width=20)
+                time_label.pack(side='left', padx=5)
+
+                info_label = ttk.Label(sep_frame,
+                                      text=sep.get('instruments', 'N/A'),
+                                      font=('TkDefaultFont', 9))
+                info_label.pack(side='left', padx=5)
+
+        # If no events
+        if not any([solar_flares, cmes, storms, sep_events]):
+            no_events_label = ttk.Label(self.events_content_frame,
+                                       text="No significant space weather events in the past 7 days",
+                                       font=('TkDefaultFont', 10))
+            no_events_label.pack(pady=20)

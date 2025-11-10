@@ -5,6 +5,7 @@ Fetches solar and geomagnetic data relevant to HF radio propagation
 Data sources:
 - HamQSL.com (N0NBH) - Comprehensive ham radio space weather
 - NOAA Space Weather Prediction Center - Official government data
+- NASA DONKI - Space weather event alerts and forecasts
 """
 
 import requests
@@ -21,6 +22,14 @@ class SpaceWeatherClient:
     # NOAA Space Weather Prediction Center JSON APIs
     NOAA_SOLAR_FLUX = "https://services.swpc.noaa.gov/json/f107_cm_flux.json"
     NOAA_KP_INDEX = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
+
+    # NASA DONKI (Database Of Notifications, Knowledge, Information) APIs
+    DONKI_BASE_URL = "https://api.nasa.gov/DONKI"
+    DONKI_API_KEY = "DEMO_KEY"  # Free public API key
+    DONKI_FLARES = f"{DONKI_BASE_URL}/FLR"
+    DONKI_CME = f"{DONKI_BASE_URL}/CME"
+    DONKI_GST = f"{DONKI_BASE_URL}/GST"
+    DONKI_SEP = f"{DONKI_BASE_URL}/SEP"
 
     def __init__(self):
         self.session = requests.Session()
@@ -293,3 +302,200 @@ class SpaceWeatherClient:
             return "Poor", "#f57c00", "Poor conditions, high absorption likely"
         else:
             return "Very Poor", "#d32f2f", "Very poor conditions, severe absorption"
+
+    def get_donki_events(self, days=7):
+        """
+        Fetch space weather events from NASA DONKI
+
+        Args:
+            days: Number of days to look back (default 7)
+
+        Returns dict with:
+            - solar_flares: List of recent solar flare events
+            - cmes: List of coronal mass ejections
+            - geomagnetic_storms: List of geomagnetic storms
+            - sep_events: List of solar energetic particle events
+            - updated: Timestamp of data fetch
+        """
+        # Check cache
+        cache_key = 'donki_events'
+        if cache_key in self.cache:
+            cached_time, cached_data = self.cache[cache_key]
+            if (datetime.now() - cached_time).seconds < self.cache_timeout:
+                return cached_data
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+
+        date_params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.DONKI_API_KEY
+        }
+
+        events = {
+            'solar_flares': [],
+            'cmes': [],
+            'geomagnetic_storms': [],
+            'sep_events': [],
+            'updated': datetime.now().isoformat()
+        }
+
+        # Fetch solar flares
+        try:
+            response = self.session.get(self.DONKI_FLARES, params=date_params, timeout=10)
+            response.raise_for_status()
+            flares = response.json()
+
+            # Filter to significant flares (M-class and above)
+            for flare in flares:
+                class_type = flare.get('classType', '')
+                if class_type and (class_type.startswith('M') or class_type.startswith('X')):
+                    linked = flare.get('linkedEvents')
+                    events['solar_flares'].append({
+                        'time': flare.get('beginTime', ''),
+                        'peak_time': flare.get('peakTime', ''),
+                        'class': class_type,
+                        'location': flare.get('sourceLocation', 'Unknown'),
+                        'region': flare.get('activeRegionNum', 'N/A'),
+                        'linked_events': len(linked) > 0 if linked else False
+                    })
+        except Exception as e:
+            print(f"Error fetching DONKI solar flares: {e}")
+
+        # Fetch CMEs
+        try:
+            response = self.session.get(self.DONKI_CME, params=date_params, timeout=10)
+            response.raise_for_status()
+            cmes = response.json()
+
+            # Get recent significant CMEs
+            for cme in cmes[:10]:  # Limit to 10 most recent
+                # Get analysis data
+                analyses = cme.get('cmeAnalyses', [])
+                speed = 0
+                if analyses:
+                    analysis = analyses[0]  # Most accurate analysis
+                    speed = analysis.get('speed', 0)
+
+                linked = cme.get('linkedEvents')
+                events['cmes'].append({
+                    'time': cme.get('startTime', ''),
+                    'location': cme.get('sourceLocation', 'Unknown'),
+                    'speed': speed,
+                    'note': cme.get('note', ''),
+                    'linked_events': len(linked) > 0 if linked else False
+                })
+        except Exception as e:
+            print(f"Error fetching DONKI CMEs: {e}")
+
+        # Fetch Geomagnetic Storms
+        try:
+            response = self.session.get(self.DONKI_GST, params=date_params, timeout=10)
+            response.raise_for_status()
+            storms = response.json()
+
+            for storm in storms:
+                # Get max Kp value
+                kp_values = storm.get('allKpIndex', [])
+                max_kp = 0
+                if kp_values:
+                    max_kp = max(kp.get('kpIndex', 0) for kp in kp_values)
+
+                linked = storm.get('linkedEvents')
+                events['geomagnetic_storms'].append({
+                    'time': storm.get('startTime', ''),
+                    'max_kp': max_kp,
+                    'linked_events': len(linked) > 0 if linked else False
+                })
+        except Exception as e:
+            print(f"Error fetching DONKI geomagnetic storms: {e}")
+
+        # Fetch Solar Energetic Particle (SEP) Events
+        try:
+            response = self.session.get(self.DONKI_SEP, params=date_params, timeout=10)
+            response.raise_for_status()
+            sep_events = response.json()
+
+            for sep in sep_events[:5]:  # Limit to 5 most recent
+                linked = sep.get('linkedEvents')
+                events['sep_events'].append({
+                    'time': sep.get('eventTime', ''),
+                    'instruments': ', '.join([i.get('displayName', '') for i in sep.get('instruments', [])[:2]]),
+                    'linked_events': len(linked) > 0 if linked else False
+                })
+        except Exception as e:
+            print(f"Error fetching DONKI SEP events: {e}")
+
+        # Cache the result
+        self.cache[cache_key] = (datetime.now(), events)
+        return events
+
+    def interpret_solar_flare(self, flare_class):
+        """
+        Interpret solar flare class for HF radio impact
+
+        Flare classes: A, B, C, M, X (each 10x stronger)
+        Returns: (severity, color, description)
+        """
+        if not flare_class:
+            return "Unknown", "#757575", "Unknown class"
+
+        class_letter = flare_class[0].upper()
+
+        if class_letter == 'X':
+            return "Extreme", "#d32f2f", "Major HF radio blackouts possible"
+        elif class_letter == 'M':
+            return "High", "#f57c00", "Moderate HF radio blackouts possible"
+        elif class_letter == 'C':
+            return "Moderate", "#fbc02d", "Minor HF impacts possible"
+        elif class_letter == 'B':
+            return "Low", "#7cb342", "Minimal HF impact"
+        else:  # A
+            return "Minimal", "#388e3c", "No significant HF impact"
+
+    def interpret_cme_speed(self, speed):
+        """
+        Interpret CME speed for Earth impact potential
+
+        Args:
+            speed: CME speed in km/s
+
+        Returns: (severity, color, description)
+        """
+        if speed < 300:
+            return "Slow", "#388e3c", "Unlikely to cause disturbances"
+        elif speed < 500:
+            return "Moderate", "#7cb342", "Minor geomagnetic activity possible"
+        elif speed < 1000:
+            return "Fast", "#fbc02d", "Geomagnetic storm possible if Earth-directed"
+        elif speed < 2000:
+            return "Very Fast", "#f57c00", "Major geomagnetic storm likely if Earth-directed"
+        else:
+            return "Extreme", "#d32f2f", "Severe geomagnetic storm likely if Earth-directed"
+
+    def get_event_summary(self, events):
+        """
+        Generate summary of recent space weather events
+
+        Returns: (alert_level, color, message)
+        """
+        if not events:
+            return "Normal", "#388e3c", "No significant space weather events"
+
+        # Count significant events
+        x_flares = sum(1 for f in events.get('solar_flares', []) if f['class'].startswith('X'))
+        m_flares = sum(1 for f in events.get('solar_flares', []) if f['class'].startswith('M'))
+        fast_cmes = sum(1 for c in events.get('cmes', []) if c['speed'] > 1000)
+        storms = len(events.get('geomagnetic_storms', []))
+
+        # Determine alert level
+        if x_flares > 0 or fast_cmes > 2 or storms > 1:
+            return "High Alert", "#d32f2f", f"{x_flares} X-flares, {fast_cmes} fast CMEs, {storms} geomagnetic storms"
+        elif m_flares > 3 or fast_cmes > 0 or storms > 0:
+            return "Elevated", "#f57c00", f"{m_flares} M-flares, {fast_cmes} fast CMEs, {storms} geomagnetic storms"
+        elif m_flares > 0:
+            return "Minor Activity", "#fbc02d", f"{m_flares} M-flares detected"
+        else:
+            return "Normal", "#388e3c", "No significant space weather events"
