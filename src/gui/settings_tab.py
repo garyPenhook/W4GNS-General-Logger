@@ -334,6 +334,31 @@ class SettingsTab:
         ttk.Label(backup_frame, text="Restore will replace current database with a backup file",
                  font=('', 8), foreground=get_error_color(self.config)).pack(anchor='w', pady=(0, 5))
 
+        # NASA API Configuration
+        nasa_frame = ttk.LabelFrame(scrollable_frame, text="NASA Space Weather API", padding=10)
+        nasa_frame.pack(fill='x', padx=10, pady=5)
+
+        nasa_row = ttk.Frame(nasa_frame)
+        nasa_row.pack(fill='x', pady=5)
+        ttk.Label(nasa_row, text="NASA API Key:").pack(side='left')
+        self.nasa_api_key_var = tk.StringVar(value=self.config.get('nasa.api_key', 'DEMO_KEY'))
+        ttk.Entry(nasa_row, textvariable=self.nasa_api_key_var, width=50).pack(side='left', padx=5)
+
+        ttk.Label(nasa_frame, text="Get your free API key from https://api.nasa.gov/ (no rate limits)",
+                 font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w', pady=2)
+
+        ttk.Label(nasa_frame, text="Used for NASA DONKI space weather event alerts in the Space Weather tab.",
+                 font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w', pady=(0, 2))
+
+        # Cache duration
+        cache_row = ttk.Frame(nasa_frame)
+        cache_row.pack(fill='x', pady=5)
+        ttk.Label(cache_row, text="Cache DONKI data for:").pack(side='left')
+        self.nasa_cache_hours_var = tk.StringVar(value=str(self.config.get('nasa.donki_cache_hours', 24)))
+        ttk.Entry(cache_row, textvariable=self.nasa_cache_hours_var, width=5).pack(side='left', padx=5)
+        ttk.Label(cache_row, text="hours").pack(side='left')
+        ttk.Label(cache_row, text="(reduces API calls)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left', padx=10)
+
         # Google Drive Backup Settings
         self.create_google_drive_section(scrollable_frame)
 
@@ -766,6 +791,14 @@ Cluster list sources:
         self.config.set('backup.external_path', self.backup_path_var.get().strip())
         self.config.set('backup.auto_save', self.auto_save_var.get())
         self.config.set('backup.interval_minutes', self.auto_save_interval_var.get())
+
+        # NASA API settings
+        self.config.set('nasa.api_key', self.nasa_api_key_var.get().strip())
+        try:
+            cache_hours = int(self.nasa_cache_hours_var.get())
+            self.config.set('nasa.donki_cache_hours', cache_hours)
+        except ValueError:
+            pass  # Keep existing value if invalid
 
         # DX Cluster settings
         self.config.set('dx_cluster.auto_connect', self.auto_connect_var.get())

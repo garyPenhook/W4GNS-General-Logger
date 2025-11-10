@@ -75,6 +75,10 @@ class Config:
                 "max_backups": 30,
                 "include_config": True,
                 "last_backup": None
+            },
+            "nasa": {
+                "api_key": "gnvs4j1YeLecrNeI0xcGtNMBwsxy5cfabuw2EFna",
+                "donki_cache_hours": 24
             }
         }
 
