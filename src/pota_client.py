@@ -47,14 +47,16 @@ class POTAClient:
                 - count: Number of QSOs
                 - expire: Time until expiration in seconds
         """
-        # Retry configuration
-        max_retries = 3
-        retry_delays = [2, 4, 8]  # Exponential backoff in seconds
+        # Retry configuration with 4 retries (matching git best practices)
+        max_retries = 4
+        retry_delays = [2, 4, 8, 16]  # Exponential backoff in seconds
+
+        spots = []
 
         for attempt in range(max_retries):
             try:
                 url = f"{self.BASE_URL}{self.SPOTS_ENDPOINT}"
-                # Increased timeout to 30 seconds
+                # Timeout set to 30 seconds for potentially large response
                 response = self.session.get(url, timeout=30)
                 response.raise_for_status()
 
@@ -65,14 +67,53 @@ class POTAClient:
                 if attempt < max_retries - 1:
                     delay = retry_delays[attempt]
                     logger.warning(f"POTA API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    print(f"POTA API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
                     time.sleep(delay)
                     continue
                 else:
-                    logger.error(f"Error fetching POTA spots after {max_retries} attempts: {e}")
+                    logger.error(f"Error: POTA API timeout after {max_retries} attempts. Check your internet connection.")
+                    print(f"Error: POTA API timeout after {max_retries} attempts. Check your internet connection.")
                     return []
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error fetching POTA spots: {e}")
+
+            except requests.exceptions.ConnectionError as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    error_msg = str(e)
+                    # Check for DNS resolution errors
+                    if 'Name or service not known' in error_msg or 'Failed to resolve' in error_msg:
+                        logger.warning(f"DNS resolution error for api.pota.app (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                        print(f"DNS resolution error for api.pota.app (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    else:
+                        logger.warning(f"Connection error to POTA API (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                        print(f"Connection error to POTA API (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    if 'Name or service not known' in str(e) or 'Failed to resolve' in str(e):
+                        logger.error(f"Error: Cannot resolve api.pota.app after {max_retries} attempts. Check DNS settings or internet connection.")
+                        print(f"Error: Cannot resolve api.pota.app after {max_retries} attempts. Check DNS settings or internet connection.")
+                    else:
+                        logger.error(f"Error: Cannot connect to POTA API after {max_retries} attempts: {e}")
+                        print(f"Error: Cannot connect to POTA API after {max_retries} attempts: {e}")
+                    return []
+
+            except requests.exceptions.HTTPError as e:
+                # Don't retry on HTTP errors (4xx, 5xx)
+                logger.error(f"HTTP Error fetching POTA spots: {e}")
+                print(f"HTTP Error fetching POTA spots: {e}")
                 return []
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    logger.warning(f"Network error connecting to POTA API (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    print(f"Network error connecting to POTA API (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"Error: Network error fetching POTA spots after {max_retries} attempts: {e}")
+                    print(f"Error: Network error fetching POTA spots after {max_retries} attempts: {e}")
+                    return []
 
         # Parse and enrich spot data
         try:
