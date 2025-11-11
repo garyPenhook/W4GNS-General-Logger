@@ -112,10 +112,18 @@ class ContactsTab:
             contacts_list = list(contacts)
 
             # Schedule UI update on main thread
-            self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
+            try:
+                self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
+            except RuntimeError:
+                # Main loop not started yet, call directly
+                self._update_contacts_display(contacts_list)
         except Exception as e:
             # Handle errors gracefully
-            self.parent.after(0, lambda: self._load_error(str(e)))
+            try:
+                self.parent.after(0, lambda: self._load_error(str(e)))
+            except RuntimeError:
+                # Main loop not started yet, call directly
+                self._load_error(str(e))
 
     def _update_contacts_display(self, contacts_list):
         """Update UI with loaded contacts (runs on main thread)"""

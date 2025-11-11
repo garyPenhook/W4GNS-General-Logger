@@ -264,10 +264,18 @@ class AwardsTab:
             awards_data = self.calculator.calculate_all_awards()
 
             # Schedule UI update on main thread
-            self.parent.after(0, lambda: self._update_awards_display(awards_data))
+            try:
+                self.parent.after(0, lambda: self._update_awards_display(awards_data))
+            except RuntimeError:
+                # Main loop not started yet, call directly
+                self._update_awards_display(awards_data)
         except Exception as e:
             # Handle errors gracefully
-            self.parent.after(0, lambda: self._calculation_error(str(e)))
+            try:
+                self.parent.after(0, lambda: self._calculation_error(str(e)))
+            except RuntimeError:
+                # Main loop not started yet, call directly
+                self._calculation_error(str(e))
 
     def _update_awards_display(self, awards_data):
         """Update UI with calculated awards data (runs on main thread)"""
