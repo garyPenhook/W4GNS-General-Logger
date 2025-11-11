@@ -77,13 +77,15 @@ class SpaceWeatherClient:
             if (datetime.now() - cached_time).seconds < self.cache_timeout:
                 return cached_data
 
-        # Try up to 3 times with exponential backoff
-        max_retries = 3
-        retry_delay = 1  # seconds
+        # Try up to 4 times with exponential backoff (matching git instructions)
+        max_retries = 4
+        retry_delays = [2, 4, 8, 16]  # Exponential backoff in seconds
+
+        solardata = None
 
         for attempt in range(max_retries):
             try:
-                response = self.session.get(self.HAMQSL_URL, timeout=10)
+                response = self.session.get(self.HAMQSL_URL, timeout=15)
                 response.raise_for_status()
 
                 # Parse XML - data is nested inside <solar><solardata>
@@ -98,24 +100,43 @@ class SpaceWeatherClient:
 
             except requests.exceptions.Timeout:
                 if attempt < max_retries - 1:
-                    print(f"Timeout fetching space weather, retrying in {retry_delay}s...")
+                    delay = retry_delays[attempt]
+                    print(f"HamQSL API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
                     import time
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    time.sleep(delay)
                     continue
                 else:
-                    print("Error: Timeout fetching HamQSL data after retries")
+                    print(f"Error: HamQSL API timeout after {max_retries} attempts. Check your internet connection.")
+                    return None
+
+            except requests.exceptions.ConnectionError as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    error_msg = str(e)
+                    # Check for DNS resolution errors
+                    if 'Name or service not known' in error_msg or 'Failed to resolve' in error_msg:
+                        print(f"DNS resolution error for hamqsl.com (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    else:
+                        print(f"Connection error to HamQSL (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    import time
+                    time.sleep(delay)
+                    continue
+                else:
+                    if 'Name or service not known' in str(e) or 'Failed to resolve' in str(e):
+                        print(f"Error: Cannot resolve hamqsl.com after {max_retries} attempts. Check DNS settings or internet connection.")
+                    else:
+                        print(f"Error: Cannot connect to HamQSL after {max_retries} attempts: {e}")
                     return None
 
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries - 1:
-                    print(f"Network error ({e}), retrying in {retry_delay}s...")
+                    delay = retry_delays[attempt]
+                    print(f"Network error connecting to HamQSL (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
                     import time
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
+                    time.sleep(delay)
                     continue
                 else:
-                    print(f"Error fetching HamQSL data: {e}")
+                    print(f"Error: Network error fetching HamQSL data after {max_retries} attempts: {e}")
                     return None
 
         try:
@@ -353,111 +374,178 @@ class SpaceWeatherClient:
             'updated': datetime.now().isoformat()
         }
 
-        # Fetch solar flares
-        try:
-            response = self.session.get(self.DONKI_FLARES, params=date_params, timeout=10)
-            response.raise_for_status()
-            flares = response.json()
+        # Fetch solar flares with retry logic
+        max_retries = 3
+        retry_delays = [2, 4, 8]
 
-            # Filter to significant flares (M-class and above)
-            for flare in flares:
-                class_type = flare.get('classType', '')
-                if class_type and (class_type.startswith('M') or class_type.startswith('X')):
-                    linked = flare.get('linkedEvents')
-                    events['solar_flares'].append({
-                        'time': flare.get('beginTime', ''),
-                        'peak_time': flare.get('peakTime', ''),
-                        'class': class_type,
-                        'location': flare.get('sourceLocation', 'Unknown'),
-                        'region': flare.get('activeRegionNum', 'N/A'),
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(self.DONKI_FLARES, params=date_params, timeout=15)
+                response.raise_for_status()
+                flares = response.json()
+
+                # Filter to significant flares (M-class and above)
+                for flare in flares:
+                    class_type = flare.get('classType', '')
+                    if class_type and (class_type.startswith('M') or class_type.startswith('X')):
+                        linked = flare.get('linkedEvents')
+                        events['solar_flares'].append({
+                            'time': flare.get('beginTime', ''),
+                            'peak_time': flare.get('peakTime', ''),
+                            'class': class_type,
+                            'location': flare.get('sourceLocation', 'Unknown'),
+                            'region': flare.get('activeRegionNum', 'N/A'),
+                            'linked_events': len(linked) > 0 if linked else False
+                        })
+                break  # Success
+
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    print("NASA API rate limit exceeded. Using cached data if available. Get your free API key at https://api.nasa.gov/")
+                else:
+                    print(f"HTTP Error fetching DONKI solar flares: {e}")
+                break  # Don't retry on HTTP errors
+
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    print(f"NASA DONKI API connection error (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    import time
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"Error: Cannot connect to NASA DONKI after {max_retries} attempts: {e}")
+
+            except Exception as e:
+                print(f"Error fetching DONKI solar flares: {e}")
+                break
+
+        # Fetch CMEs with retry logic
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(self.DONKI_CME, params=date_params, timeout=15)
+                response.raise_for_status()
+                cmes = response.json()
+
+                # Get recent significant CMEs
+                for cme in cmes[:10]:  # Limit to 10 most recent
+                    # Get analysis data
+                    analyses = cme.get('cmeAnalyses', [])
+                    speed = 0
+                    if analyses:
+                        analysis = analyses[0]  # Most accurate analysis
+                        speed = analysis.get('speed', 0)
+
+                    linked = cme.get('linkedEvents')
+                    events['cmes'].append({
+                        'time': cme.get('startTime', ''),
+                        'location': cme.get('sourceLocation', 'Unknown'),
+                        'speed': speed,
+                        'note': cme.get('note', ''),
                         'linked_events': len(linked) > 0 if linked else False
                     })
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print("NASA API rate limit exceeded. Using cached data if available. Get your free API key at https://api.nasa.gov/")
-            else:
-                print(f"HTTP Error fetching DONKI solar flares: {e}")
-        except Exception as e:
-            print(f"Error fetching DONKI solar flares: {e}")
+                break  # Success
 
-        # Fetch CMEs
-        try:
-            response = self.session.get(self.DONKI_CME, params=date_params, timeout=10)
-            response.raise_for_status()
-            cmes = response.json()
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    print("NASA API rate limit exceeded (CME data). Using cached data if available.")
+                else:
+                    print(f"HTTP Error fetching DONKI CMEs: {e}")
+                break  # Don't retry on HTTP errors
 
-            # Get recent significant CMEs
-            for cme in cmes[:10]:  # Limit to 10 most recent
-                # Get analysis data
-                analyses = cme.get('cmeAnalyses', [])
-                speed = 0
-                if analyses:
-                    analysis = analyses[0]  # Most accurate analysis
-                    speed = analysis.get('speed', 0)
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    print(f"NASA CME API connection error (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    import time
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"Error: Cannot connect to NASA CME API after {max_retries} attempts: {e}")
 
-                linked = cme.get('linkedEvents')
-                events['cmes'].append({
-                    'time': cme.get('startTime', ''),
-                    'location': cme.get('sourceLocation', 'Unknown'),
-                    'speed': speed,
-                    'note': cme.get('note', ''),
-                    'linked_events': len(linked) > 0 if linked else False
-                })
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print("NASA API rate limit exceeded (CME data). Using cached data if available.")
-            else:
-                print(f"HTTP Error fetching DONKI CMEs: {e}")
-        except Exception as e:
-            print(f"Error fetching DONKI CMEs: {e}")
+            except Exception as e:
+                print(f"Error fetching DONKI CMEs: {e}")
+                break
 
-        # Fetch Geomagnetic Storms
-        try:
-            response = self.session.get(self.DONKI_GST, params=date_params, timeout=10)
-            response.raise_for_status()
-            storms = response.json()
+        # Fetch Geomagnetic Storms with retry logic
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(self.DONKI_GST, params=date_params, timeout=15)
+                response.raise_for_status()
+                storms = response.json()
 
-            for storm in storms:
-                # Get max Kp value
-                kp_values = storm.get('allKpIndex', [])
-                max_kp = 0
-                if kp_values:
-                    max_kp = max(kp.get('kpIndex', 0) for kp in kp_values)
+                for storm in storms:
+                    # Get max Kp value
+                    kp_values = storm.get('allKpIndex', [])
+                    max_kp = 0
+                    if kp_values:
+                        max_kp = max(kp.get('kpIndex', 0) for kp in kp_values)
 
-                linked = storm.get('linkedEvents')
-                events['geomagnetic_storms'].append({
-                    'time': storm.get('startTime', ''),
-                    'max_kp': max_kp,
-                    'linked_events': len(linked) > 0 if linked else False
-                })
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print("NASA API rate limit exceeded (Geomagnetic storm data). Using cached data if available.")
-            else:
-                print(f"HTTP Error fetching DONKI geomagnetic storms: {e}")
-        except Exception as e:
-            print(f"Error fetching DONKI geomagnetic storms: {e}")
+                    linked = storm.get('linkedEvents')
+                    events['geomagnetic_storms'].append({
+                        'time': storm.get('startTime', ''),
+                        'max_kp': max_kp,
+                        'linked_events': len(linked) > 0 if linked else False
+                    })
+                break  # Success
 
-        # Fetch Solar Energetic Particle (SEP) Events
-        try:
-            response = self.session.get(self.DONKI_SEP, params=date_params, timeout=10)
-            response.raise_for_status()
-            sep_events = response.json()
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    print("NASA API rate limit exceeded (Geomagnetic storm data). Using cached data if available.")
+                else:
+                    print(f"HTTP Error fetching DONKI geomagnetic storms: {e}")
+                break  # Don't retry on HTTP errors
 
-            for sep in sep_events[:5]:  # Limit to 5 most recent
-                linked = sep.get('linkedEvents')
-                events['sep_events'].append({
-                    'time': sep.get('eventTime', ''),
-                    'instruments': ', '.join([i.get('displayName', '') for i in sep.get('instruments', [])[:2]]),
-                    'linked_events': len(linked) > 0 if linked else False
-                })
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 429:
-                print("NASA API rate limit exceeded (SEP data). Using cached data if available.")
-            else:
-                print(f"HTTP Error fetching DONKI SEP events: {e}")
-        except Exception as e:
-            print(f"Error fetching DONKI SEP events: {e}")
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    print(f"NASA GST API connection error (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    import time
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"Error: Cannot connect to NASA GST API after {max_retries} attempts: {e}")
+
+            except Exception as e:
+                print(f"Error fetching DONKI geomagnetic storms: {e}")
+                break
+
+        # Fetch Solar Energetic Particle (SEP) Events with retry logic
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(self.DONKI_SEP, params=date_params, timeout=15)
+                response.raise_for_status()
+                sep_events = response.json()
+
+                for sep in sep_events[:5]:  # Limit to 5 most recent
+                    linked = sep.get('linkedEvents')
+                    events['sep_events'].append({
+                        'time': sep.get('eventTime', ''),
+                        'instruments': ', '.join([i.get('displayName', '') for i in sep.get('instruments', [])[:2]]),
+                        'linked_events': len(linked) > 0 if linked else False
+                    })
+                break  # Success
+
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    print("NASA API rate limit exceeded (SEP data). Using cached data if available.")
+                else:
+                    print(f"HTTP Error fetching DONKI SEP events: {e}")
+                break  # Don't retry on HTTP errors
+
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if attempt < max_retries - 1:
+                    delay = retry_delays[attempt]
+                    print(f"NASA SEP API connection error (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                    import time
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"Error: Cannot connect to NASA SEP API after {max_retries} attempts: {e}")
+
+            except Exception as e:
+                print(f"Error fetching DONKI SEP events: {e}")
+                break
 
         # Cache the result
         self.cache[cache_key] = (datetime.now(), events)
