@@ -89,8 +89,8 @@ class ContactsTab:
         # Bind double-click to open contact details
         self.log_tree.bind('<Double-Button-1>', self.on_contact_double_click)
 
-        # Load existing contacts
-        self.refresh_log()
+        # Delay loading contacts until main loop is running
+        self.parent.after(100, self.refresh_log)
 
     def refresh_log(self):
         """Refresh the contact log display - load all contacts"""
@@ -111,19 +111,11 @@ class ContactsTab:
             contacts = self.database.get_all_contacts(limit=999999)
             contacts_list = list(contacts)
 
-            # Schedule UI update on main thread
-            try:
-                self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._update_contacts_display(contacts_list)
+            # Schedule UI update on main thread (main loop is guaranteed to be running)
+            self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
         except Exception as e:
             # Handle errors gracefully
-            try:
-                self.parent.after(0, lambda: self._load_error(str(e)))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._load_error(str(e))
+            self.parent.after(0, lambda: self._load_error(str(e)))
 
     def _update_contacts_display(self, contacts_list):
         """Update UI with loaded contacts (runs on main thread)"""
