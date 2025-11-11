@@ -20,6 +20,7 @@ class EnhancedLoggingTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.qrz_session = None
+        self.is_looking_up = False  # Track if a lookup is in progress
 
         # SKCC roster manager for member lookup
         self.skcc_roster = SKCCRosterManager()
@@ -577,6 +578,10 @@ class EnhancedLoggingTab:
 
     def lookup_callsign(self, auto=False):
         """Lookup callsign using QRZ and DXCC"""
+        # Prevent multiple simultaneous lookups
+        if self.is_looking_up:
+            return
+
         callsign = self.callsign_var.get().strip().upper()
 
         if not callsign:
@@ -584,92 +589,139 @@ class EnhancedLoggingTab:
                 messagebox.showwarning("Missing Callsign", "Please enter a callsign")
             return
 
-        # First try DXCC lookup (always available)
-        dxcc_info = lookup_dxcc(callsign)
+        # Set lookup state
+        self.is_looking_up = True
+        original_text = self.lookup_btn['text']
+        self.lookup_btn.config(text="Looking up...", state='disabled')
+
+        # Run lookup in background thread
+        threading.Thread(
+            target=self._lookup_callsign_background,
+            args=(callsign, auto, original_text),
+            daemon=True
+        ).start()
+
+    def _lookup_callsign_background(self, callsign, auto, original_button_text):
+        """Background thread for callsign lookup"""
+        try:
+            # First try DXCC lookup (always available, fast)
+            dxcc_info = lookup_dxcc(callsign)
+
+            # Then try QRZ lookup if enabled and configured
+            qrz_data = None
+            qrz_error = None
+
+            if self.config.get('qrz.enable_lookup', False):
+                qrz_user = self.config.get('qrz.username')
+                qrz_pass = self.config.get('qrz.password')
+
+                if qrz_user and qrz_pass:
+                    # Create session if needed
+                    if not self.qrz_session:
+                        self.qrz_session = QRZSession(qrz_user, qrz_pass)
+
+                    # Lookup callsign
+                    try:
+                        qrz_data = self.qrz_session.lookup_callsign(callsign)
+                    except Exception as e:
+                        qrz_error = str(e)
+                elif not auto:
+                    # Missing credentials
+                    missing_items = []
+                    if not qrz_user:
+                        missing_items.append("Username")
+                    if not qrz_pass:
+                        missing_items.append("Password")
+                    missing_text = " and ".join(missing_items)
+                    qrz_error = f"QRZ {missing_text} not configured"
+
+            # Always check SKCC roster/database for SKCC number
+            skcc_number, source = self.lookup_skcc_number(callsign)
+
+            # Schedule UI update on main thread
+            self.parent.after(0, lambda: self._update_lookup_results(
+                callsign, auto, original_button_text, dxcc_info,
+                qrz_data, qrz_error, skcc_number, source
+            ))
+
+        except Exception as e:
+            # Handle unexpected errors
+            self.parent.after(0, lambda: self._lookup_error(
+                callsign, auto, original_button_text, str(e)
+            ))
+
+    def _update_lookup_results(self, callsign, auto, original_button_text,
+                                dxcc_info, qrz_data, qrz_error, skcc_number, skcc_source):
+        """Update UI with lookup results (runs on main thread)"""
+        # Populate DXCC data
         if dxcc_info:
             self.country_var.set(dxcc_info['country'])
             self.continent_var.set(dxcc_info['continent'])
             self.cq_zone_var.set(str(dxcc_info['cq_zone']))
             self.itu_zone_var.set(str(dxcc_info['itu_zone']))
 
-        # Then try QRZ lookup if enabled and configured
-        if not self.config.get('qrz.enable_lookup', False):
-            return
+        # Populate QRZ data
+        if qrz_data:
+            if 'name' in qrz_data and qrz_data['name']:
+                # Combine first and last name for display
+                name = qrz_data.get('first_name', '') + ' ' + qrz_data.get('name', '')
+                self.name_var.set(name.strip())
 
-        qrz_user = self.config.get('qrz.username')
-        qrz_pass = self.config.get('qrz.password')
+                # Store first_name separately for SKCC comment format
+                if 'first_name' in qrz_data:
+                    self.first_name_var.set(qrz_data['first_name'])
 
-        if not qrz_user or not qrz_pass:
+            if 'gridsquare' in qrz_data:
+                self.grid_var.set(qrz_data['gridsquare'])
+
+            if 'state' in qrz_data:
+                self.state_var.set(qrz_data['state'])
+
+            if 'county' in qrz_data:
+                self.county_var.set(qrz_data['county'])
+
+            if 'addr2' in qrz_data:
+                self.qth_var.set(qrz_data['addr2'])
+
+            # QRZ data overrides DXCC for zones if available
+            if 'cq_zone' in qrz_data:
+                self.cq_zone_var.set(qrz_data['cq_zone'])
+
+            if 'itu_zone' in qrz_data:
+                self.itu_zone_var.set(qrz_data['itu_zone'])
+
             if not auto:
-                # Provide specific feedback about what's missing
-                missing_items = []
-                if not qrz_user:
-                    missing_items.append("Username")
-                if not qrz_pass:
-                    missing_items.append("Password")
-
-                missing_text = " and ".join(missing_items)
+                messagebox.showinfo("Lookup Successful", f"Found {callsign} on QRZ")
+        elif qrz_error and not auto:
+            if "not configured" in qrz_error:
                 messagebox.showinfo("QRZ Not Configured",
-                                   f"QRZ {missing_text} not configured.\n\n"
+                                   f"{qrz_error}.\n\n"
                                    "Please go to Settings tab and enter your QRZ credentials,\n"
                                    "then click 'Save Settings' to enable lookups.\n\n"
                                    "Note: QRZ XML lookups require a separate XML Data subscription.")
-            return
+            elif qrz_error:
+                messagebox.showerror("Lookup Error", f"Error looking up callsign: {qrz_error}")
+        elif self.config.get('qrz.enable_lookup', False) and not auto:
+            messagebox.showinfo("Not Found", f"{callsign} not found on QRZ")
 
-        # Create session if needed
-        if not self.qrz_session:
-            self.qrz_session = QRZSession(qrz_user, qrz_pass)
-
-        # Lookup callsign
-        try:
-            data = self.qrz_session.lookup_callsign(callsign)
-
-            if data:
-                # Populate fields from QRZ data
-                if 'name' in data and data['name']:
-                    # Combine first and last name for display
-                    name = data.get('first_name', '') + ' ' + data.get('name', '')
-                    self.name_var.set(name.strip())
-
-                    # Store first_name separately for SKCC comment format
-                    if 'first_name' in data:
-                        self.first_name_var.set(data['first_name'])
-
-                if 'gridsquare' in data:
-                    self.grid_var.set(data['gridsquare'])
-
-                if 'state' in data:
-                    self.state_var.set(data['state'])
-
-                if 'county' in data:
-                    self.county_var.set(data['county'])
-
-                if 'addr2' in data:
-                    self.qth_var.set(data['addr2'])
-
-                # QRZ data overrides DXCC for zones if available
-                if 'cq_zone' in data:
-                    self.cq_zone_var.set(data['cq_zone'])
-
-                if 'itu_zone' in data:
-                    self.itu_zone_var.set(data['itu_zone'])
-
-                if not auto:
-                    messagebox.showinfo("Lookup Successful", f"Found {callsign} on QRZ")
-            else:
-                if not auto:
-                    messagebox.showinfo("Not Found", f"{callsign} not found on QRZ")
-
-        except Exception as e:
-            if not auto:
-                messagebox.showerror("Lookup Error", f"Error looking up callsign: {str(e)}")
-
-        # Always check SKCC roster/database for SKCC number
-        skcc_number, source = self.lookup_skcc_number(callsign)
+        # Populate SKCC data
         if skcc_number:
             self.skcc_number_var.set(skcc_number)
-            source_text = "SKCC roster" if source == 'roster' else "previous contact"
+            source_text = "SKCC roster" if skcc_source == 'roster' else "previous contact"
             print(f"SKCC #{skcc_number} found for {callsign} (from {source_text})")
+
+        # Reset lookup state
+        self.lookup_btn.config(text=original_button_text, state='normal')
+        self.is_looking_up = False
+
+    def _lookup_error(self, callsign, auto, original_button_text, error_msg):
+        """Handle lookup errors (runs on main thread)"""
+        if not auto:
+            messagebox.showerror("Lookup Error", f"Unexpected error: {error_msg}")
+
+        # Reset lookup state
+        self.lookup_btn.config(text=original_button_text, state='normal')
+        self.is_looking_up = False
 
     def lookup_skcc_number(self, callsign):
         """

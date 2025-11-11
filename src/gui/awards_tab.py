@@ -4,6 +4,7 @@ ARRL Awards Tab - Display award progress and tracking
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext
+import threading
 from src.awards_calculator import AwardsCalculator
 
 
@@ -15,6 +16,7 @@ class AwardsTab:
         self.frame = ttk.Frame(parent)
         self.calculator = AwardsCalculator(database)
         self.awards_data = None
+        self.is_calculating = False
 
         self.create_widgets()
         self.refresh_awards()
@@ -28,6 +30,10 @@ class AwardsTab:
 
         ttk.Label(header_frame, text="ARRL Awards Progress",
                  font=('', 14, 'bold')).pack(side='left')
+
+        # Loading indicator
+        self.loading_label = ttk.Label(header_frame, text="", foreground='blue')
+        self.loading_label.pack(side='left', padx=10)
 
         ttk.Button(header_frame, text="Refresh Awards",
                   command=self.refresh_awards).pack(side='right', padx=5)
@@ -241,13 +247,44 @@ class AwardsTab:
 
     def refresh_awards(self):
         """Refresh all award calculations and displays"""
-        self.awards_data = self.calculator.calculate_all_awards()
+        # Prevent multiple simultaneous calculations
+        if self.is_calculating:
+            return
+
+        self.is_calculating = True
+        self.loading_label.config(text="Calculating awards...")
+
+        # Run calculation in background thread
+        threading.Thread(target=self._calculate_awards_background, daemon=True).start()
+
+    def _calculate_awards_background(self):
+        """Background thread for award calculations"""
+        try:
+            # Perform the calculation off the UI thread
+            awards_data = self.calculator.calculate_all_awards()
+
+            # Schedule UI update on main thread
+            self.parent.after(0, lambda: self._update_awards_display(awards_data))
+        except Exception as e:
+            # Handle errors gracefully
+            self.parent.after(0, lambda: self._calculation_error(str(e)))
+
+    def _update_awards_display(self, awards_data):
+        """Update UI with calculated awards data (runs on main thread)"""
+        self.awards_data = awards_data
+        self.loading_label.config(text="")
+        self.is_calculating = False
 
         self.update_dxcc_display()
         self.update_was_display()
         self.update_wac_display()
         self.update_wpx_display()
         self.update_vucc_display()
+
+    def _calculation_error(self, error_msg):
+        """Handle calculation errors (runs on main thread)"""
+        self.loading_label.config(text=f"Error: {error_msg}", foreground='red')
+        self.is_calculating = False
 
     def update_dxcc_display(self):
         """Update DXCC display with current data"""

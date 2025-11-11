@@ -14,6 +14,7 @@ import os
 import time
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
 logger = logging.getLogger(__name__)
@@ -390,7 +391,7 @@ class SKCCAwardRosterManager:
 
     def download_all_rosters(self, force: bool = False) -> Dict[str, bool]:
         """
-        Download all three award rosters
+        Download all three award rosters in parallel
 
         Args:
             force: Force download even if cached files are recent
@@ -399,9 +400,24 @@ class SKCCAwardRosterManager:
             Dictionary with success status for each roster
         """
         results = {}
+        award_types = ['centurion', 'tribune', 'senator']
 
-        for award_type in ['centurion', 'tribune', 'senator']:
-            results[award_type] = self.download_roster(award_type, force)
+        # Download rosters in parallel using ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            # Submit all download tasks
+            future_to_award = {
+                executor.submit(self.download_roster, award_type, force): award_type
+                for award_type in award_types
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_award):
+                award_type = future_to_award[future]
+                try:
+                    results[award_type] = future.result()
+                except Exception as e:
+                    logger.error(f"Error downloading {award_type} roster: {e}")
+                    results[award_type] = False
 
         return results
 
