@@ -209,13 +209,36 @@ class SKCCRosterManager:
         """
         Look up a callsign in the roster.
 
+        Handles callsigns with portable indicators (/EX, /P, etc.)
+        by checking both exact match and base callsign.
+
         Args:
             callsign: Callsign to look up
 
         Returns:
             Member info dict or None if not found
         """
-        return self.roster_data.get(callsign.upper())
+        callsign_upper = callsign.upper()
+
+        # First try exact match
+        if callsign_upper in self.roster_data:
+            return self.roster_data[callsign_upper]
+
+        # If no exact match, try base callsign (before slash)
+        # e.g., "W8CBC" matches "W8CBC/EX" in roster
+        if '/' in callsign_upper:
+            # User entered with suffix, extract base
+            base_call = callsign_upper.split('/')[0]
+        else:
+            # User entered just base, try adding common suffixes
+            base_call = callsign_upper
+            for suffix in ['/EX', '/P', '/QRP', '/MM']:
+                roster_entry = self.roster_data.get(base_call + suffix)
+                if roster_entry:
+                    return roster_entry
+
+        # No match found
+        return None
 
     def is_skcc_member(self, callsign: str) -> bool:
         """
@@ -227,7 +250,7 @@ class SKCCRosterManager:
         Returns:
             True if callsign is in SKCC roster
         """
-        return callsign.upper() in self.roster_data
+        return self.lookup_callsign(callsign) is not None
 
     def get_skcc_number(self, callsign: str) -> Optional[str]:
         """
