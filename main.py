@@ -6,6 +6,7 @@ Amateur Radio Contact Logging and DX Cluster Integration
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import threading
 import sys
 import os
 
@@ -135,14 +136,7 @@ class W4GNSLogger:
 
     def export_adif(self):
         """Export contacts to ADIF format"""
-        # Get all contacts from database
-        contacts = self.database.get_all_contacts(limit=999999)
-
-        if not contacts:
-            messagebox.showwarning("No Contacts", "No contacts found to export.")
-            return
-
-        # Ask user for save location
+        # Ask user for save location first
         filename = filedialog.asksaveasfilename(
             defaultextension=".adi",
             filetypes=[
@@ -156,16 +150,71 @@ class W4GNSLogger:
         if not filename:
             return  # User cancelled
 
+        # Create progress dialog
+        progress_dialog = tk.Toplevel(self.root)
+        progress_dialog.title("Exporting ADIF")
+        progress_dialog.geometry("400x100")
+        progress_dialog.transient(self.root)
+        progress_dialog.grab_set()
+
+        ttk.Label(progress_dialog, text="Exporting contacts to ADIF...").pack(pady=10)
+        progress_label = ttk.Label(progress_dialog, text="Loading contacts...")
+        progress_label.pack(pady=5)
+
+        # Run export in background thread
+        threading.Thread(
+            target=self._export_adif_background,
+            args=(filename, progress_dialog, progress_label),
+            daemon=True
+        ).start()
+
+    def _export_adif_background(self, filename, progress_dialog, progress_label):
+        """Background thread for ADIF export"""
         try:
+            # Update progress
+            self.root.after(0, lambda: progress_label.config(text="Loading contacts from database..."))
+
+            # Get all contacts from database
+            contacts = self.database.get_all_contacts(limit=999999)
+
+            if not contacts:
+                self.root.after(0, lambda: self._export_no_contacts(progress_dialog))
+                return
+
+            contacts_list = list(contacts)
+            contact_count = len(contacts_list)
+
+            # Update progress
+            self.root.after(0, lambda: progress_label.config(text=f"Exporting {contact_count} contacts..."))
+
             # Export to ADIF
-            export_contacts_to_adif(contacts, filename)
-            messagebox.showinfo(
-                "Export Successful",
-                f"Successfully exported {len(contacts)} contacts to:\n{filename}"
-            )
-            self.status_bar.config(text=f"Exported {len(contacts)} contacts to ADIF")
+            export_contacts_to_adif(contacts_list, filename)
+
+            # Schedule success message on main thread
+            self.root.after(0, lambda: self._export_success(progress_dialog, contact_count, filename))
+
         except Exception as e:
-            messagebox.showerror("Export Failed", f"Failed to export log:\n{str(e)}")
+            # Handle errors gracefully
+            self.root.after(0, lambda: self._export_error(progress_dialog, str(e)))
+
+    def _export_success(self, progress_dialog, count, filename):
+        """Handle successful export (runs on main thread)"""
+        progress_dialog.destroy()
+        messagebox.showinfo(
+            "Export Successful",
+            f"Successfully exported {count} contacts to:\n{filename}"
+        )
+        self.status_bar.config(text=f"Exported {count} contacts to ADIF")
+
+    def _export_no_contacts(self, progress_dialog):
+        """Handle no contacts case (runs on main thread)"""
+        progress_dialog.destroy()
+        messagebox.showwarning("No Contacts", "No contacts found to export.")
+
+    def _export_error(self, progress_dialog, error_msg):
+        """Handle export errors (runs on main thread)"""
+        progress_dialog.destroy()
+        messagebox.showerror("Export Failed", f"Failed to export log:\n{error_msg}")
 
     def export_adif_by_date_range(self):
         """Export contacts to ADIF format filtered by date/time range"""

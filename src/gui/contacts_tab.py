@@ -4,6 +4,7 @@ Contacts Tab - View and manage logged contacts
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+import threading
 from datetime import datetime
 
 
@@ -14,6 +15,7 @@ class ContactsTab:
         self.config = config
         self.frame = ttk.Frame(parent)
         self.all_contacts = []  # Store all contacts for filtering
+        self.is_loading = False
         self.create_widgets()
 
     def create_widgets(self):
@@ -47,6 +49,10 @@ class ContactsTab:
 
         # Clear search button
         ttk.Button(search_row, text="Clear Search", command=self.clear_search).pack(side='left', padx=10)
+
+        # Loading indicator
+        self.loading_label = ttk.Label(search_row, text="", foreground='blue', font=('', 9))
+        self.loading_label.pack(side='left', padx=10)
 
         # Results count label
         self.results_label = ttk.Label(search_row, text="", font=('', 9))
@@ -88,12 +94,42 @@ class ContactsTab:
 
     def refresh_log(self):
         """Refresh the contact log display - load all contacts"""
-        # Get all contacts (no limit)
-        contacts = self.database.get_all_contacts(limit=999999)
-        self.all_contacts = list(contacts)
+        # Prevent multiple simultaneous loads
+        if self.is_loading:
+            return
+
+        self.is_loading = True
+        self.loading_label.config(text="Loading contacts...")
+
+        # Run query in background thread
+        threading.Thread(target=self._load_contacts_background, daemon=True).start()
+
+    def _load_contacts_background(self):
+        """Background thread for loading contacts"""
+        try:
+            # Perform the database query off the UI thread
+            contacts = self.database.get_all_contacts(limit=999999)
+            contacts_list = list(contacts)
+
+            # Schedule UI update on main thread
+            self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
+        except Exception as e:
+            # Handle errors gracefully
+            self.parent.after(0, lambda: self._load_error(str(e)))
+
+    def _update_contacts_display(self, contacts_list):
+        """Update UI with loaded contacts (runs on main thread)"""
+        self.all_contacts = contacts_list
+        self.loading_label.config(text="")
+        self.is_loading = False
 
         # Apply current search filters
         self.apply_search()
+
+    def _load_error(self, error_msg):
+        """Handle load errors (runs on main thread)"""
+        self.loading_label.config(text=f"Error: {error_msg}", foreground='red')
+        self.is_loading = False
 
     def apply_search(self):
         """Apply search filters and update display"""

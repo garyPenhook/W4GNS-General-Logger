@@ -33,6 +33,14 @@ class Database:
             self.conn = sqlite3.connect(self.db_path)
             self.conn.row_factory = sqlite3.Row
             cursor = self.conn.cursor()
+
+            # Enable WAL mode for better concurrency (allows simultaneous reads during writes)
+            cursor.execute('PRAGMA journal_mode=WAL')
+            # Set synchronous mode to NORMAL for good balance of safety and performance
+            cursor.execute('PRAGMA synchronous=NORMAL')
+            # Enable foreign keys
+            cursor.execute('PRAGMA foreign_keys=ON')
+
         except sqlite3.Error as e:
             raise sqlite3.DatabaseError(f"Failed to connect to database {self.db_path}: {e}")
 
@@ -86,6 +94,13 @@ class Database:
                 received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Create indexes for frequently queried columns (performance optimization)
+        # These indexes significantly speed up queries by date, callsign, band, and mode
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_date ON contacts(date DESC)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_callsign ON contacts(callsign)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_band_mode ON contacts(band, mode)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_date_callsign ON contacts(date, callsign)')
 
         self.conn.commit()
 
