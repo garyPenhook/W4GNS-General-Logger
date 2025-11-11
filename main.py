@@ -172,30 +172,45 @@ class W4GNSLogger:
         """Background thread for ADIF export"""
         try:
             # Update progress
-            self.root.after(0, lambda: progress_label.config(text="Loading contacts from database..."))
+            try:
+                self.root.after(0, lambda: progress_label.config(text="Loading contacts from database..."))
+            except RuntimeError:
+                progress_label.config(text="Loading contacts from database...")
 
             # Get all contacts from database
             contacts = self.database.get_all_contacts(limit=999999)
 
             if not contacts:
-                self.root.after(0, lambda: self._export_no_contacts(progress_dialog))
+                try:
+                    self.root.after(0, lambda: self._export_no_contacts(progress_dialog))
+                except RuntimeError:
+                    self._export_no_contacts(progress_dialog)
                 return
 
             contacts_list = list(contacts)
             contact_count = len(contacts_list)
 
             # Update progress
-            self.root.after(0, lambda: progress_label.config(text=f"Exporting {contact_count} contacts..."))
+            try:
+                self.root.after(0, lambda: progress_label.config(text=f"Exporting {contact_count} contacts..."))
+            except RuntimeError:
+                progress_label.config(text=f"Exporting {contact_count} contacts...")
 
             # Export to ADIF
             export_contacts_to_adif(contacts_list, filename)
 
             # Schedule success message on main thread
-            self.root.after(0, lambda: self._export_success(progress_dialog, contact_count, filename))
+            try:
+                self.root.after(0, lambda: self._export_success(progress_dialog, contact_count, filename))
+            except RuntimeError:
+                self._export_success(progress_dialog, contact_count, filename)
 
         except Exception as e:
             # Handle errors gracefully
-            self.root.after(0, lambda: self._export_error(progress_dialog, str(e)))
+            try:
+                self.root.after(0, lambda: self._export_error(progress_dialog, str(e)))
+            except RuntimeError:
+                self._export_error(progress_dialog, str(e))
 
     def _export_success(self, progress_dialog, count, filename):
         """Handle successful export (runs on main thread)"""

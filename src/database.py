@@ -4,6 +4,7 @@ Uses SQLite for local storage
 """
 
 import sqlite3
+import threading
 import os
 from datetime import datetime
 
@@ -20,6 +21,8 @@ class Database:
 
         self.db_path = db_path
         self.conn = None
+        # Thread lock for write operations (reads are safe with WAL mode)
+        self._write_lock = threading.Lock()
         self.init_database()
 
     def init_database(self):
@@ -30,7 +33,9 @@ class Database:
             sqlite3.DatabaseError: If database connection or initialization fails
         """
         try:
-            self.conn = sqlite3.connect(self.db_path)
+            # Allow connection to be used from multiple threads (safe with WAL mode)
+            # SQLite itself is thread-safe, and WAL mode allows concurrent reads
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             cursor = self.conn.cursor()
 
