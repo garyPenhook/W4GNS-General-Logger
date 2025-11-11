@@ -19,7 +19,9 @@ class AwardsTab:
         self.is_calculating = False
 
         self.create_widgets()
-        self.refresh_awards()
+
+        # Delay initial refresh until main loop is running
+        self.parent.after(100, self.refresh_awards)
 
     def create_widgets(self):
         """Create the awards interface"""
@@ -263,19 +265,11 @@ class AwardsTab:
             # Perform the calculation off the UI thread
             awards_data = self.calculator.calculate_all_awards()
 
-            # Schedule UI update on main thread
-            try:
-                self.parent.after(0, lambda: self._update_awards_display(awards_data))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._update_awards_display(awards_data)
+            # Schedule UI update on main thread (main loop is guaranteed to be running)
+            self.parent.after(0, lambda: self._update_awards_display(awards_data))
         except Exception as e:
             # Handle errors gracefully
-            try:
-                self.parent.after(0, lambda: self._calculation_error(str(e)))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._calculation_error(str(e))
+            self.parent.after(0, lambda: self._calculation_error(str(e)))
 
     def _update_awards_display(self, awards_data):
         """Update UI with calculated awards data (runs on main thread)"""

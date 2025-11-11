@@ -638,28 +638,17 @@ class EnhancedLoggingTab:
             # Always check SKCC roster/database for SKCC number
             skcc_number, source = self.lookup_skcc_number(callsign)
 
-            # Schedule UI update on main thread
-            try:
-                self.parent.after(0, lambda: self._update_lookup_results(
-                    callsign, auto, original_button_text, dxcc_info,
-                    qrz_data, qrz_error, skcc_number, source
-                ))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._update_lookup_results(
-                    callsign, auto, original_button_text, dxcc_info,
-                    qrz_data, qrz_error, skcc_number, source
-                )
+            # Schedule UI update on main thread (main loop is guaranteed to be running)
+            self.parent.after(0, lambda: self._update_lookup_results(
+                callsign, auto, original_button_text, dxcc_info,
+                qrz_data, qrz_error, skcc_number, source
+            ))
 
         except Exception as e:
             # Handle unexpected errors
-            try:
-                self.parent.after(0, lambda: self._lookup_error(
-                    callsign, auto, original_button_text, str(e)
-                ))
-            except RuntimeError:
-                # Main loop not started yet, call directly
-                self._lookup_error(callsign, auto, original_button_text, str(e))
+            self.parent.after(0, lambda: self._lookup_error(
+                callsign, auto, original_button_text, str(e)
+            ))
 
     def _update_lookup_results(self, callsign, auto, original_button_text,
                                 dxcc_info, qrz_data, qrz_error, skcc_number, skcc_source):
