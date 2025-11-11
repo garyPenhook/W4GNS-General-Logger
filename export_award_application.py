@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from database import Database
 from award_export import AwardExporter
+from text_award_export import TextAwardExporter
 from skcc_awards import (
     CenturionAward, TribuneAward, SenatorAward,
     TripleKeyAward, RagChewAward, MarathonAward,
@@ -57,6 +58,88 @@ AWARD_MAP = {
     'was-s': SKCCWASSAward,
     'wac': SKCCWACAward
 }
+
+
+def _export_all_text_awards(
+    text_exporter,
+    database,
+    output_directory: str = "exports",
+    callsign: str = None,
+    applicant_name: str = None,
+    applicant_address: str = None,
+    user_skcc_number: str = None,
+    only_achieved: bool = False
+) -> dict:
+    """
+    Export all awards as text applications.
+
+    Args:
+        text_exporter: TextAwardExporter instance
+        database: Database instance
+        output_directory: Output directory
+        callsign: Applicant's callsign
+        applicant_name: Applicant's name
+        applicant_address: Applicant's address
+        user_skcc_number: Applicant's SKCC number
+        only_achieved: If True, only export achieved awards
+
+    Returns:
+        Dict mapping award names to export paths
+    """
+    # Instantiate all awards
+    all_awards = [
+        CenturionAward(database),
+        TribuneAward(database),
+        SenatorAward(database),
+        TripleKeyAward(database),
+        RagChewAward(database),
+        MarathonAward(database),
+        CanadianMapleAward(database),
+        SKCCDXQAward(database),
+        SKCCDXCAward(database),
+        PFXAward(database),
+        QRPMPWAward(database),
+        SKCCWASAward(database),
+        SKCCWASTAward(database),
+        SKCCWASSAward(database),
+        SKCCWACAward(database)
+    ]
+
+    # Filter for achieved awards if requested
+    if only_achieved:
+        contacts = text_exporter._get_all_contacts()
+        awards_to_export = []
+        for award in all_awards:
+            try:
+                progress = award.calculate_progress(contacts)
+                if progress.get('achieved', False):
+                    awards_to_export.append(award)
+            except Exception as e:
+                print(f"  Warning: Could not check progress for {award.name}: {e}")
+    else:
+        awards_to_export = all_awards
+
+    # Export each award
+    results = {}
+    for award in awards_to_export:
+        try:
+            filepath = text_exporter.export_award_application_as_text(
+                award,
+                output_directory=output_directory,
+                callsign=callsign,
+                applicant_name=applicant_name,
+                applicant_address=applicant_address,
+                user_skcc_number=user_skcc_number
+            )
+            results[award.name] = filepath
+        except ValueError:
+            # No qualifying contacts
+            results[award.name] = None
+        except Exception as e:
+            print(f"  Error exporting {award.name}: {e}")
+            results[award.name] = None
+
+    return results
 
 
 def main():
@@ -121,6 +204,28 @@ Available awards:
         help='List all available awards and exit'
     )
 
+    parser.add_argument(
+        '--format',
+        choices=['adif', 'text'],
+        default='text',
+        help='Export format: adif (ADIF file) or text (formatted text application) (default: text)'
+    )
+
+    parser.add_argument(
+        '--applicant-name',
+        help='Applicant\'s full name (for text format)'
+    )
+
+    parser.add_argument(
+        '--applicant-address',
+        help='Applicant\'s address (e.g., "Penhook, VA") (for text format)'
+    )
+
+    parser.add_argument(
+        '--skcc-number',
+        help='Applicant\'s SKCC number (for text format)'
+    )
+
     args = parser.parse_args()
 
     # List awards and exit
@@ -162,12 +267,25 @@ Available awards:
         award = award_class(db)
 
         try:
-            print(f"Exporting {award.name} award...")
-            filepath = exporter.export_award_application(
-                award,
-                output_directory=args.output,
-                callsign=args.callsign
-            )
+            print(f"Exporting {award.name} award ({args.format.upper()} format)...")
+
+            if args.format == 'text':
+                text_exporter = TextAwardExporter(db)
+                filepath = text_exporter.export_award_application_as_text(
+                    award,
+                    output_directory=args.output,
+                    callsign=args.callsign,
+                    applicant_name=args.applicant_name,
+                    applicant_address=args.applicant_address,
+                    user_skcc_number=args.skcc_number
+                )
+            else:  # ADIF format
+                filepath = exporter.export_award_application(
+                    award,
+                    output_directory=args.output,
+                    callsign=args.callsign
+                )
+
             print(f"✓ Exported to: {filepath}")
 
             # Get count of qualifying contacts
@@ -186,12 +304,25 @@ Available awards:
 
     # Export all achieved awards
     elif args.all_achieved:
-        print("Exporting all achieved awards...")
+        print(f"Exporting all achieved awards ({args.format.upper()} format)...")
         try:
-            results = exporter.export_all_ready_awards(
-                output_directory=args.output,
-                callsign=args.callsign
-            )
+            if args.format == 'text':
+                text_exporter = TextAwardExporter(db)
+                results = _export_all_text_awards(
+                    text_exporter,
+                    db,
+                    output_directory=args.output,
+                    callsign=args.callsign,
+                    applicant_name=args.applicant_name,
+                    applicant_address=args.applicant_address,
+                    user_skcc_number=args.skcc_number,
+                    only_achieved=True
+                )
+            else:  # ADIF format
+                results = exporter.export_all_ready_awards(
+                    output_directory=args.output,
+                    callsign=args.callsign
+                )
 
             if not results:
                 print("No awards are ready for submission yet.")
@@ -214,16 +345,29 @@ Available awards:
 
     # Export all awards
     elif args.all:
-        print("Exporting all awards...")
+        print(f"Exporting all awards ({args.format.upper()} format)...")
 
         all_awards = [award_class(db) for award_class in AWARD_MAP.values()]
 
         try:
-            results = exporter.export_multiple_awards(
-                all_awards,
-                output_directory=args.output,
-                callsign=args.callsign
-            )
+            if args.format == 'text':
+                text_exporter = TextAwardExporter(db)
+                results = _export_all_text_awards(
+                    text_exporter,
+                    db,
+                    output_directory=args.output,
+                    callsign=args.callsign,
+                    applicant_name=args.applicant_name,
+                    applicant_address=args.applicant_address,
+                    user_skcc_number=args.skcc_number,
+                    only_achieved=False
+                )
+            else:  # ADIF format
+                results = exporter.export_multiple_awards(
+                    all_awards,
+                    output_directory=args.output,
+                    callsign=args.callsign
+                )
 
             success_count = sum(1 for path in results.values() if path)
             print(f"\nExported {success_count} awards:")
