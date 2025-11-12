@@ -247,6 +247,9 @@ class SenatorAward(SKCCAwardBase):
 
         Counts unique Tribune/Senator SKCC numbers contacted AFTER achieving Tribune x8.
 
+        CRITICAL RULE: Must set Tribune x8 achievement date in Settings for any Senator progress.
+        Without this date, 0 credits are awarded (as per SKCC rules).
+
         Args:
             contacts: List of contact records
 
@@ -260,43 +263,47 @@ class SenatorAward(SKCCAwardBase):
                 'unique_members': set,      # Set of unique SKCC numbers (post-Tribune x8)
                 'is_tribune_x8': bool,      # Whether user has achieved Tribune x8
                 'tribune_x8_date': str,     # Date Tribune x8 was achieved (YYYYMMDD)
-                'tribune_x8_count': int,    # Total Tribune contacts (for x8 check)
-                'total_tribune_contacts': int  # All Tribune contacts (including pre-x8)
+                'prerequisite_met': bool    # Whether Tribune x8 is achieved
             }
         """
-        # First, check if user has manually set Tribune x8 date, otherwise auto-calculate
+        # CRITICAL: Tribune x8 date MUST be manually set by user in Settings
+        # We do NOT auto-calculate it because:
+        # 1. This avoids circular dependency in validation logic
+        # 2. Per SKCC rules, user must document when Tribune x8 was achieved
+        # 3. Without explicit date, ZERO credits toward Senator (per rules)
+
         tribune_x8_date = self.user_tribune_x8_date
-        if not tribune_x8_date:
-            tribune_x8_date = self._find_tribune_x8_date(contacts)
         is_tribune_x8 = tribune_x8_date is not None and tribune_x8_date != ''
 
-        # Count total Tribune contacts for context
-        total_tribune_members = set()
-        for contact in contacts:
-            if self.validate(contact):
-                skcc_number = contact.get('skcc_number', '').strip()
-                if skcc_number:
-                    base_number = extract_base_skcc_number(skcc_number)
-                    if base_number and base_number.isdigit():
-                        total_tribune_members.add(base_number)
-
-        tribune_x8_count = len(total_tribune_members)
+        # If Tribune x8 date is not set, return zero Senator credits
+        if not is_tribune_x8:
+            return {
+                'current': 0,
+                'required': 200,
+                'achieved': False,
+                'progress_pct': 0.0,
+                'endorsement': 'Senator',
+                'unique_members': set(),
+                'next_level_count': 200,
+                'is_tribune_x8': False,
+                'tribune_x8_date': 'Not set - set in Settings to enable Senator tracking',
+                'prerequisite_met': False
+            }
 
         # Collect unique Senator-qualifying members (AFTER Tribune x8 date)
         unique_senator_members = set()
 
-        if is_tribune_x8:
-            for contact in contacts:
-                if self.validate(contact):
-                    qso_date = contact.get('date', '').replace('-', '')
+        for contact in contacts:
+            if self.validate(contact):
+                qso_date = contact.get('date', '').replace('-', '')
 
-                    # Only count contacts AFTER Tribune x8 achievement
-                    if qso_date and qso_date >= tribune_x8_date:
-                        skcc_number = contact.get('skcc_number', '').strip()
-                        if skcc_number:
-                            base_number = extract_base_skcc_number(skcc_number)
-                            if base_number and base_number.isdigit():
-                                unique_senator_members.add(base_number)
+                # Only count contacts AFTER Tribune x8 achievement
+                if qso_date and qso_date >= tribune_x8_date:
+                    skcc_number = contact.get('skcc_number', '').strip()
+                    if skcc_number:
+                        base_number = extract_base_skcc_number(skcc_number)
+                        if base_number and base_number.isdigit():
+                            unique_senator_members.add(base_number)
 
         current_count = len(unique_senator_members)
         required_count = 200
@@ -314,9 +321,7 @@ class SenatorAward(SKCCAwardBase):
             'unique_members': unique_senator_members,
             'next_level_count': next_level,
             'is_tribune_x8': is_tribune_x8,
-            'tribune_x8_date': tribune_x8_date if tribune_x8_date else 'Not achieved',
-            'tribune_x8_count': tribune_x8_count,
-            'total_tribune_contacts': len(total_tribune_members),
+            'tribune_x8_date': tribune_x8_date,
             'prerequisite_met': is_tribune_x8
         }
 
