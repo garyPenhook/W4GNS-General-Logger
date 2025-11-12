@@ -224,18 +224,18 @@ class SKCCRosterManager:
         if callsign_upper in self.roster_data:
             return self.roster_data[callsign_upper]
 
-        # If no exact match, try base callsign (before slash)
-        # e.g., "W8CBC" matches "W8CBC/EX" in roster
+        # Extract base callsign if it has a slash
         if '/' in callsign_upper:
-            # User entered with suffix, extract base
             base_call = callsign_upper.split('/')[0]
         else:
-            # User entered just base, try adding common suffixes
             base_call = callsign_upper
-            for suffix in ['/EX', '/P', '/QRP', '/MM']:
-                roster_entry = self.roster_data.get(base_call + suffix)
-                if roster_entry:
-                    return roster_entry
+
+        # Try base callsign with common portable suffixes
+        # e.g., "W8CBC" matches "W8CBC/EX" in roster
+        for suffix in ['/EX', '/P', '/QRP', '/MM']:
+            roster_entry = self.roster_data.get(base_call + suffix)
+            if roster_entry:
+                return roster_entry
 
         # No match found
         return None
