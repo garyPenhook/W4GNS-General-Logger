@@ -193,10 +193,15 @@ class SenatorAward(SKCCAwardBase):
             return False
 
         # CRITICAL RULE: "Only contacts AFTER achieving Tribune x8 count toward Senator"
+        # Tribune x8 date MUST be set by user in Settings
+        if not self.user_tribune_x8_date:
+            logger.debug(
+                f"Contact {base_call} not valid for Senator: Tribune x8 date not set in Settings"
+            )
+            return False
+
         # Check if QSO occurred on/after user's Tribune x8 achievement date
-        # Note: If tribune_x8_date is not set, we cannot validate this requirement
-        # The award application should prompt user to set this date
-        if self.user_tribune_x8_date and qso_date < self.user_tribune_x8_date:
+        if qso_date < self.user_tribune_x8_date:
             logger.debug(
                 f"Contact {base_call} not valid: QSO date {qso_date} before "
                 f"user Tribune x8 date {self.user_tribune_x8_date}"
