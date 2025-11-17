@@ -673,10 +673,13 @@ https://www.ng3k.com/Misc/cluster.html
             export_contacts_to_adif(contacts, local_adif_path)
             print(f"Backed up {len(contacts)} contacts to {local_adif_path}")
 
-            # Backup database
+            # Backup database using SQLite's backup API (prevents corruption)
             local_db_path = os.path.join(logs_dir, db_filename)
-            if os.path.exists(self.database.db_path):
-                shutil.copy2(self.database.db_path, local_db_path)
+            if self.database and self.database.conn:
+                backup_conn = sqlite3.connect(local_db_path)
+                with backup_conn:
+                    self.database.conn.backup(backup_conn)
+                backup_conn.close()
                 print(f"Backed up database to {local_db_path}")
 
             # Clean up old backups in local logs directory (keep last 5)
@@ -690,10 +693,13 @@ https://www.ng3k.com/Misc/cluster.html
                 export_contacts_to_adif(contacts, external_adif_file)
                 print(f"Also backed up ADIF to {external_adif_file}")
 
-                # Backup database to external
+                # Backup database to external using SQLite's backup API
                 external_db_file = os.path.join(external_path, db_filename)
-                if os.path.exists(self.database.db_path):
-                    shutil.copy2(self.database.db_path, external_db_file)
+                if self.database and self.database.conn:
+                    backup_conn = sqlite3.connect(external_db_file)
+                    with backup_conn:
+                        self.database.conn.backup(backup_conn)
+                    backup_conn.close()
                     print(f"Also backed up database to {external_db_file}")
 
                 # Clean up old backups in external directory (keep last 5)
