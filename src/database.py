@@ -47,7 +47,19 @@ class Database:
             cursor.execute('PRAGMA foreign_keys=ON')
 
         except sqlite3.Error as e:
-            raise sqlite3.DatabaseError(f"Failed to connect to database {self.db_path}: {e}")
+            # Database is corrupted - attempt automatic recovery
+            print(f"ERROR: Database corrupted: {e}")
+            if self._attempt_auto_recovery():
+                print("Database recovered successfully, continuing startup...")
+                # Retry connection after recovery
+                self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                self.conn.row_factory = sqlite3.Row
+                cursor = self.conn.cursor()
+                cursor.execute('PRAGMA journal_mode=DELETE')
+                cursor.execute('PRAGMA synchronous=FULL')
+                cursor.execute('PRAGMA foreign_keys=ON')
+            else:
+                raise sqlite3.DatabaseError(f"Failed to connect to database {self.db_path}: {e}")
 
         # Create contacts table
         cursor.execute('''
@@ -220,6 +232,152 @@ class Database:
         ''')
 
         self.conn.commit()
+
+    def _attempt_auto_recovery(self):
+        """
+        Attempt to automatically recover from database corruption
+        by restoring from the most recent ADIF backup
+
+        Returns:
+            bool: True if recovery successful, False otherwise
+        """
+        try:
+            import glob
+
+            print("Attempting automatic database recovery...")
+
+            # Find most recent ADIF backup
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            logs_dir = os.path.join(project_root, "logs")
+
+            if not os.path.exists(logs_dir):
+                print(f"ERROR: Backup directory not found: {logs_dir}")
+                return False
+
+            adif_pattern = os.path.join(logs_dir, "w4gns_log_*.adi")
+            adif_files = sorted(glob.glob(adif_pattern), key=os.path.getmtime, reverse=True)
+
+            if not adif_files:
+                print("ERROR: No ADIF backup files found for recovery")
+                return False
+
+            backup_file = adif_files[0]
+            print(f"Found backup: {os.path.basename(backup_file)}")
+
+            # Remove corrupted database files
+            if os.path.exists(self.db_path):
+                os.remove(self.db_path)
+                print(f"Removed corrupted database: {self.db_path}")
+
+            # Remove WAL files if present
+            wal_file = f"{self.db_path}-wal"
+            shm_file = f"{self.db_path}-shm"
+            if os.path.exists(wal_file):
+                os.remove(wal_file)
+                print(f"Removed WAL file: {wal_file}")
+            if os.path.exists(shm_file):
+                os.remove(shm_file)
+                print(f"Removed SHM file: {shm_file}")
+
+            # Parse ADIF backup
+            from src.adif import ADIFParser
+            parser = ADIFParser()
+            contacts = parser.parse_file(backup_file)
+            print(f"Parsed {len(contacts)} contacts from backup")
+
+            if not contacts:
+                print("ERROR: No contacts found in backup file")
+                return False
+
+            # Create new database with proper settings
+            temp_conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            temp_conn.row_factory = sqlite3.Row
+            cursor = temp_conn.cursor()
+
+            # Set journal mode BEFORE creating tables
+            cursor.execute('PRAGMA journal_mode=DELETE')
+            cursor.execute('PRAGMA synchronous=FULL')
+            cursor.execute('PRAGMA foreign_keys=ON')
+
+            # Create contacts table (minimal version for recovery)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS contacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    callsign TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    time_on TEXT NOT NULL,
+                    time_off TEXT,
+                    frequency TEXT,
+                    band TEXT,
+                    mode TEXT,
+                    rst_sent TEXT,
+                    rst_rcvd TEXT,
+                    power TEXT,
+                    name TEXT,
+                    qth TEXT,
+                    gridsquare TEXT,
+                    county TEXT,
+                    state TEXT,
+                    country TEXT,
+                    continent TEXT,
+                    cq_zone TEXT,
+                    itu_zone TEXT,
+                    dxcc TEXT,
+                    iota TEXT,
+                    sota TEXT,
+                    pota TEXT,
+                    my_gridsquare TEXT,
+                    comment TEXT,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    skcc_number TEXT,
+                    my_skcc_number TEXT,
+                    key_type TEXT,
+                    duration_minutes INTEGER,
+                    distance_nm REAL,
+                    power_watts INTEGER,
+                    dxcc_entity TEXT
+                )
+            ''')
+
+            # Import contacts in batches
+            batch_size = 100
+            total_imported = 0
+
+            for i in range(0, len(contacts), batch_size):
+                batch = contacts[i:i+batch_size]
+                for contact in batch:
+                    try:
+                        # Build INSERT statement dynamically based on available fields
+                        fields = []
+                        values = []
+                        for field, value in contact.items():
+                            if value is not None and value != '':
+                                fields.append(field)
+                                values.append(value)
+
+                        if fields:
+                            placeholders = ','.join(['?'] * len(fields))
+                            field_names = ','.join(fields)
+                            query = f"INSERT INTO contacts ({field_names}) VALUES ({placeholders})"
+                            cursor.execute(query, values)
+                            total_imported += 1
+                    except Exception as e:
+                        print(f"Warning: Skipped contact due to error: {e}")
+                        continue
+
+                temp_conn.commit()
+
+            temp_conn.close()
+
+            print(f"Successfully restored {total_imported} contacts from backup")
+            return True
+
+        except Exception as e:
+            print(f"ERROR during auto-recovery: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def add_contact(self, contact_data):
         """
