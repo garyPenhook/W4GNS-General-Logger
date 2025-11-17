@@ -26,12 +26,16 @@ class LoggingTab:
         input_frame = ttk.LabelFrame(top_container, text="New Contact", padding=10)
         input_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
 
-        # Right side: Previous QSOs frame
-        self.previous_qsos_frame = ttk.LabelFrame(top_container, text="Previous QSOs", padding=10)
-        self.previous_qsos_frame.pack(side='right', fill='both', expand=False, padx=(5, 0), ipadx=10)
+        # Right side: Container for both QSO displays
+        right_container = ttk.Frame(top_container)
+        right_container.pack(side='right', fill='both', expand=False, padx=(5, 0))
+
+        # Previous QSOs with entered callsign frame
+        self.previous_qsos_frame = ttk.LabelFrame(right_container, text="Previous QSOs", padding=10)
+        self.previous_qsos_frame.pack(side='top', fill='both', expand=False, ipadx=10, pady=(0, 5))
 
         # Previous QSOs display (initially empty)
-        self.previous_qsos_text = tk.Text(self.previous_qsos_frame, width=40, height=15,
+        self.previous_qsos_text = tk.Text(self.previous_qsos_frame, width=40, height=10,
                                           font=('Courier', 9), wrap='none', state='disabled')
         self.previous_qsos_text.pack(fill='both', expand=True)
 
@@ -40,6 +44,21 @@ class LoggingTab:
                                        command=self.previous_qsos_text.yview)
         prev_scrollbar.pack(side='right', fill='y')
         self.previous_qsos_text.configure(yscrollcommand=prev_scrollbar.set)
+
+        # Recent QSOs frame (10 most recent from log)
+        self.recent_qsos_frame = ttk.LabelFrame(right_container, text="Recent QSOs (10 Most Recent)", padding=10)
+        self.recent_qsos_frame.pack(side='top', fill='both', expand=True, ipadx=10)
+
+        # Recent QSOs display
+        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, width=40, height=12,
+                                        font=('Courier', 9), wrap='none', state='disabled')
+        self.recent_qsos_text.pack(fill='both', expand=True)
+
+        # Scrollbar for recent QSOs
+        recent_scrollbar = ttk.Scrollbar(self.recent_qsos_frame, orient='vertical',
+                                         command=self.recent_qsos_text.yview)
+        recent_scrollbar.pack(side='right', fill='y')
+        self.recent_qsos_text.configure(yscrollcommand=recent_scrollbar.set)
 
         # Row 1: Callsign, Date, Time
         row1 = ttk.Frame(input_frame)
@@ -157,6 +176,9 @@ class LoggingTab:
 
         # Load existing contacts
         self.refresh_log()
+
+        # Load and display recent QSOs
+        self.display_recent_qsos()
 
     def on_callsign_changed(self, *args):
         """
@@ -292,6 +314,63 @@ class LoggingTab:
         self.previous_qsos_text.delete('1.0', 'end')
         self.previous_qsos_text.config(state='disabled')
 
+    def display_recent_qsos(self):
+        """Display the 10 most recent QSOs from the entire log."""
+        try:
+            # Get 10 most recent QSOs
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT callsign, date, time_on, band, mode, skcc_number
+                FROM contacts
+                ORDER BY date DESC, time_on DESC
+                LIMIT 10
+            ''')
+
+            results = cursor.fetchall()
+
+            # Enable text widget for editing
+            self.recent_qsos_text.config(state='normal')
+            self.recent_qsos_text.delete('1.0', 'end')
+
+            if results:
+                # Header
+                header = "10 Most Recent QSOs\n"
+                header += "=" * 38 + "\n\n"
+                self.recent_qsos_text.insert('end', header, 'header')
+
+                # Display each QSO
+                for row in results:
+                    callsign = (row[0] if row[0] else '???').ljust(12)
+                    date_str = row[1] if row[1] else '????-??-??'
+                    time_str = row[2] if row[2] else '??:??'
+                    band_str = (row[3] if row[3] else '???').ljust(5)
+                    mode_str = (row[4] if row[4] else '???').ljust(5)
+                    skcc_str = row[5] if row[5] else ''
+
+                    # Format line
+                    line = f"{callsign} {date_str} {time_str}\n"
+                    line += f"  {band_str} {mode_str}"
+                    if skcc_str:
+                        line += f"  SKCC: {skcc_str}"
+                    line += "\n"
+                    self.recent_qsos_text.insert('end', line)
+            else:
+                self.recent_qsos_text.insert('end', "No QSOs in log yet\n", 'empty')
+
+            # Disable editing
+            self.recent_qsos_text.config(state='disabled')
+
+            # Configure text tags for formatting
+            self.recent_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
+            self.recent_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
+
+        except Exception as e:
+            print(f"Error displaying recent QSOs: {e}")
+            # Clear display on error
+            self.recent_qsos_text.config(state='normal')
+            self.recent_qsos_text.delete('1.0', 'end')
+            self.recent_qsos_text.config(state='disabled')
+
     def log_contact(self):
         """Save contact to database"""
         callsign = self.callsign_var.get().strip().upper()
@@ -321,6 +400,7 @@ class LoggingTab:
             messagebox.showinfo("Success", f"Contact with {callsign} logged!")
             self.clear_form()
             self.refresh_log()
+            self.display_recent_qsos()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to log contact: {str(e)}")
 
