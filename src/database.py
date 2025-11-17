@@ -609,20 +609,21 @@ class Database:
 
     def add_dx_spot(self, spot_data):
         """Add a DX spot to cache"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            INSERT INTO dx_spots
-            (callsign, frequency, spotter, time, comment, cluster_source)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (
-            spot_data.get('callsign', ''),
-            spot_data.get('frequency', ''),
-            spot_data.get('spotter', ''),
-            spot_data.get('time', ''),
-            spot_data.get('comment', ''),
-            spot_data.get('cluster_source', '')
-        ))
-        self.conn.commit()
+        with self._write_lock:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO dx_spots
+                (callsign, frequency, spotter, time, comment, cluster_source)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                spot_data.get('callsign', ''),
+                spot_data.get('frequency', ''),
+                spot_data.get('spotter', ''),
+                spot_data.get('time', ''),
+                spot_data.get('comment', ''),
+                spot_data.get('cluster_source', '')
+            ))
+            self.conn.commit()
 
     def get_recent_spots(self, limit=50):
         """Get recent DX spots"""
