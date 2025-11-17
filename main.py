@@ -65,10 +65,10 @@ class W4GNSLogger:
         # Download SKCC award rosters in background (for Tribune/Senator validation)
         self.download_skcc_rosters_background()
 
-        # Start auto-save timer if enabled
-        if self.config.get('backup.auto_save', False):
-            interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000
-            self.root.after(interval, self.auto_save_timer)
+        # Auto-save disabled - backups only on shutdown
+        # if self.config.get('backup.auto_save', False):
+        #     interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000
+        #     self.root.after(interval, self.auto_save_timer)
 
     def center_window(self):
         """Center the window on screen"""
@@ -709,44 +709,45 @@ https://www.ng3k.com/Misc/cluster.html
         except Exception as e:
             print(f"Error during shutdown backup: {e}")
 
-    def auto_save_timer(self):
-        """Periodic auto-save timer"""
-        if self.config.get('backup.auto_save', False):
-            external_path = self.config.get('backup.external_path', '').strip()
-
-            if external_path and os.path.exists(external_path):
-                try:
-                    from datetime import datetime
-                    import shutil
-
-                    contacts = self.database.get_all_contacts(limit=999999)
-
-                    if contacts:
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        adif_filename = f"w4gns_log_autosave_{timestamp}.adi"
-                        db_filename = f"w4gns_log_autosave_{timestamp}.db"
-
-                        # Backup ADIF
-                        external_adif_file = os.path.join(external_path, adif_filename)
-                        export_contacts_to_adif(contacts, external_adif_file)
-
-                        # Backup database
-                        external_db_file = os.path.join(external_path, db_filename)
-                        if os.path.exists(self.database.db_path):
-                            shutil.copy2(self.database.db_path, external_db_file)
-                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts + database to external backup")
-                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
-                            print(f"Auto-save: database to {external_db_file}")
-                        else:
-                            self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
-                            print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
-
-                except Exception as e:
-                    print(f"Error during auto-save: {e}")
-
-        # Schedule next auto-save
-        interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000  # Convert to milliseconds
-        self.root.after(interval, self.auto_save_timer)
+    # AUTO-SAVE DISABLED - Backups only on shutdown
+    # def auto_save_timer(self):
+    #     """Periodic auto-save timer"""
+    #     if self.config.get('backup.auto_save', False):
+    #         external_path = self.config.get('backup.external_path', '').strip()
+    #
+    #         if external_path and os.path.exists(external_path):
+    #             try:
+    #                 from datetime import datetime
+    #                 import shutil
+    #
+    #                 contacts = self.database.get_all_contacts(limit=999999)
+    #
+    #                 if contacts:
+    #                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #                     adif_filename = f"w4gns_log_autosave_{timestamp}.adi"
+    #                     db_filename = f"w4gns_log_autosave_{timestamp}.db"
+    #
+    #                     # Backup ADIF
+    #                     external_adif_file = os.path.join(external_path, adif_filename)
+    #                     export_contacts_to_adif(contacts, external_adif_file)
+    #
+    #                     # Backup database
+    #                     external_db_file = os.path.join(external_path, db_filename)
+    #                     if os.path.exists(self.database.db_path):
+    #                         shutil.copy2(self.database.db_path, external_db_file)
+    #                         self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts + database to external backup")
+    #                         print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
+    #                         print(f"Auto-save: database to {external_db_file}")
+    #                     else:
+    #                         self.status_bar.config(text=f"Auto-saved {len(contacts)} contacts to external backup")
+    #                         print(f"Auto-save: {len(contacts)} contacts to {external_adif_file}")
+    #
+    #             except Exception as e:
+    #                 print(f"Error during auto-save: {e}")
+    #
+    #     # Schedule next auto-save
+    #     interval = self.config.get('backup.interval_minutes', 30) * 60 * 1000  # Convert to milliseconds
+    #     self.root.after(interval, self.auto_save_timer)
 
     def download_skcc_rosters_background(self):
         """
