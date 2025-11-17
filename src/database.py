@@ -21,7 +21,7 @@ class Database:
 
         self.db_path = db_path
         self.conn = None
-        # Thread lock for write operations (reads are safe with WAL mode)
+        # Thread lock for all write operations to prevent corruption
         self._write_lock = threading.Lock()
         self.init_database()
 
@@ -33,16 +33,16 @@ class Database:
             sqlite3.DatabaseError: If database connection or initialization fails
         """
         try:
-            # Allow connection to be used from multiple threads (safe with WAL mode)
-            # SQLite itself is thread-safe, and WAL mode allows concurrent reads
+            # Allow connection to be used from multiple threads
+            # Write lock ensures only one thread writes at a time
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             cursor = self.conn.cursor()
 
-            # Enable WAL mode for better concurrency (allows simultaneous reads during writes)
-            cursor.execute('PRAGMA journal_mode=WAL')
-            # Set synchronous mode to NORMAL for good balance of safety and performance
-            cursor.execute('PRAGMA synchronous=NORMAL')
+            # Use DELETE journal mode (more reliable than WAL, prevents corruption)
+            cursor.execute('PRAGMA journal_mode=DELETE')
+            # Set synchronous mode to FULL for maximum safety
+            cursor.execute('PRAGMA synchronous=FULL')
             # Enable foreign keys
             cursor.execute('PRAGMA foreign_keys=ON')
 
