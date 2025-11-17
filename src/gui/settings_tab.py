@@ -308,21 +308,26 @@ class SettingsTab:
         ttk.Label(external_frame, text="(Leave blank to disable external backup, e.g., USB: /media/usb/ham_logs)",
                  font=('', 8), foreground=get_muted_color(self.config)).pack(anchor='w')
 
-        self.auto_save_var = tk.BooleanVar(value=self.config.get('backup.auto_save', False))
-        auto_save_check = ttk.Checkbutton(backup_frame, text="Enable auto-save to external path",
-                       variable=self.auto_save_var, command=self.toggle_auto_save)
-        auto_save_check.pack(anchor='w', pady=(10, 2))
+        # AUTO-SAVE DISABLED - Feature removed, backups only on shutdown
+        # self.auto_save_var = tk.BooleanVar(value=self.config.get('backup.auto_save', False))
+        # auto_save_check = ttk.Checkbutton(backup_frame, text="Enable auto-save to external path",
+        #                variable=self.auto_save_var, command=self.toggle_auto_save)
+        # auto_save_check.pack(anchor='w', pady=(10, 2))
+        #
+        # # Auto-save interval
+        # interval_frame = ttk.Frame(backup_frame)
+        # interval_frame.pack(fill='x', pady=2, padx=20)
+        #
+        # ttk.Label(interval_frame, text="Auto-save interval:").pack(side='left')
+        # self.auto_save_interval_var = tk.IntVar(value=self.config.get('backup.interval_minutes', 30))
+        # interval_spin = ttk.Spinbox(interval_frame, from_=5, to=120, increment=5,
+        #                             textvariable=self.auto_save_interval_var, width=8)
+        # interval_spin.pack(side='left', padx=5)
+        # ttk.Label(interval_frame, text="minutes").pack(side='left')
 
-        # Auto-save interval
-        interval_frame = ttk.Frame(backup_frame)
-        interval_frame.pack(fill='x', pady=2, padx=20)
-
-        ttk.Label(interval_frame, text="Auto-save interval:").pack(side='left')
-        self.auto_save_interval_var = tk.IntVar(value=self.config.get('backup.interval_minutes', 30))
-        interval_spin = ttk.Spinbox(interval_frame, from_=5, to=120, increment=5,
-                                    textvariable=self.auto_save_interval_var, width=8)
-        interval_spin.pack(side='left', padx=5)
-        ttk.Label(interval_frame, text="minutes").pack(side='left')
+        # Initialize variables with default values (needed for save_settings method)
+        self.auto_save_var = tk.BooleanVar(value=False)
+        self.auto_save_interval_var = tk.IntVar(value=30)
 
         # Backup and Restore buttons
         backup_buttons_frame = ttk.Frame(backup_frame)
