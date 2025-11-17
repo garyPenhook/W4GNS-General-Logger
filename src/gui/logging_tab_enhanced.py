@@ -797,7 +797,7 @@ class EnhancedLoggingTab:
                     if skcc_str:
                         line += f"  SKCC: {skcc_str}"
                     line += "\n"
-                    self.recent_qsos_text.insert('end', line)
+                    self.recent_qsos_text.insert('end', line, 'qso')
             else:
                 self.recent_qsos_text.insert('end', "No QSOs in log yet\n", 'empty')
 
@@ -806,6 +806,7 @@ class EnhancedLoggingTab:
 
             # Configure text tags for formatting
             self.recent_qsos_text.tag_config('header', font=('Courier', 10, 'bold'))
+            self.recent_qsos_text.tag_config('qso', font=('Courier', 10, 'bold'))
             self.recent_qsos_text.tag_config('empty', font=('Courier', 10, 'italic'), foreground=get_muted_color(self.config))
 
         except Exception as e:
