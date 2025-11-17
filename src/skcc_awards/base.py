@@ -120,7 +120,7 @@ class SKCCAwardBase(ABC):
         # CRITICAL RULE: SKCC Mechanical Key Policy
         # Contact must use mechanical key (STRAIGHT, BUG, or SIDESWIPER)
         # Electronic keyers are NOT allowed
-        key_type = contact.get('key_type', '').upper()
+        key_type = (contact.get('key_type') or '').upper()
         if not key_type or key_type not in VALID_KEY_TYPES:
             return False
 

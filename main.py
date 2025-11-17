@@ -615,6 +615,34 @@ https://www.ng3k.com/Misc/cluster.html
         """
         tk.messagebox.showinfo("About W4GNS Logger", about_text.strip())
 
+    def cleanup_old_backups(self, directory, keep_count=5):
+        """Keep only the most recent backup files, delete older ones"""
+        try:
+            import glob
+
+            # Get all backup database files
+            db_pattern = os.path.join(directory, "w4gns_log_*.db")
+            db_files = sorted(glob.glob(db_pattern), key=os.path.getmtime, reverse=True)
+
+            # Get all backup ADIF files
+            adif_pattern = os.path.join(directory, "w4gns_log_*.adi")
+            adif_files = sorted(glob.glob(adif_pattern), key=os.path.getmtime, reverse=True)
+
+            # Delete old database backups (keep only most recent 5)
+            if len(db_files) > keep_count:
+                for old_file in db_files[keep_count:]:
+                    os.remove(old_file)
+                    print(f"Deleted old backup: {os.path.basename(old_file)}")
+
+            # Delete old ADIF backups (keep only most recent 5)
+            if len(adif_files) > keep_count:
+                for old_file in adif_files[keep_count:]:
+                    os.remove(old_file)
+                    print(f"Deleted old backup: {os.path.basename(old_file)}")
+
+        except Exception as e:
+            print(f"Error cleaning up old backups: {e}")
+
     def backup_on_shutdown(self):
         """Backup log to local and external locations on shutdown"""
         try:
@@ -651,6 +679,9 @@ https://www.ng3k.com/Misc/cluster.html
                 shutil.copy2(self.database.db_path, local_db_path)
                 print(f"Backed up database to {local_db_path}")
 
+            # Clean up old backups in local logs directory (keep last 5)
+            self.cleanup_old_backups(logs_dir, keep_count=5)
+
             # Backup to external path if configured
             external_path = self.config.get('backup.external_path', '').strip()
             if external_path and os.path.exists(external_path):
@@ -664,6 +695,9 @@ https://www.ng3k.com/Misc/cluster.html
                 if os.path.exists(self.database.db_path):
                     shutil.copy2(self.database.db_path, external_db_file)
                     print(f"Also backed up database to {external_db_file}")
+
+                # Clean up old backups in external directory (keep last 5)
+                self.cleanup_old_backups(external_path, keep_count=5)
 
         except Exception as e:
             print(f"Error during shutdown backup: {e}")
