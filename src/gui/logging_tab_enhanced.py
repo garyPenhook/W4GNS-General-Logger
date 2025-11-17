@@ -267,25 +267,11 @@ class EnhancedLoggingTab:
         self.frame.bind_all('<Control-Return>', lambda e: self.log_contact())
         self.frame.bind_all('<Escape>', lambda e: self.clear_form())
 
-        # Previous QSOs display
-        self.previous_qsos_frame = ttk.LabelFrame(self.frame, text="Previous QSOs", padding=10)
-        self.previous_qsos_frame.pack(fill='x', padx=10, pady=5)
-
-        self.previous_qsos_text = tk.Text(self.previous_qsos_frame, height=5,
-                                          font=('Courier', 9), wrap='none', state='disabled')
-        self.previous_qsos_text.pack(side='left', fill='both', expand=True)
-
-        # Scrollbar for previous QSOs
-        prev_scrollbar = ttk.Scrollbar(self.previous_qsos_frame, orient='vertical',
-                                       command=self.previous_qsos_text.yview)
-        prev_scrollbar.pack(side='right', fill='y')
-        self.previous_qsos_text.configure(yscrollcommand=prev_scrollbar.set)
-
         # Recent QSOs display (10 most recent from log)
         self.recent_qsos_frame = ttk.LabelFrame(self.frame, text="Recent QSOs (10 Most Recent)", padding=10)
         self.recent_qsos_frame.pack(fill='x', padx=10, pady=5)
 
-        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=8,
+        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=5,
                                         font=('Courier', 9), wrap='none', state='disabled')
         self.recent_qsos_text.pack(side='left', fill='both', expand=True)
 
@@ -481,11 +467,7 @@ class EnhancedLoggingTab:
         """Display previous QSOs as user types in callsign field"""
         callsign = self.callsign_var.get().strip()
 
-        # Display previous QSOs as user types (if at least 3 characters)
-        if len(callsign) >= 3:
-            self.display_previous_qsos(callsign.upper())
-        else:
-            self.clear_previous_qsos()
+        # Previous QSOs feature removed - now showing Recent QSOs only
 
     def on_callsign_tab(self, event=None):
         """Capture time_on when Tab is pressed after entering callsign"""
@@ -507,7 +489,6 @@ class EnhancedLoggingTab:
         callsign = self.callsign_var.get().strip().upper()
 
         if not callsign:
-            self.clear_previous_qsos()
             return
 
         self.callsign_var.set(callsign)
@@ -523,9 +504,6 @@ class EnhancedLoggingTab:
                 self.skcc_number_var.set(skcc_number)
                 source_text = "SKCC roster" if source == 'roster' else "previous contact"
                 print(f"SKCC #{skcc_number} auto-filled for {callsign} (from {source_text})")
-
-        # Display previous QSOs
-        self.display_previous_qsos(callsign)
 
         # Auto-lookup QRZ/DXCC if enabled
         if self.config.get('logging.auto_lookup', True):
@@ -781,76 +759,6 @@ class EnhancedLoggingTab:
 
         return None, None
 
-    def display_previous_qsos(self, callsign):
-        """
-        Display previous QSOs with the entered callsign.
-
-        Args:
-            callsign: Callsign to search for
-        """
-        if not callsign or len(callsign) < 3:
-            self.clear_previous_qsos()
-            return
-
-        try:
-            # Get previous QSOs for this callsign
-            cursor = self.database.conn.cursor()
-            cursor.execute('''
-                SELECT date, time_on, band, mode, skcc_number
-                FROM contacts
-                WHERE UPPER(callsign) = ?
-                ORDER BY date DESC, time_on DESC
-                LIMIT 20
-            ''', (callsign.upper(),))
-
-            results = cursor.fetchall()
-
-            # Enable text widget for editing
-            self.previous_qsos_text.config(state='normal')
-            self.previous_qsos_text.delete('1.0', 'end')
-
-            if results:
-                # Header
-                header = f"Previous QSOs with {callsign}\n"
-                header += "=" * 50 + "\n\n"
-                self.previous_qsos_text.insert('end', header, 'header')
-
-                # Display each QSO
-                for row in results:
-                    date_str = row[0] if row[0] else '????-??-??'
-                    time_str = row[1] if row[1] else '??:??'
-                    band_str = (row[2] if row[2] else '???').ljust(5)
-                    mode_str = (row[3] if row[3] else '???').ljust(6)
-                    skcc_str = row[4] if row[4] else 'N/A'
-
-                    # Format line
-                    line = f"{date_str} {time_str}  {band_str} {mode_str}  SKCC: {skcc_str}\n"
-                    self.previous_qsos_text.insert('end', line)
-
-                # Summary
-                summary = f"\nTotal: {len(results)} QSO{'s' if len(results) != 1 else ''}"
-                self.previous_qsos_text.insert('end', summary, 'summary')
-            else:
-                self.previous_qsos_text.insert('end', f"No previous QSOs with {callsign}\n", 'empty')
-
-            # Disable editing
-            self.previous_qsos_text.config(state='disabled')
-
-            # Configure text tags for formatting
-            self.previous_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
-            self.previous_qsos_text.tag_config('summary', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
-            self.previous_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
-
-        except Exception as e:
-            print(f"Error displaying previous QSOs: {e}")
-            self.clear_previous_qsos()
-
-    def clear_previous_qsos(self):
-        """Clear the previous QSOs display."""
-        self.previous_qsos_text.config(state='normal')
-        self.previous_qsos_text.delete('1.0', 'end')
-        self.previous_qsos_text.config(state='disabled')
-
     def display_recent_qsos(self):
         """Display the 10 most recent QSOs from the entire log."""
         try:
@@ -1053,7 +961,6 @@ class EnhancedLoggingTab:
         # Keep my_skcc_number_var (don't clear operator's own number)
         self.notes_var.set('')
         self.dupe_label.config(text='')
-        self.clear_previous_qsos()
         self.callsign_entry.focus()
 
         if hasattr(self, 'qrz_upload_btn'):
