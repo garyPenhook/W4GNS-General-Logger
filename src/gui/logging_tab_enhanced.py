@@ -281,6 +281,23 @@ class EnhancedLoggingTab:
         prev_scrollbar.pack(side='right', fill='y')
         self.previous_qsos_text.configure(yscrollcommand=prev_scrollbar.set)
 
+        # Recent QSOs display (10 most recent from log)
+        self.recent_qsos_frame = ttk.LabelFrame(self.frame, text="Recent QSOs (10 Most Recent)", padding=10)
+        self.recent_qsos_frame.pack(fill='x', padx=10, pady=5)
+
+        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=8,
+                                        font=('Courier', 9), wrap='none', state='disabled')
+        self.recent_qsos_text.pack(side='left', fill='both', expand=True)
+
+        # Scrollbar for recent QSOs
+        recent_scrollbar = ttk.Scrollbar(self.recent_qsos_frame, orient='vertical',
+                                         command=self.recent_qsos_text.yview)
+        recent_scrollbar.pack(side='right', fill='y')
+        self.recent_qsos_text.configure(yscrollcommand=recent_scrollbar.set)
+
+        # Load and display recent QSOs
+        self.display_recent_qsos()
+
         # Spots Display - DX and POTA side by side
         self.create_spots_display()
 
@@ -834,6 +851,62 @@ class EnhancedLoggingTab:
         self.previous_qsos_text.delete('1.0', 'end')
         self.previous_qsos_text.config(state='disabled')
 
+    def display_recent_qsos(self):
+        """Display the 10 most recent QSOs from the entire log."""
+        try:
+            # Get 10 most recent QSOs
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT callsign, date, time_on, band, mode, skcc_number
+                FROM contacts
+                ORDER BY date DESC, time_on DESC
+                LIMIT 10
+            ''')
+
+            results = cursor.fetchall()
+
+            # Enable text widget for editing
+            self.recent_qsos_text.config(state='normal')
+            self.recent_qsos_text.delete('1.0', 'end')
+
+            if results:
+                # Header
+                header = "10 Most Recent QSOs\n"
+                header += "=" * 50 + "\n\n"
+                self.recent_qsos_text.insert('end', header, 'header')
+
+                # Display each QSO
+                for row in results:
+                    callsign = (row[0] if row[0] else '???').ljust(12)
+                    date_str = row[1] if row[1] else '????-??-??'
+                    time_str = row[2] if row[2] else '??:??'
+                    band_str = (row[3] if row[3] else '???').ljust(5)
+                    mode_str = (row[4] if row[4] else '???').ljust(6)
+                    skcc_str = row[5] if row[5] else ''
+
+                    # Format line
+                    line = f"{callsign} {date_str} {time_str}  {band_str} {mode_str}"
+                    if skcc_str:
+                        line += f"  SKCC: {skcc_str}"
+                    line += "\n"
+                    self.recent_qsos_text.insert('end', line)
+            else:
+                self.recent_qsos_text.insert('end', "No QSOs in log yet\n", 'empty')
+
+            # Disable editing
+            self.recent_qsos_text.config(state='disabled')
+
+            # Configure text tags for formatting
+            self.recent_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
+            self.recent_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
+
+        except Exception as e:
+            print(f"Error displaying recent QSOs: {e}")
+            # Clear display on error
+            self.recent_qsos_text.config(state='normal')
+            self.recent_qsos_text.delete('1.0', 'end')
+            self.recent_qsos_text.config(state='disabled')
+
     def log_contact(self):
         """Save contact to database"""
         callsign = self.callsign_var.get().strip().upper()
@@ -887,6 +960,9 @@ class EnhancedLoggingTab:
             # Refresh contacts tab to show the new contact
             if self.contacts_tab:
                 self.contacts_tab.refresh_log()
+
+            # Refresh recent QSOs display
+            self.display_recent_qsos()
 
             # Auto-upload to QRZ if enabled
             if self.config.get('qrz.auto_upload', False):
