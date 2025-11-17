@@ -272,7 +272,7 @@ class EnhancedLoggingTab:
         self.recent_qsos_frame.pack(fill='x', padx=10, pady=5)
 
         self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=5,
-                                        font=('Courier', 9), wrap='none', state='disabled')
+                                        font=('Courier', 10), wrap='none', state='disabled')
         self.recent_qsos_text.pack(side='left', fill='both', expand=True)
 
         # Scrollbar for recent QSOs
@@ -805,8 +805,8 @@ class EnhancedLoggingTab:
             self.recent_qsos_text.config(state='disabled')
 
             # Configure text tags for formatting
-            self.recent_qsos_text.tag_config('header', font=('Courier', 9, 'bold'))
-            self.recent_qsos_text.tag_config('empty', font=('Courier', 9, 'italic'), foreground=get_muted_color(self.config))
+            self.recent_qsos_text.tag_config('header', font=('Courier', 10, 'bold'))
+            self.recent_qsos_text.tag_config('empty', font=('Courier', 10, 'italic'), foreground=get_muted_color(self.config))
 
         except Exception as e:
             print(f"Error displaying recent QSOs: {e}")
