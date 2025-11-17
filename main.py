@@ -9,6 +9,7 @@ from tkinter import ttk, filedialog, messagebox
 import threading
 import sys
 import os
+import sqlite3
 
 # Add src directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
