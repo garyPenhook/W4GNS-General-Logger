@@ -271,7 +271,7 @@ class EnhancedLoggingTab:
         self.recent_qsos_frame = ttk.LabelFrame(self.frame, text="Recent QSOs (10 Most Recent)", padding=10)
         self.recent_qsos_frame.pack(fill='x', padx=10, pady=5)
 
-        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=8,
+        self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=5,
                                         font=('Courier', 9), wrap='none', state='disabled')
         self.recent_qsos_text.pack(side='left', fill='both', expand=True)
 
