@@ -8,6 +8,9 @@ from datetime import datetime, timezone
 import threading
 
 from src.theme_colors import get_muted_color, get_info_color
+from src.qrz import QRZSession
+from src.dxcc import lookup_dxcc
+from src.skcc_roster import SKCCRosterManager
 
 
 class ContestTab:
@@ -37,6 +40,11 @@ class ContestTab:
         self.ks1kcc_bands = set()  # Bands worked KS1KCC
         self.worked_stations = {}  # {callsign: set of bands}
         self.contest_qsos = []  # List of QSOs in current contest
+
+        # QRZ lookup
+        self.qrz_session = None
+        self.is_looking_up = False
+        self.skcc_roster = SKCCRosterManager()
 
         self.frame = ttk.Frame(notebook)
         self.create_widgets()
@@ -128,8 +136,13 @@ class ContestTab:
         self.callsign_entry = ttk.Entry(row1, textvariable=self.callsign_var,
                                         width=15, font=('', 14, 'bold'))
         self.callsign_entry.pack(side='left', padx=5)
-        self.callsign_entry.bind('<Return>', lambda e: self.rst_sent_entry.focus())
+        self.callsign_entry.bind('<Return>', lambda e: self.lookup_callsign())
+        self.callsign_entry.bind('<Tab>', lambda e: (self.lookup_callsign(), 'break')[1])
         self.callsign_entry.bind('<KeyRelease>', self.on_callsign_change)
+
+        # Lookup button
+        self.lookup_btn = ttk.Button(row1, text="Lookup", command=self.lookup_callsign, width=8)
+        self.lookup_btn.pack(side='left', padx=2)
 
         # Duplicate warning label
         self.dupe_label = ttk.Label(row1, text="", foreground='red', font=('', 10, 'bold'))
@@ -607,6 +620,129 @@ class ContestTab:
         self.rst_rcvd_var.set('599')
         self.dupe_label.config(text='')
         self.skcc_status.config(text='')
+
+    def lookup_callsign(self):
+        """Lookup callsign using QRZ and SKCC roster"""
+        if self.is_looking_up:
+            return
+
+        callsign = self.callsign_var.get().strip().upper()
+        if not callsign:
+            messagebox.showwarning("Missing Callsign", "Please enter a callsign")
+            return
+
+        # Set lookup state
+        self.is_looking_up = True
+        original_text = self.lookup_btn['text']
+        self.lookup_btn.config(text="...", state='disabled')
+
+        # Run lookup in background thread
+        threading.Thread(
+            target=self._lookup_background,
+            args=(callsign, original_text),
+            daemon=True
+        ).start()
+
+    def _lookup_background(self, callsign, original_button_text):
+        """Background thread for callsign lookup"""
+        try:
+            qrz_data = None
+            qrz_error = None
+
+            # Try QRZ lookup if enabled
+            if self.config.get('qrz.enable_lookup', False):
+                qrz_user = self.config.get('qrz.username')
+                qrz_pass = self.config.get('qrz.password')
+
+                if qrz_user and qrz_pass:
+                    if not self.qrz_session:
+                        self.qrz_session = QRZSession(qrz_user, qrz_pass)
+
+                    try:
+                        qrz_data = self.qrz_session.lookup_callsign(callsign)
+                    except Exception as e:
+                        qrz_error = str(e)
+
+            # Look up SKCC number from roster and previous contacts
+            skcc_number = self._lookup_skcc_number(callsign)
+
+            # Schedule UI update on main thread
+            self.frame.after(0, lambda: self._update_lookup_results(
+                callsign, original_button_text, qrz_data, qrz_error, skcc_number
+            ))
+
+        except Exception as e:
+            self.frame.after(0, lambda: self._lookup_error(original_button_text, str(e)))
+
+    def _lookup_skcc_number(self, callsign):
+        """Look up SKCC number from roster and previous contacts"""
+        # First try the SKCC roster
+        try:
+            member_info = self.skcc_roster.lookup_member(callsign)
+            if member_info and member_info.get('skcc_number'):
+                return member_info['skcc_number']
+        except:
+            pass
+
+        # Then try previous contacts in database
+        try:
+            cursor = self.database.conn.cursor()
+            cursor.execute('''
+                SELECT skcc_number FROM contacts
+                WHERE callsign = ? AND skcc_number IS NOT NULL AND skcc_number != ''
+                ORDER BY date DESC, time_on DESC
+                LIMIT 1
+            ''', (callsign.upper(),))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+        except:
+            pass
+
+        return None
+
+    def _update_lookup_results(self, callsign, original_button_text, qrz_data, qrz_error, skcc_number):
+        """Update UI with lookup results"""
+        # Populate from QRZ data
+        if qrz_data:
+            # Name (first name for contest exchange)
+            if 'first_name' in qrz_data:
+                self.name_var.set(qrz_data['first_name'])
+            elif 'name' in qrz_data:
+                self.name_var.set(qrz_data['name'])
+
+            # QTH/State for exchange and multiplier
+            if 'state' in qrz_data and qrz_data['state']:
+                self.qth_var.set(qrz_data['state'])
+            elif 'country' in qrz_data and qrz_data['country']:
+                # For DX, use country code
+                self.qth_var.set(qrz_data.get('land', qrz_data['country'][:3].upper()))
+
+        # Populate SKCC number
+        if skcc_number:
+            self.skcc_var.set(skcc_number)
+            # Show bonus indicator
+            if 'S' in skcc_number.upper():
+                self.skcc_status.config(text="Senator!", foreground='green')
+            elif 'T' in skcc_number.upper():
+                self.skcc_status.config(text="Tribune!", foreground='blue')
+            elif 'C' in skcc_number.upper():
+                self.skcc_status.config(text="Centurion", foreground='orange')
+            else:
+                self.skcc_status.config(text="")
+
+        # Reset lookup state
+        self.lookup_btn.config(text=original_button_text, state='normal')
+        self.is_looking_up = False
+
+        # Move focus to RST field
+        self.rst_sent_entry.focus()
+
+    def _lookup_error(self, original_button_text, error_msg):
+        """Handle lookup errors"""
+        messagebox.showerror("Lookup Error", f"Error: {error_msg}")
+        self.lookup_btn.config(text=original_button_text, state='normal')
+        self.is_looking_up = False
 
     def export_for_skcc(self):
         """Export contest log for SKCC submission"""
