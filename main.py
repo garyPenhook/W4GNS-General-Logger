@@ -25,6 +25,7 @@ from src.gui.skcc_awards_tab import SKCCAwardsTab
 from src.gui.space_weather_tab import SpaceWeatherTab
 from src.gui.weather_tab import WeatherTab
 from src.gui.settings_tab import SettingsTab
+from src.gui.contest_tab import ContestTab
 from src.gui.date_range_dialog import DateRangeDialog
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
@@ -113,6 +114,7 @@ class W4GNSLogger:
         self.skcc_awards_tab = SKCCAwardsTab(self.notebook, self.database, self.config)
         self.weather_tab = WeatherTab(self.notebook, self.config)
         self.space_weather_tab = SpaceWeatherTab(self.notebook, self.database, self.config)
+        self.contest_tab = ContestTab(self.notebook, self.database, self.config)
         self.settings_tab = SettingsTab(self.notebook, self.config, self.theme_manager, self.database)
 
         # Wire DX cluster to logging tab for DX spot display
@@ -127,6 +129,7 @@ class W4GNSLogger:
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
         self.notebook.add(self.awards_tab.get_frame(), text="  ARRL Awards  ")
         self.notebook.add(self.skcc_awards_tab.get_frame(), text="  SKCC Awards  ")
+        self.notebook.add(self.contest_tab.get_frame(), text="  Contest  ")
         self.notebook.add(self.weather_tab.get_frame(), text="  Weather  ")
         self.notebook.add(self.space_weather_tab.get_frame(), text="  Space Weather  ")
         self.notebook.add(self.settings_tab.get_frame(), text="  Settings  ")
