@@ -7,6 +7,9 @@ from tkinter import ttk, messagebox
 import threading
 from datetime import datetime
 
+from src.qrz import QRZSession
+from src.skcc_roster import SKCCRosterManager
+
 
 class ContactsTab:
     def __init__(self, parent, database, config):
@@ -16,6 +19,9 @@ class ContactsTab:
         self.frame = ttk.Frame(parent)
         self.all_contacts = []  # Store all contacts for filtering
         self.is_loading = False
+        self.qrz_session = None
+        self.is_looking_up = False
+        self.skcc_roster = SKCCRosterManager()
         self.create_widgets()
 
     def create_widgets(self):
@@ -33,7 +39,14 @@ class ContactsTab:
         ttk.Label(search_row, text="Callsign:", width=10).pack(side='left', padx=2)
         self.callsign_search_var = tk.StringVar()
         self.callsign_search_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row, textvariable=self.callsign_search_var, width=15).pack(side='left', padx=5)
+        callsign_entry = ttk.Entry(search_row, textvariable=self.callsign_search_var, width=15)
+        callsign_entry.pack(side='left', padx=5)
+        callsign_entry.bind('<Return>', lambda e: self.lookup_callsign())
+        callsign_entry.bind('<Tab>', lambda e: (self.lookup_callsign(), 'break')[1])
+
+        # Lookup button
+        self.lookup_btn = ttk.Button(search_row, text="Lookup", command=self.lookup_callsign, width=8)
+        self.lookup_btn.pack(side='left', padx=2)
 
         # Prefix search
         ttk.Label(search_row, text="Prefix:", width=8).pack(side='left', padx=2)
@@ -408,6 +421,113 @@ class ContactsTab:
         dialog.wait_visibility()
         dialog.grab_set()
         dialog.focus_set()
+
+    def lookup_callsign(self):
+        """Lookup callsign using QRZ"""
+        if self.is_looking_up:
+            return
+
+        callsign = self.callsign_search_var.get().strip().upper()
+        if not callsign:
+            return
+
+        self.is_looking_up = True
+        original_text = self.lookup_btn['text']
+        self.lookup_btn.config(text="...", state='disabled')
+
+        threading.Thread(
+            target=self._lookup_background,
+            args=(callsign, original_text),
+            daemon=True
+        ).start()
+
+    def _lookup_background(self, callsign, original_button_text):
+        """Background thread for callsign lookup"""
+        try:
+            qrz_data = None
+            skcc_number = None
+
+            # Try QRZ lookup
+            if self.config.get('qrz.enable_lookup', False):
+                qrz_user = self.config.get('qrz.username')
+                qrz_pass = self.config.get('qrz.password')
+
+                if qrz_user and qrz_pass:
+                    if not self.qrz_session:
+                        self.qrz_session = QRZSession(qrz_user, qrz_pass)
+
+                    try:
+                        qrz_data = self.qrz_session.lookup_callsign(callsign)
+                    except:
+                        pass
+
+            # Look up SKCC number
+            try:
+                member_info = self.skcc_roster.lookup_member(callsign)
+                if member_info and member_info.get('skcc_number'):
+                    skcc_number = member_info['skcc_number']
+            except:
+                pass
+
+            if not skcc_number:
+                try:
+                    cursor = self.database.conn.cursor()
+                    cursor.execute('''
+                        SELECT skcc_number FROM contacts
+                        WHERE callsign = ? AND skcc_number IS NOT NULL AND skcc_number != ''
+                        ORDER BY date DESC LIMIT 1
+                    ''', (callsign.upper(),))
+                    result = cursor.fetchone()
+                    if result:
+                        skcc_number = result[0]
+                except:
+                    pass
+
+            self.frame.after(0, lambda: self._show_lookup_results(
+                callsign, original_button_text, qrz_data, skcc_number
+            ))
+
+        except Exception as e:
+            self.frame.after(0, lambda: self._lookup_done(original_button_text))
+
+    def _show_lookup_results(self, callsign, original_button_text, qrz_data, skcc_number):
+        """Show lookup results in a dialog"""
+        self._lookup_done(original_button_text)
+
+        # Build info text
+        info = f"Callsign: {callsign}\n\n"
+
+        if qrz_data:
+            if 'first_name' in qrz_data or 'name' in qrz_data:
+                name = f"{qrz_data.get('first_name', '')} {qrz_data.get('name', '')}".strip()
+                info += f"Name: {name}\n"
+            if 'addr2' in qrz_data:
+                info += f"City: {qrz_data['addr2']}\n"
+            if 'state' in qrz_data:
+                info += f"State: {qrz_data['state']}\n"
+            if 'country' in qrz_data:
+                info += f"Country: {qrz_data['country']}\n"
+            if 'gridsquare' in qrz_data:
+                info += f"Grid: {qrz_data['gridsquare']}\n"
+
+        if skcc_number:
+            info += f"\nSKCC #: {skcc_number}"
+            if 'S' in skcc_number.upper():
+                info += " (Senator)"
+            elif 'T' in skcc_number.upper():
+                info += " (Tribune)"
+            elif 'C' in skcc_number.upper():
+                info += " (Centurion)"
+
+        if not qrz_data and not skcc_number:
+            info += "No information found"
+
+        messagebox.showinfo(f"Lookup: {callsign}", info)
+
+    def _lookup_done(self, original_button_text):
+        """Reset lookup state"""
+        self.lookup_btn.config(text=original_button_text, state='normal')
+        self.is_looking_up = False
 
     def get_frame(self):
         """Return the frame widget"""
