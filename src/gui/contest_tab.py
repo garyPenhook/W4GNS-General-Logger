@@ -137,6 +137,7 @@ class ContestTab:
                                         width=15, font=('', 14, 'bold'))
         self.callsign_entry.pack(side='left', padx=5)
         self.callsign_entry.bind('<Return>', lambda e: self.lookup_callsign())
+        self.callsign_entry.bind('<Tab>', lambda e: (self.lookup_callsign(), 'break')[1])
         self.callsign_entry.bind('<KeyRelease>', self.on_callsign_change)
 
         # Lookup button
