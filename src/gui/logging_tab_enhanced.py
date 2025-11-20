@@ -91,6 +91,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row1, text="Callsign:", width=12, anchor='e').pack(side='left')
         self.callsign_var = tk.StringVar()
+        self.callsign_var.trace_add('write', lambda *args: self.display_recent_qsos())
         self.callsign_entry = ttk.Entry(row1, textvariable=self.callsign_var, width=15, font=('', 12, 'bold'))
         self.callsign_entry.pack(side='left', padx=5)
 
@@ -267,8 +268,8 @@ class EnhancedLoggingTab:
         self.frame.bind_all('<Control-Return>', lambda e: self.log_contact())
         self.frame.bind_all('<Escape>', lambda e: self.clear_form())
 
-        # Recent QSOs display (10 most recent from log)
-        self.recent_qsos_frame = ttk.LabelFrame(self.frame, text="Recent QSOs (10 Most Recent)", padding=10)
+        # Previous QSOs display
+        self.recent_qsos_frame = ttk.LabelFrame(self.frame, text="Previous QSOs", padding=10)
         self.recent_qsos_frame.pack(fill='x', padx=10, pady=5)
 
         self.recent_qsos_text = tk.Text(self.recent_qsos_frame, height=5,
@@ -760,16 +761,29 @@ class EnhancedLoggingTab:
         return None, None
 
     def display_recent_qsos(self):
-        """Display the 10 most recent QSOs from the entire log."""
+        """Display previous QSOs - filtered by callsign if entered, otherwise 10 most recent."""
         try:
-            # Get 10 most recent QSOs
             cursor = self.database.conn.cursor()
-            cursor.execute('''
-                SELECT callsign, date, time_on, band, mode, skcc_number
-                FROM contacts
-                ORDER BY date DESC, time_on DESC
-                LIMIT 10
-            ''')
+            callsign_filter = self.callsign_var.get().strip().upper()
+
+            if callsign_filter:
+                # Show all previous QSOs with this callsign
+                cursor.execute('''
+                    SELECT callsign, date, time_on, band, mode, skcc_number
+                    FROM contacts
+                    WHERE UPPER(callsign) = ?
+                    ORDER BY date DESC, time_on DESC
+                ''', (callsign_filter,))
+                header_text = f"Previous QSOs with {callsign_filter}\n"
+            else:
+                # Show 10 most recent QSOs
+                cursor.execute('''
+                    SELECT callsign, date, time_on, band, mode, skcc_number
+                    FROM contacts
+                    ORDER BY date DESC, time_on DESC
+                    LIMIT 10
+                ''')
+                header_text = "10 Most Recent QSOs\n"
 
             results = cursor.fetchall()
 
@@ -779,7 +793,7 @@ class EnhancedLoggingTab:
 
             if results:
                 # Header
-                header = "10 Most Recent QSOs\n"
+                header = header_text
                 header += "=" * 50 + "\n\n"
                 self.recent_qsos_text.insert('end', header, 'header')
 
@@ -799,7 +813,10 @@ class EnhancedLoggingTab:
                     line += "\n"
                     self.recent_qsos_text.insert('end', line, 'qso')
             else:
-                self.recent_qsos_text.insert('end', "No QSOs in log yet\n", 'empty')
+                if callsign_filter:
+                    self.recent_qsos_text.insert('end', f"No previous QSOs with {callsign_filter}\n", 'empty')
+                else:
+                    self.recent_qsos_text.insert('end', "No QSOs in log yet\n", 'empty')
 
             # Disable editing
             self.recent_qsos_text.config(state='disabled')
