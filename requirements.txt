@@ -2,8 +2,6 @@
 # Python 3.12+
 
 # GUI is built with tkinter (included with Python)
-# Calendar date picker widget
-tkcalendar>=1.6.1
 
 # HTTP requests for POTA API
 requests>=2.31.0
