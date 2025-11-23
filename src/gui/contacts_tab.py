@@ -60,6 +60,14 @@ class ContactsTab:
         self.country_search_var.trace('w', lambda *args: self.apply_search())
         ttk.Entry(search_row, textvariable=self.country_search_var, width=20).pack(side='left', padx=5)
 
+        # Band search
+        ttk.Label(search_row, text="Band:", width=6).pack(side='left', padx=2)
+        self.band_search_var = tk.StringVar()
+        self.band_search_var.trace('w', lambda *args: self.apply_search())
+        band_values = ['', '160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', '70cm']
+        band_combo = ttk.Combobox(search_row, textvariable=self.band_search_var, values=band_values, width=8, state='readonly')
+        band_combo.pack(side='left', padx=5)
+
         # Clear search button
         ttk.Button(search_row, text="Clear Search", command=self.clear_search).pack(side='left', padx=10)
 
@@ -154,12 +162,14 @@ class ContactsTab:
         callsign_search = self.callsign_search_var.get().strip().upper()
         prefix_search = self.prefix_search_var.get().strip().upper()
         country_search = self.country_search_var.get().strip().upper()
+        band_search = self.band_search_var.get().strip().upper()
 
         # Filter contacts
         filtered_contacts = []
         for contact in self.all_contacts:
             callsign = contact.get('callsign', '').upper()
             country = contact.get('country', '').upper()
+            band = contact.get('band', '').upper()
 
             # Callsign filter (partial match)
             if callsign_search and callsign_search not in callsign:
@@ -171,6 +181,10 @@ class ContactsTab:
 
             # Country filter (partial match)
             if country_search and country_search not in country:
+                continue
+
+            # Band filter (exact match)
+            if band_search and band != band_search:
                 continue
 
             filtered_contacts.append(contact)
@@ -195,7 +209,7 @@ class ContactsTab:
         # Update results label
         total = len(self.all_contacts)
         shown = len(filtered_contacts)
-        if callsign_search or prefix_search or country_search:
+        if callsign_search or prefix_search or country_search or band_search:
             self.results_label.config(text=f"Showing {shown} of {total} contacts")
         else:
             self.results_label.config(text=f"Total: {total} contacts")
@@ -205,6 +219,7 @@ class ContactsTab:
         self.callsign_search_var.set('')
         self.prefix_search_var.set('')
         self.country_search_var.set('')
+        self.band_search_var.set('')
         # apply_search() will be called automatically via trace
 
     def on_contact_double_click(self, event):
