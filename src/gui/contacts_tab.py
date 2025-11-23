@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 from datetime import datetime
+from tkcalendar import DateEntry
 
 from src.qrz import QRZSession
 from src.skcc_roster import SKCCRosterManager
@@ -94,14 +95,20 @@ class ContactsTab:
         # Date From
         ttk.Label(search_row2, text="From:", width=6).pack(side='left', padx=2)
         self.date_from_var = tk.StringVar()
+        self.date_from_entry = DateEntry(search_row2, textvariable=self.date_from_var, width=10,
+                                         date_pattern='yyyy-mm-dd', state='readonly')
+        self.date_from_entry.pack(side='left', padx=2)
+        self.date_from_entry.delete(0, 'end')  # Clear default date
         self.date_from_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_from_var, width=10).pack(side='left', padx=2)
 
         # Date To
         ttk.Label(search_row2, text="To:", width=4).pack(side='left', padx=2)
         self.date_to_var = tk.StringVar()
+        self.date_to_entry = DateEntry(search_row2, textvariable=self.date_to_var, width=10,
+                                       date_pattern='yyyy-mm-dd', state='readonly')
+        self.date_to_entry.pack(side='left', padx=2)
+        self.date_to_entry.delete(0, 'end')  # Clear default date
         self.date_to_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_to_var, width=10).pack(side='left', padx=2)
 
         # CQ Zone
         ttk.Label(search_row2, text="CQ Zone:", width=8).pack(side='left', padx=2)
@@ -381,8 +388,8 @@ class ContactsTab:
         self.continent_search_var.set('')
         self.band_search_var.set('')
         self.mode_search_var.set('')
-        self.date_from_var.set('')
-        self.date_to_var.set('')
+        self.date_from_entry.delete(0, 'end')
+        self.date_to_entry.delete(0, 'end')
         self.cq_zone_var.set('')
         self.itu_zone_var.set('')
         self.dxcc_search_var.set('')
