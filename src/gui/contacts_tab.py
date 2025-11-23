@@ -259,20 +259,20 @@ class ContactsTab:
         # Filter contacts
         filtered_contacts = []
         for contact in self.all_contacts:
-            callsign = contact.get('callsign', '').upper()
-            country = contact.get('country', '').upper()
-            state = contact.get('state', '').upper()
-            continent = contact.get('continent', '').upper()
-            band = contact.get('band', '').upper()
-            mode = contact.get('mode', '').upper()
-            date = contact.get('date', '')
-            cq_zone = str(contact.get('cq_zone', ''))
-            itu_zone = str(contact.get('itu_zone', ''))
-            dxcc = contact.get('dxcc_entity', '').upper() or contact.get('dxcc', '').upper()
-            pota = contact.get('pota', '').upper()
-            sota = contact.get('sota', '').upper()
-            skcc = contact.get('skcc_number', '').upper()
-            power = contact.get('power', '') or contact.get('power_watts', '')
+            callsign = (contact.get('callsign') or '').upper()
+            country = (contact.get('country') or '').upper()
+            state = (contact.get('state') or '').upper()
+            continent = (contact.get('continent') or '').upper()
+            band = (contact.get('band') or '').upper()
+            mode = (contact.get('mode') or '').upper()
+            date = contact.get('date') or ''
+            cq_zone = str(contact.get('cq_zone') or '')
+            itu_zone = str(contact.get('itu_zone') or '')
+            dxcc = (contact.get('dxcc_entity') or contact.get('dxcc') or '').upper()
+            pota = (contact.get('pota') or '').upper()
+            sota = (contact.get('sota') or '').upper()
+            skcc = (contact.get('skcc_number') or '').upper()
+            power = contact.get('power') or contact.get('power_watts') or ''
 
             # Callsign filter (partial match)
             if callsign_search and callsign_search not in callsign:
