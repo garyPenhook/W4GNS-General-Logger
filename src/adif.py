@@ -15,7 +15,7 @@ class ADIFParser:
 
     def parse_file(self, filename):
         """Parse an ADIF file and return list of contact records"""
-        with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(filename, 'r', encoding='utf-8', errors='replace') as f:
             content = f.read()
 
         # Find the end of header marker
@@ -518,7 +518,7 @@ def validate_adif_file(filename):
         return False, f"File is not readable: {filename}"
 
     try:
-        with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(filename, 'r', encoding='utf-8', errors='replace') as f:
             content = f.read()
 
         if not content.strip():

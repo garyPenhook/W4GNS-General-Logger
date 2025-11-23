@@ -161,12 +161,12 @@ class SKCCRosterManager:
             # Parse formats like "2-Jan-2006"
             dt = datetime.strptime(date_str, "%d-%b-%Y")
             return dt.strftime("%Y%m%d")
-        except:
+        except ValueError:
             try:
                 # Try alternate format
                 dt = datetime.strptime(date_str, "%d-%B-%Y")
                 return dt.strftime("%Y%m%d")
-            except:
+            except ValueError:
                 # Return empty if can't parse
                 return ""
 
@@ -325,7 +325,7 @@ class SKCCRosterManager:
                         else:
                             minutes = age.seconds // 60
                             return f"{minutes} minutes ago"
-        except:
+        except (ValueError, TypeError, KeyError, OSError):
             pass
 
         return "Unknown"
