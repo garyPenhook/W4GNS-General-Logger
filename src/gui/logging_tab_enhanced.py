@@ -30,6 +30,7 @@ class EnhancedLoggingTab:
         self.auto_refresh = False
         self.refresh_interval = 60
         self.current_pota_spots = []
+        self._pota_grid_set = False  # Track if grid was set from POTA spot
 
         # Time tracking for QSO
         self.time_on_captured = False  # Track if time_on has been set for current contact
@@ -667,7 +668,8 @@ class EnhancedLoggingTab:
                 if 'first_name' in qrz_data:
                     self.first_name_var.set(qrz_data['first_name'])
 
-            if 'gridsquare' in qrz_data:
+            if 'gridsquare' in qrz_data and not self._pota_grid_set:
+                # Only set grid from QRZ if not already set from POTA spot
                 self.grid_var.set(qrz_data['gridsquare'])
 
             if 'state' in qrz_data:
@@ -951,6 +953,7 @@ class EnhancedLoggingTab:
         self.time_on_var.set('')  # Clear time_on (will be captured on next callsign entry)
         self.time_off_var.set('')  # Clear time_off
         self.time_on_captured = False  # Reset flag for next contact
+        self._pota_grid_set = False  # Reset POTA grid flag for next contact
         self.freq_var.set('')
         self.band_var.set('')
         self.mode_var.set('')
@@ -1179,12 +1182,14 @@ class EnhancedLoggingTab:
             time = values[6]
             qsos = values[7]
 
-            # Find full spot details for park name
+            # Find full spot details for park name and grid
             park_name = ""
+            park_grid = ""
             for spot in self.current_pota_spots:
                 if (spot.get('activator') == activator and
                     spot.get('park_ref') == park_ref):
                     park_name = spot.get('park_name', '')
+                    park_grid = spot.get('grid', '')
                     break
 
             # Populate the logging form
@@ -1195,6 +1200,11 @@ class EnhancedLoggingTab:
 
             # Add POTA reference and park name to POTA field and notes
             self.pota_var.set(park_ref)
+
+            # Set grid from POTA spot (park location) instead of QRZ (home location)
+            if park_grid:
+                self.grid_var.set(park_grid)
+                self._pota_grid_set = True
 
             # Build descriptive note
             pota_note = f"POTA: {park_ref}"
