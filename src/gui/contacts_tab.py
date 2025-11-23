@@ -95,13 +95,23 @@ class ContactsTab:
         ttk.Label(search_row2, text="From:", width=6).pack(side='left', padx=2)
         self.date_from_var = tk.StringVar()
         self.date_from_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_from_var, width=10).pack(side='left', padx=2)
+        date_from_entry = ttk.Entry(search_row2, textvariable=self.date_from_var, width=10)
+        date_from_entry.pack(side='left', padx=2)
+        date_from_entry.insert(0, 'YYYY-MM-DD')
+        date_from_entry.config(foreground='gray')
+        date_from_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
+        date_from_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
 
         # Date To
         ttk.Label(search_row2, text="To:", width=4).pack(side='left', padx=2)
         self.date_to_var = tk.StringVar()
         self.date_to_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_to_var, width=10).pack(side='left', padx=2)
+        date_to_entry = ttk.Entry(search_row2, textvariable=self.date_to_var, width=10)
+        date_to_entry.pack(side='left', padx=2)
+        date_to_entry.insert(0, 'YYYY-MM-DD')
+        date_to_entry.config(foreground='gray')
+        date_to_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
+        date_to_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
 
         # CQ Zone
         ttk.Label(search_row2, text="CQ Zone:", width=8).pack(side='left', padx=2)
@@ -236,7 +246,7 @@ class ContactsTab:
         self.is_loading = False
 
     def apply_search(self):
-        """Apply search filters and update display"""
+        """Apply search filters and update display using database query"""
         # Clear existing items
         for item in self.log_tree.get_children():
             self.log_tree.delete(item)
@@ -251,6 +261,11 @@ class ContactsTab:
         mode_search = self.mode_search_var.get().strip().upper()
         date_from = self.date_from_var.get().strip()
         date_to = self.date_to_var.get().strip()
+        # Ignore placeholder text
+        if date_from == 'YYYY-MM-DD':
+            date_from = ''
+        if date_to == 'YYYY-MM-DD':
+            date_to = ''
         cq_zone_search = self.cq_zone_var.get().strip()
         itu_zone_search = self.itu_zone_var.get().strip()
         dxcc_search = self.dxcc_search_var.get().strip().upper()
@@ -259,92 +274,88 @@ class ContactsTab:
         skcc_search = self.skcc_search_var.get().strip().upper()
         qrp_only = self.qrp_var.get()
 
-        # Filter contacts
-        filtered_contacts = []
-        for contact in self.all_contacts:
-            callsign = (contact.get('callsign') or '').upper()
-            country = (contact.get('country') or '').upper()
-            state = (contact.get('state') or '').upper()
-            continent = (contact.get('continent') or '').upper()
-            band = (contact.get('band') or '').upper()
-            mode = (contact.get('mode') or '').upper()
-            date = contact.get('date') or ''
-            cq_zone = str(contact.get('cq_zone') or '')
-            itu_zone = str(contact.get('itu_zone') or '')
-            dxcc = (contact.get('dxcc_entity') or contact.get('dxcc') or '').upper()
-            pota = (contact.get('pota') or '').upper()
-            sota = (contact.get('sota') or '').upper()
-            skcc = (contact.get('skcc_number') or '').upper()
-            power = contact.get('power') or contact.get('power_watts') or ''
+        # Build SQL query with filters
+        query = "SELECT * FROM contacts WHERE 1=1"
+        params = []
 
-            # Callsign filter (partial match)
-            if callsign_search and callsign_search not in callsign:
-                continue
+        if callsign_search:
+            query += " AND UPPER(callsign) LIKE ?"
+            params.append(f"%{callsign_search}%")
 
-            # Prefix filter (starts with)
-            if prefix_search and not callsign.startswith(prefix_search):
-                continue
+        if prefix_search:
+            query += " AND UPPER(callsign) LIKE ?"
+            params.append(f"{prefix_search}%")
 
-            # Country filter (partial match)
-            if country_search and country_search not in country:
-                continue
+        if country_search:
+            query += " AND UPPER(country) LIKE ?"
+            params.append(f"%{country_search}%")
 
-            # State filter (partial match)
-            if state_search and state_search not in state:
-                continue
+        if state_search:
+            query += " AND UPPER(state) LIKE ?"
+            params.append(f"%{state_search}%")
 
-            # Continent filter (exact match)
-            if continent_search and continent != continent_search:
-                continue
+        if continent_search:
+            query += " AND UPPER(continent) = ?"
+            params.append(continent_search)
 
-            # Band filter (exact match)
-            if band_search and band != band_search:
-                continue
+        if band_search:
+            query += " AND UPPER(band) = ?"
+            params.append(band_search)
 
-            # Mode filter (exact match)
-            if mode_search and mode != mode_search:
-                continue
+        if mode_search:
+            query += " AND UPPER(mode) = ?"
+            params.append(mode_search)
 
-            # Date range filter
-            if date_from and date < date_from:
-                continue
-            if date_to and date > date_to:
-                continue
+        if date_from:
+            query += " AND date >= ?"
+            params.append(date_from)
 
-            # CQ Zone filter
-            if cq_zone_search and cq_zone != cq_zone_search:
-                continue
+        if date_to:
+            query += " AND date <= ?"
+            params.append(date_to)
 
-            # ITU Zone filter
-            if itu_zone_search and itu_zone != itu_zone_search:
-                continue
+        if cq_zone_search:
+            query += " AND cq_zone = ?"
+            params.append(cq_zone_search)
 
-            # DXCC filter (partial match)
-            if dxcc_search and dxcc_search not in dxcc:
-                continue
+        if itu_zone_search:
+            query += " AND itu_zone = ?"
+            params.append(itu_zone_search)
 
-            # POTA filter (partial match)
-            if pota_search and pota_search not in pota:
-                continue
+        if dxcc_search:
+            query += " AND (UPPER(dxcc_entity) LIKE ? OR UPPER(dxcc) LIKE ?)"
+            params.append(f"%{dxcc_search}%")
+            params.append(f"%{dxcc_search}%")
 
-            # SOTA filter (partial match)
-            if sota_search and sota_search not in sota:
-                continue
+        if pota_search:
+            query += " AND UPPER(pota) LIKE ?"
+            params.append(f"%{pota_search}%")
 
-            # SKCC filter (partial match)
-            if skcc_search and skcc_search not in skcc:
-                continue
+        if sota_search:
+            query += " AND UPPER(sota) LIKE ?"
+            params.append(f"%{sota_search}%")
 
-            # QRP filter (5W or less)
-            if qrp_only:
-                try:
-                    power_val = float(str(power).replace('W', '').strip()) if power else 0
-                    if power_val > 5:
-                        continue
-                except (ValueError, TypeError):
-                    continue
+        if skcc_search:
+            query += " AND UPPER(skcc_number) LIKE ?"
+            params.append(f"%{skcc_search}%")
 
-            filtered_contacts.append(contact)
+        if qrp_only:
+            query += " AND (CAST(REPLACE(REPLACE(power, 'W', ''), ' ', '') AS REAL) <= 5 OR CAST(power_watts AS REAL) <= 5)"
+
+        query += " ORDER BY date DESC, time_on DESC"
+
+        # Execute query
+        try:
+            cursor = self.database.conn.cursor()
+            cursor.execute(query, params)
+            columns = [description[0] for description in cursor.description]
+            filtered_contacts = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            self.loading_label.config(text=f"Query error: {str(e)}", foreground='red')
+            filtered_contacts = []
+
+        # Store for double-click handler
+        self.all_contacts = filtered_contacts
 
         # Add filtered contacts to treeview (most recent first)
         for contact in filtered_contacts:
@@ -364,16 +375,22 @@ class ContactsTab:
             self.log_tree.item(item_id, tags=(str(contact.get('id', '')),))
 
         # Update results label
-        total = len(self.all_contacts)
         shown = len(filtered_contacts)
         has_filter = any([callsign_search, prefix_search, country_search, state_search,
                         continent_search, band_search, mode_search, date_from, date_to,
                         cq_zone_search, itu_zone_search, dxcc_search, pota_search,
                         sota_search, skcc_search, qrp_only])
         if has_filter:
+            # Get total count from database
+            try:
+                cursor = self.database.conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM contacts")
+                total = cursor.fetchone()[0]
+            except:
+                total = shown
             self.results_label.config(text=f"Showing {shown} of {total} contacts")
         else:
-            self.results_label.config(text=f"Total: {total} contacts")
+            self.results_label.config(text=f"Total: {shown} contacts")
 
     def clear_search(self):
         """Clear all search filters"""
@@ -394,6 +411,18 @@ class ContactsTab:
         self.skcc_search_var.set('')
         self.qrp_var.set(False)
         # apply_search() will be called automatically via trace
+
+    def _clear_placeholder(self, entry, var, placeholder):
+        """Clear placeholder text when entry gains focus"""
+        if var.get() == placeholder:
+            entry.delete(0, 'end')
+            entry.config(foreground='black')
+
+    def _set_placeholder(self, entry, var, placeholder):
+        """Set placeholder text when entry loses focus and is empty"""
+        if not var.get():
+            entry.insert(0, placeholder)
+            entry.config(foreground='gray')
 
     def on_contact_double_click(self, event):
         """Handle double-click on a contact to open detail view"""
