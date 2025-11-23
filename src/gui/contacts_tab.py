@@ -95,13 +95,23 @@ class ContactsTab:
         ttk.Label(search_row2, text="From:", width=6).pack(side='left', padx=2)
         self.date_from_var = tk.StringVar()
         self.date_from_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_from_var, width=10).pack(side='left', padx=2)
+        date_from_entry = ttk.Entry(search_row2, textvariable=self.date_from_var, width=10)
+        date_from_entry.pack(side='left', padx=2)
+        date_from_entry.insert(0, 'YYYY-MM-DD')
+        date_from_entry.config(foreground='gray')
+        date_from_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
+        date_from_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
 
         # Date To
         ttk.Label(search_row2, text="To:", width=4).pack(side='left', padx=2)
         self.date_to_var = tk.StringVar()
         self.date_to_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row2, textvariable=self.date_to_var, width=10).pack(side='left', padx=2)
+        date_to_entry = ttk.Entry(search_row2, textvariable=self.date_to_var, width=10)
+        date_to_entry.pack(side='left', padx=2)
+        date_to_entry.insert(0, 'YYYY-MM-DD')
+        date_to_entry.config(foreground='gray')
+        date_to_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
+        date_to_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
 
         # CQ Zone
         ttk.Label(search_row2, text="CQ Zone:", width=8).pack(side='left', padx=2)
@@ -251,6 +261,11 @@ class ContactsTab:
         mode_search = self.mode_search_var.get().strip().upper()
         date_from = self.date_from_var.get().strip()
         date_to = self.date_to_var.get().strip()
+        # Ignore placeholder text
+        if date_from == 'YYYY-MM-DD':
+            date_from = ''
+        if date_to == 'YYYY-MM-DD':
+            date_to = ''
         cq_zone_search = self.cq_zone_var.get().strip()
         itu_zone_search = self.itu_zone_var.get().strip()
         dxcc_search = self.dxcc_search_var.get().strip().upper()
@@ -394,6 +409,18 @@ class ContactsTab:
         self.skcc_search_var.set('')
         self.qrp_var.set(False)
         # apply_search() will be called automatically via trace
+
+    def _clear_placeholder(self, entry, var, placeholder):
+        """Clear placeholder text when entry gains focus"""
+        if var.get() == placeholder:
+            entry.delete(0, 'end')
+            entry.config(foreground='black')
+
+    def _set_placeholder(self, entry, var, placeholder):
+        """Set placeholder text when entry loses focus and is empty"""
+        if not var.get():
+            entry.insert(0, placeholder)
+            entry.config(foreground='gray')
 
     def on_contact_double_click(self, event):
         """Handle double-click on a contact to open detail view"""
