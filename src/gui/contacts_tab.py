@@ -390,7 +390,8 @@ class ContactsTab:
                 cursor = self.database.conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM contacts")
                 total = cursor.fetchone()[0]
-            except:
+            except Exception as e:
+                print(f"Warning: Could not get total count: {e}")
                 total = shown
             self.results_label.config(text=f"Showing {shown} of {total} contacts")
         else:
@@ -679,16 +680,16 @@ class ContactsTab:
 
                     try:
                         qrz_data = self.qrz_session.lookup_callsign(callsign)
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"QRZ lookup failed for {callsign}: {e}")
 
             # Look up SKCC number
             try:
                 member_info = self.skcc_roster.lookup_member(callsign)
                 if member_info and member_info.get('skcc_number'):
                     skcc_number = member_info['skcc_number']
-            except:
-                pass
+            except Exception as e:
+                print(f"SKCC roster lookup failed for {callsign}: {e}")
 
             if not skcc_number:
                 try:
@@ -701,8 +702,8 @@ class ContactsTab:
                     result = cursor.fetchone()
                     if result:
                         skcc_number = result[0]
-                except:
-                    pass
+                except Exception as e:
+                    print(f"SKCC database lookup failed for {callsign}: {e}")
 
             self.frame.after(0, lambda: self._show_lookup_results(
                 callsign, original_button_text, qrz_data, skcc_number
