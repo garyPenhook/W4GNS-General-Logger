@@ -247,6 +247,10 @@ class ContactsTab:
 
     def apply_search(self):
         """Apply search filters and update display using database query"""
+        # Guard against early calls during widget creation
+        if not hasattr(self, 'log_tree'):
+            return
+
         # Clear existing items
         for item in self.log_tree.get_children():
             self.log_tree.delete(item)
