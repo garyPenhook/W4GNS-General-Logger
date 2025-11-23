@@ -681,7 +681,7 @@ class ContestTab:
             member_info = self.skcc_roster.lookup_member(callsign)
             if member_info and member_info.get('skcc_number'):
                 return member_info['skcc_number']
-        except:
+        except (AttributeError, KeyError, TypeError):
             pass
 
         # Then try previous contacts in database
@@ -696,7 +696,7 @@ class ContestTab:
             result = cursor.fetchone()
             if result:
                 return result[0]
-        except:
+        except Exception:
             pass
 
         return None

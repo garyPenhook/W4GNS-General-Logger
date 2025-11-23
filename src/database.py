@@ -635,14 +635,21 @@ class Database:
 
     def get_all_contacts(self, limit=100):
         """Retrieve all contacts (most recent first)"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT * FROM contacts
-            ORDER BY date DESC, time_on DESC
-            LIMIT ?
-        ''', (limit,))
-        # Convert Row objects to dicts for compatibility
-        return [dict(row) for row in cursor.fetchall()]
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT * FROM contacts
+                ORDER BY date DESC, time_on DESC
+                LIMIT ?
+            ''', (limit,))
+            # Convert Row objects to dicts for compatibility
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database read failed in get_all_contacts: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in get_all_contacts: {type(e).__name__}: {e}")
+            return []
 
     def get_contacts_by_date_range(self, start_date, end_date, start_time=None, end_time=None):
         """
@@ -666,26 +673,40 @@ class Database:
             end_time = '23:59'
 
         # Query contacts within date/time range
-        cursor.execute('''
-            SELECT * FROM contacts
-            WHERE (date > ? OR (date = ? AND time_on >= ?))
-              AND (date < ? OR (date = ? AND time_on <= ?))
-            ORDER BY date ASC, time_on ASC
-        ''', (start_date, start_date, start_time, end_date, end_date, end_time))
+        try:
+            cursor.execute('''
+                SELECT * FROM contacts
+                WHERE (date > ? OR (date = ? AND time_on >= ?))
+                  AND (date < ? OR (date = ? AND time_on <= ?))
+                ORDER BY date ASC, time_on ASC
+            ''', (start_date, start_date, start_time, end_date, end_date, end_time))
 
-        # Convert Row objects to dicts for compatibility
-        return [dict(row) for row in cursor.fetchall()]
+            # Convert Row objects to dicts for compatibility
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database read failed in get_contacts_by_date_range: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in get_contacts_by_date_range: {type(e).__name__}: {e}")
+            return []
 
     def search_contacts(self, callsign):
         """Search for contacts by callsign"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT * FROM contacts
-            WHERE callsign LIKE ?
-            ORDER BY date DESC, time_on DESC
-        ''', (f'%{callsign}%',))
-        # Convert Row objects to dicts for compatibility
-        return [dict(row) for row in cursor.fetchall()]
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT * FROM contacts
+                WHERE callsign LIKE ?
+                ORDER BY date DESC, time_on DESC
+            ''', (f'%{callsign}%',))
+            # Convert Row objects to dicts for compatibility
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database read failed in search_contacts: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in search_contacts: {type(e).__name__}: {e}")
+            return []
 
     def check_duplicate(self, callsign, band, mode, date):
         """
@@ -694,15 +715,22 @@ class Database:
         Returns:
             dict with duplicate info or None if not a duplicate
         """
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT * FROM contacts
-            WHERE callsign = ? AND band = ? AND mode = ? AND date = ?
-            ORDER BY time_on DESC
-            LIMIT 1
-        ''', (callsign.upper(), band, mode, date))
-        result = cursor.fetchone()
-        return dict(result) if result else None
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT * FROM contacts
+                WHERE callsign = ? AND band = ? AND mode = ? AND date = ?
+                ORDER BY time_on DESC
+                LIMIT 1
+            ''', (callsign.upper(), band, mode, date))
+            result = cursor.fetchone()
+            return dict(result) if result else None
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database read failed in check_duplicate: {e}")
+            return None
+        except Exception as e:
+            print(f"ERROR: Unexpected error in check_duplicate: {type(e).__name__}: {e}")
+            return None
 
     def check_duplicate_within_time_window(self, callsign, date, time_on, window_minutes=10):
         """
@@ -769,32 +797,44 @@ class Database:
 
     def add_dx_spot(self, spot_data):
         """Add a DX spot to cache"""
-        with self._write_lock:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                INSERT INTO dx_spots
-                (callsign, frequency, spotter, time, comment, cluster_source)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                spot_data.get('callsign', ''),
-                spot_data.get('frequency', ''),
-                spot_data.get('spotter', ''),
-                spot_data.get('time', ''),
-                spot_data.get('comment', ''),
-                spot_data.get('cluster_source', '')
-            ))
-            self.conn.commit()
+        try:
+            with self._write_lock:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                    INSERT INTO dx_spots
+                    (callsign, frequency, spotter, time, comment, cluster_source)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    spot_data.get('callsign', ''),
+                    spot_data.get('frequency', ''),
+                    spot_data.get('spotter', ''),
+                    spot_data.get('time', ''),
+                    spot_data.get('comment', ''),
+                    spot_data.get('cluster_source', '')
+                ))
+                self.conn.commit()
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database write failed in add_dx_spot: {e}")
+        except Exception as e:
+            print(f"ERROR: Unexpected error in add_dx_spot: {type(e).__name__}: {e}")
 
     def get_recent_spots(self, limit=50):
         """Get recent DX spots"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            SELECT * FROM dx_spots
-            ORDER BY received_at DESC
-            LIMIT ?
-        ''', (limit,))
-        # Convert Row objects to dicts for compatibility
-        return [dict(row) for row in cursor.fetchall()]
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT * FROM dx_spots
+                ORDER BY received_at DESC
+                LIMIT ?
+            ''', (limit,))
+            # Convert Row objects to dicts for compatibility
+            return [dict(row) for row in cursor.fetchall()]
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database read failed in get_recent_spots: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in get_recent_spots: {type(e).__name__}: {e}")
+            return []
 
     def update_contact(self, contact_id, contact_data):
         """
@@ -804,28 +844,35 @@ class Database:
             contact_id: The ID of the contact to update
             contact_data: Dictionary containing the updated contact fields
         """
-        with self._write_lock:
-            cursor = self.conn.cursor()
+        try:
+            with self._write_lock:
+                cursor = self.conn.cursor()
 
-            # Build the UPDATE query dynamically based on provided fields
-            fields = []
-            values = []
+                # Build the UPDATE query dynamically based on provided fields
+                fields = []
+                values = []
 
-            for field, value in contact_data.items():
-                if field != 'id':  # Don't update the ID field
-                    fields.append(f"{field} = ?")
-                    values.append(value)
+                for field, value in contact_data.items():
+                    if field != 'id':  # Don't update the ID field
+                        fields.append(f"{field} = ?")
+                        values.append(value)
 
-            if not fields:
-                return  # Nothing to update
+                if not fields:
+                    return  # Nothing to update
 
-            # Add the contact_id for the WHERE clause
-            values.append(contact_id)
+                # Add the contact_id for the WHERE clause
+                values.append(contact_id)
 
-            query = f"UPDATE contacts SET {', '.join(fields)} WHERE id = ?"
+                query = f"UPDATE contacts SET {', '.join(fields)} WHERE id = ?"
 
-            cursor.execute(query, values)
-            self.conn.commit()
+                cursor.execute(query, values)
+                self.conn.commit()
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database update failed in update_contact: {e}")
+            raise
+        except Exception as e:
+            print(f"ERROR: Unexpected error in update_contact: {type(e).__name__}: {e}")
+            raise
 
     def delete_contact(self, contact_id):
         """
@@ -834,10 +881,17 @@ class Database:
         Args:
             contact_id: The ID of the contact to delete
         """
-        with self._write_lock:
-            cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
-            self.conn.commit()
+        try:
+            with self._write_lock:
+                cursor = self.conn.cursor()
+                cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+                self.conn.commit()
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database delete failed in delete_contact: {e}")
+            raise
+        except Exception as e:
+            print(f"ERROR: Unexpected error in delete_contact: {type(e).__name__}: {e}")
+            raise
 
     def close(self):
         """Close database connection"""

@@ -4,6 +4,8 @@ Configuration management
 
 import json
 import os
+import tempfile
+import shutil
 
 
 class Config:
@@ -21,22 +23,58 @@ class Config:
 
     def load(self):
         """Load configuration from file"""
-        if os.path.exists(self.config_path):
+        if not os.path.exists(self.config_path):
+            return self.get_defaults()
+
+        try:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Config file is malformed JSON: {e}")
+            # Backup the corrupted file
+            backup_path = self.config_path + '.corrupted'
             try:
-                with open(self.config_path, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"Error loading config: {e}")
-                return self.get_defaults()
-        return self.get_defaults()
+                shutil.copy2(self.config_path, backup_path)
+                print(f"Corrupted config backed up to: {backup_path}")
+            except Exception:
+                pass
+            return self.get_defaults()
+        except PermissionError as e:
+            print(f"ERROR: Cannot read config file (permission denied): {e}")
+            return self.get_defaults()
+        except IOError as e:
+            print(f"ERROR: Cannot read config file: {e}")
+            return self.get_defaults()
+        except Exception as e:
+            print(f"ERROR: Unexpected error loading config: {type(e).__name__}: {e}")
+            return self.get_defaults()
 
     def save(self):
-        """Save configuration to file"""
+        """Save configuration to file using atomic write"""
         try:
-            with open(self.config_path, 'w') as f:
-                json.dump(self.data, f, indent=2)
+            # Get directory of config file
+            config_dir = os.path.dirname(self.config_path) or '.'
+
+            # Write to temporary file first
+            fd, temp_path = tempfile.mkstemp(dir=config_dir, suffix='.tmp')
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(self.data, f, indent=2)
+
+                # Atomic rename (overwrites existing file)
+                shutil.move(temp_path, self.config_path)
+            except Exception:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise
+
+        except PermissionError as e:
+            print(f"ERROR: Cannot save config file (permission denied): {e}")
+        except IOError as e:
+            print(f"ERROR: Cannot save config file: {e}")
         except Exception as e:
-            print(f"Error saving config: {e}")
+            print(f"ERROR: Unexpected error saving config: {type(e).__name__}: {e}")
 
     def get_defaults(self):
         """Get default configuration"""
