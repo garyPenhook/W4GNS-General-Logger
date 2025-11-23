@@ -155,8 +155,11 @@ class ContactsTab:
         self.qrp_var.trace('w', lambda *args: self.apply_search())
         ttk.Checkbutton(search_row3, text="QRP (≤5W)", variable=self.qrp_var).pack(side='left', padx=10)
 
+        # Search button
+        ttk.Button(search_row3, text="Search", command=self.apply_search).pack(side='left', padx=5)
+
         # Clear search button
-        ttk.Button(search_row3, text="Clear Search", command=self.clear_search).pack(side='left', padx=10)
+        ttk.Button(search_row3, text="Clear", command=self.clear_search).pack(side='left', padx=5)
 
         # Loading indicator
         self.loading_label = ttk.Label(search_row3, text="", foreground='blue', font=('', 9))
