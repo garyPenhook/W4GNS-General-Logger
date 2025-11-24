@@ -462,6 +462,10 @@ class EnhancedLoggingTab:
         """Update the UTC clock display every second"""
         now = datetime.utcnow()
         self.clock_label.config(text=now.strftime("%H:%M:%S"))
+        # Update date field if UTC date has changed (midnight crossing)
+        current_date = now.strftime("%Y-%m-%d")
+        if self.date_var.get() != current_date:
+            self.date_var.set(current_date)
         # Schedule next update in 1 second
         self.frame.after(1000, self.update_clock)
 
