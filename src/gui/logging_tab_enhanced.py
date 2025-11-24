@@ -485,21 +485,28 @@ class EnhancedLoggingTab:
     def sync_online_time(self):
         """Sync time with online reference every hour"""
         def fetch_time():
-            try:
-                # Use worldtimeapi.org for UTC reference
-                url = "http://worldtimeapi.org/api/timezone/Etc/UTC"
-                req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
-                with urllib.request.urlopen(req, timeout=10) as response:
-                    data = json.loads(response.read().decode())
-                    # Parse the datetime from API
-                    online_time_str = data['datetime'][:19]  # Get YYYY-MM-DDTHH:MM:SS
-                    online_time = datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
-                    local_utc = datetime.utcnow()
-                    # Calculate offset in seconds
-                    self.time_offset = (online_time - local_utc).total_seconds()
-                    print(f"Time synced with online reference. Offset: {self.time_offset:.2f}s")
-            except Exception as e:
-                print(f"Failed to sync online time: {e}")
+            # Try multiple time sources for reliability
+            time_sources = [
+                ("https://worldtimeapi.org/api/timezone/Etc/UTC", self._parse_worldtimeapi),
+                ("https://timeapi.io/api/Time/current/zone?timeZone=UTC", self._parse_timeapi),
+            ]
+
+            for url, parser in time_sources:
+                try:
+                    req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        data = json.loads(response.read().decode())
+                        online_time = parser(data)
+                        if online_time:
+                            local_utc = datetime.utcnow()
+                            self.time_offset = (online_time - local_utc).total_seconds()
+                            print(f"Time synced with online reference. Offset: {self.time_offset:.2f}s")
+                            return
+                except Exception as e:
+                    print(f"Time sync failed ({url.split('/')[2]}): {e}")
+                    continue
+
+            print("All time sync sources failed, using local clock")
 
         # Run in background thread to not block UI
         thread = threading.Thread(target=fetch_time, daemon=True)
@@ -507,6 +514,18 @@ class EnhancedLoggingTab:
 
         # Schedule next sync in 1 hour (3600000 ms)
         self.frame.after(3600000, self.sync_online_time)
+
+    def _parse_worldtimeapi(self, data):
+        """Parse time from worldtimeapi.org response"""
+        online_time_str = data['datetime'][:19]
+        return datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
+
+    def _parse_timeapi(self, data):
+        """Parse time from timeapi.io response"""
+        return datetime(
+            data['year'], data['month'], data['day'],
+            data['hour'], data['minute'], data['seconds']
+        )
 
     def on_callsign_keypress(self, event=None):
         """Display previous QSOs as user types in callsign field"""
