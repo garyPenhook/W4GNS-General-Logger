@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 import threading
+import urllib.request
+import json
 from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
@@ -35,6 +37,9 @@ class EnhancedLoggingTab:
         # Time tracking for QSO
         self.time_on_captured = False  # Track if time_on has been set for current contact
 
+        # Time offset from online reference (in seconds)
+        self.time_offset = 0.0
+
         self.create_widgets()
 
         # Set up callsign lookup callback
@@ -48,6 +53,9 @@ class EnhancedLoggingTab:
 
         # Start the UTC clock
         self.update_clock()
+
+        # Start online time sync (runs every hour)
+        self.sync_online_time()
 
         # Focus on callsign field
         self.callsign_entry.focus()
@@ -458,12 +466,47 @@ class EnhancedLoggingTab:
         ttk.Label(pota_info_row, text="Showing: CW spots only",
                  foreground=get_info_color(self.config), font=('', 9, 'bold')).pack(side='left')
 
+    def get_corrected_utc(self):
+        """Get UTC time corrected by online time offset"""
+        from datetime import timedelta
+        return datetime.utcnow() + timedelta(seconds=self.time_offset)
+
     def update_clock(self):
         """Update the UTC clock display every second"""
-        now = datetime.utcnow()
+        now = self.get_corrected_utc()
         self.clock_label.config(text=now.strftime("%H:%M:%S"))
+        # Update date field if UTC date has changed (midnight crossing)
+        current_date = now.strftime("%Y-%m-%d")
+        if self.date_var.get() != current_date:
+            self.date_var.set(current_date)
         # Schedule next update in 1 second
         self.frame.after(1000, self.update_clock)
+
+    def sync_online_time(self):
+        """Sync time with online reference every hour"""
+        def fetch_time():
+            try:
+                # Use worldtimeapi.org for UTC reference
+                url = "http://worldtimeapi.org/api/timezone/Etc/UTC"
+                req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    data = json.loads(response.read().decode())
+                    # Parse the datetime from API
+                    online_time_str = data['datetime'][:19]  # Get YYYY-MM-DDTHH:MM:SS
+                    online_time = datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
+                    local_utc = datetime.utcnow()
+                    # Calculate offset in seconds
+                    self.time_offset = (online_time - local_utc).total_seconds()
+                    print(f"Time synced with online reference. Offset: {self.time_offset:.2f}s")
+            except Exception as e:
+                print(f"Failed to sync online time: {e}")
+
+        # Run in background thread to not block UI
+        thread = threading.Thread(target=fetch_time, daemon=True)
+        thread.start()
+
+        # Schedule next sync in 1 hour (3600000 ms)
+        self.frame.after(3600000, self.sync_online_time)
 
     def on_callsign_keypress(self, event=None):
         """Display previous QSOs as user types in callsign field"""
@@ -477,7 +520,7 @@ class EnhancedLoggingTab:
 
         # Capture time_on if callsign has content and time hasn't been captured yet
         if callsign and not self.time_on_captured:
-            current_time = datetime.utcnow().strftime("%H:%M")
+            current_time = self.get_corrected_utc().strftime("%H:%M")
             self.time_on_var.set(current_time)
             self.time_on_captured = True
             print(f"Time ON captured: {current_time}")
@@ -844,7 +887,7 @@ class EnhancedLoggingTab:
             return
 
         # Capture time_off when logging contact
-        current_time = datetime.utcnow().strftime("%H:%M")
+        current_time = self.get_corrected_utc().strftime("%H:%M")
         self.time_off_var.set(current_time)
         print(f"Time OFF captured: {current_time}")
 
@@ -949,7 +992,7 @@ class EnhancedLoggingTab:
     def clear_form(self):
         """Clear all input fields"""
         self.callsign_var.set('')
-        self.date_var.set(datetime.utcnow().strftime("%Y-%m-%d"))
+        self.date_var.set(self.get_corrected_utc().strftime("%Y-%m-%d"))
         self.time_on_var.set('')  # Clear time_on (will be captured on next callsign entry)
         self.time_off_var.set('')  # Clear time_off
         self.time_on_captured = False  # Reset flag for next contact
