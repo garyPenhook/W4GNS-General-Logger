@@ -486,10 +486,9 @@ class EnhancedLoggingTab:
         """Sync time with online reference every hour"""
         def fetch_time():
             # Try multiple time sources for reliability with retry logic
+            # Note: Using HTTP instead of HTTPS to avoid SSL/TLS handshake issues
             time_sources = [
-                ("https://worldtimeapi.org/api/timezone/Etc/UTC", self._parse_worldtimeapi),
-                ("http://worldclockapi.com/api/json/utc/now", self._parse_worldclockapi),
-                ("https://timeapi.io/api/Time/current/zone?timeZone=UTC", self._parse_timeapi),
+                ("http://worldtimeapi.org/api/timezone/Etc/UTC", self._parse_worldtimeapi),
             ]
 
             # Retry parameters (matching HamQSL retry logic)
@@ -532,7 +531,7 @@ class EnhancedLoggingTab:
                             print(f"Time sync failed ({source_name}): {e}")
                             break
 
-            print("All time sync sources failed, using local clock")
+            print("All time sync sources failed, using local system clock")
 
         # Run in background thread to not block UI
         thread = threading.Thread(target=fetch_time, daemon=True)
