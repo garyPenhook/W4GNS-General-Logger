@@ -485,26 +485,52 @@ class EnhancedLoggingTab:
     def sync_online_time(self):
         """Sync time with online reference every hour"""
         def fetch_time():
-            # Try multiple time sources for reliability
+            # Try multiple time sources for reliability with retry logic
             time_sources = [
                 ("https://worldtimeapi.org/api/timezone/Etc/UTC", self._parse_worldtimeapi),
+                ("http://worldclockapi.com/api/json/utc/now", self._parse_worldclockapi),
                 ("https://timeapi.io/api/Time/current/zone?timeZone=UTC", self._parse_timeapi),
             ]
 
+            # Retry parameters (matching HamQSL retry logic)
+            max_retries = 4
+            retry_delays = [2, 4, 8, 16]  # Exponential backoff in seconds
+
             for url, parser in time_sources:
-                try:
-                    req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        data = json.loads(response.read().decode())
-                        online_time = parser(data)
-                        if online_time:
-                            local_utc = datetime.utcnow()
-                            self.time_offset = (online_time - local_utc).total_seconds()
-                            print(f"Time synced with online reference. Offset: {self.time_offset:.2f}s")
-                            return
-                except Exception as e:
-                    print(f"Time sync failed ({url.split('/')[2]}): {e}")
-                    continue
+                source_name = url.split('/')[2]
+
+                # Try each source with retry logic
+                for attempt in range(max_retries):
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
+                        with urllib.request.urlopen(req, timeout=10) as response:
+                            data = json.loads(response.read().decode())
+                            online_time = parser(data)
+                            if online_time:
+                                local_utc = datetime.utcnow()
+                                self.time_offset = (online_time - local_utc).total_seconds()
+                                print(f"Time synced with {source_name}. Offset: {self.time_offset:.2f}s")
+                                return
+                    except urllib.error.URLError as e:
+                        if attempt < max_retries - 1:
+                            delay = retry_delays[attempt]
+                            print(f"Time sync {source_name} (attempt {attempt + 1}/{max_retries}): {e}, retrying in {delay}s...")
+                            import time
+                            time.sleep(delay)
+                            continue
+                        else:
+                            print(f"Time sync failed ({source_name}): {e}")
+                            break
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            delay = retry_delays[attempt]
+                            print(f"Time sync {source_name} (attempt {attempt + 1}/{max_retries}): {e}, retrying in {delay}s...")
+                            import time
+                            time.sleep(delay)
+                            continue
+                        else:
+                            print(f"Time sync failed ({source_name}): {e}")
+                            break
 
             print("All time sync sources failed, using local clock")
 
@@ -518,6 +544,12 @@ class EnhancedLoggingTab:
     def _parse_worldtimeapi(self, data):
         """Parse time from worldtimeapi.org response"""
         online_time_str = data['datetime'][:19]
+        return datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
+
+    def _parse_worldclockapi(self, data):
+        """Parse time from worldclockapi.com response"""
+        # Expected format: "2025-01-15T12:34:56Z"
+        online_time_str = data['currentDateTime'][:19]
         return datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
 
     def _parse_timeapi(self, data):
