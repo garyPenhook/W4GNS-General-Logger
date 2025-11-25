@@ -654,53 +654,851 @@ class HelpContent:
     # Add remaining stub methods to prevent errors
     @staticmethod
     def wes_contest():
-        return [("WES - Weekend Sprintathon\n", 'title'),
-                ("\nMonthly weekend SKCC contest.\n\n", ())]
+        return [
+            ("WES - Weekend Sprintathon\n", 'title'),
+            ("\nThe Weekend Sprintathon (WES) is SKCC's monthly weekend contest celebrating straight key operation.\n\n", ()),
+
+            ("Schedule:\n", 'heading'),
+            ("• Monthly event (check skccgroup.com for dates)\n", 'bullet'),
+            ("• Typically runs Friday-Sunday\n", 'bullet'),
+            ("• 48-hour operating window\n", 'bullet'),
+            ("• CW (Morse code) only\n", 'bullet'),
+            ("• Mechanical keys only (straight key, bug, sideswiper)\n\n", 'bullet'),
+
+            ("Objective:\n", 'heading'),
+            ("Work as many SKCC members as possible on as many bands as possible to maximize your score.\n\n", ()),
+
+            ("Scoring Formula:\n", 'heading'),
+            ("Score = (QSO Points × Multipliers) + Bonuses\n\n", 'bold'),
+
+            ("• QSO Points: 2 points per SKCC member contact\n", 'bullet'),
+            ("• Multipliers: Unique states/provinces/countries worked\n", 'bullet'),
+            ("• Bonuses: C/T/S achievements, KS1KCC station, monthly theme\n\n", 'bullet'),
+
+            ("Monthly Themes (Rotating):\n", 'heading'),
+            ("WES features a different theme each month with bonus points:\n", ()),
+            ("• January - Winter Bands (160m/80m)\n", 'bullet'),
+            ("• February - Boat Anchors (vintage rigs)\n", 'bullet'),
+            ("• March - Bug/Cootie (semi-automatic keys)\n", 'bullet'),
+            ("• April - Easter Egg Hunt\n", 'bullet'),
+            ("• May - First Year Members\n", 'bullet'),
+            ("• June - Old Timers/Summer Bands (10m/15m/20m)\n", 'bullet'),
+            ("• July - 13 Colonies (special calls)\n", 'bullet'),
+            ("• August - Home Brew Key (homemade keys)\n", 'bullet'),
+            ("• September - Club Calls\n", 'bullet'),
+            ("• October - TKA (Triple Key Award holders)\n", 'bullet'),
+            ("• November - Veterans\n", 'bullet'),
+            ("• December - Reindeer\n\n", 'bullet'),
+
+            ("Bonus Points:\n", 'heading'),
+            ("Values change monthly - check skccgroup.com:\n", ()),
+            ("• Centurion (C): Typically 5 points\n", 'bullet'),
+            ("• Tribune (T): Typically 10 points\n", 'bullet'),
+            ("• Senator (S): Typically 15 points\n", 'bullet'),
+            ("• KS1KCC: 25 points per band (special station)\n", 'bullet'),
+            ("• Monthly Theme: Varies by month\n\n", 'bullet'),
+
+            ("WES Workflow in App:\n", 'heading'),
+            ("1. Go to Contest tab\n", 'numbered'),
+            ("2. Select 'WES - Weekend Sprintathon'\n", 'numbered'),
+            ("3. Update bonus values from SKCC website\n", 'numbered'),
+            ("4. Select current monthly theme from dropdown\n", 'numbered'),
+            ("5. Click 'Start Contest'\n", 'numbered'),
+            ("6. Log QSOs - duplicates prevented per band\n", 'numbered'),
+            ("7. Watch score and rate update in real-time\n", 'numbered'),
+            ("8. Click 'End Contest' when finished\n", 'numbered'),
+            ("9. Export for SKCC submission\n\n", 'numbered'),
+
+            ("Exchange:\n", 'heading'),
+            ("Send: RST + State/Province + SKCC# or SPF\n", ()),
+            ("Receive: Same information from other station\n\n", ()),
+
+            ("Duplicates:\n", 'heading'),
+            ("You can work the same station on different bands:\n", ()),
+            ("• K1ABC on 40m = Valid\n", 'bullet'),
+            ("• K1ABC on 20m = Valid (different band)\n", 'bullet'),
+            ("• K1ABC on 40m again = DUPE (same band)\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Contest Scoring", 'link', 'link_contest_scoring'), (" - Detailed scoring breakdown\n", ()),
+            ("• ", ()), ("Exporting Results", 'link', 'link_contest_export'), (" - Submit to SKCC\n", ()),
+            ("• ", ()), ("Contest Overview", 'link', 'link_contest_overview'), (" - All contest features\n", ())
+        ]
 
     @staticmethod
     def sks_contest():
-        return [("SKS - Weekday Sprint\n", 'title'),
-                ("\n2-hour sprint on 4th Wednesday each month, 0000-0200 UTC.\n\n", ())]
+        return [
+            ("SKS - Weekday Sprint\n", 'title'),
+            ("\nThe Weekday Sprint (SKS) is a fast-paced 2-hour SKCC contest held monthly on Wednesday evenings.\n\n", ()),
+
+            ("Schedule:\n", 'heading'),
+            ("• 4th Wednesday of every month\n", 'bullet'),
+            ("• Time: 0000-0200 UTC (evening US time on Tuesday)\n", 'bullet'),
+            ("• Duration: 2 hours\n", 'bullet'),
+            ("• CW (Morse code) only\n", 'bullet'),
+            ("• Mechanical keys only (straight key, bug, sideswiper)\n\n", 'bullet'),
+
+            ("Time Zone Conversion Examples:\n", 'subheading'),
+            ("0000-0200 UTC translates to:\n", ()),
+            ("• US Eastern: 7pm-9pm (Tuesday evening)\n", 'bullet'),
+            ("• US Central: 6pm-8pm (Tuesday evening)\n", 'bullet'),
+            ("• US Mountain: 5pm-7pm (Tuesday evening)\n", 'bullet'),
+            ("• US Pacific: 4pm-6pm (Tuesday evening)\n\n", 'bullet'),
+
+            ("Objective:\n", 'heading'),
+            ("Work as many SKCC members as possible in 2 hours to maximize your score. Speed and efficiency are key!\n\n", ()),
+
+            ("Scoring Formula:\n", 'heading'),
+            ("Score = (QSO Points × Multipliers) + Bonuses\n\n", 'bold'),
+
+            ("• QSO Points: 2 points per SKCC member contact\n", 'bullet'),
+            ("• Multipliers: Unique states/provinces/countries worked\n", 'bullet'),
+            ("• Bonuses: C/T/S achievements, Designated Member\n\n", 'bullet'),
+
+            ("Designated Member Bonus:\n", 'heading'),
+            ("SKCC designates one member each month as a bonus station:\n", ()),
+            ("• Typically worth 25 points PER BAND\n", 'bullet'),
+            ("• Changes monthly - check SKCC website\n", 'bullet'),
+            ("• Working on multiple bands multiplies the bonus\n", 'bullet'),
+            ("• Configure in Contest tab → SKS Member field\n\n", 'bullet'),
+
+            ("Example: Work designated member on 3 bands = 75 bonus points!\n\n", 'italic'),
+
+            ("Bonus Points (Check SKCC website monthly):\n", 'heading'),
+            ("• Centurion (C): Typically 5 points\n", 'bullet'),
+            ("• Tribune (T): Typically 10 points\n", 'bullet'),
+            ("• Senator (S): Typically 15 points\n", 'bullet'),
+            ("• Designated Member: 25 points per band\n\n", 'bullet'),
+
+            ("SKS Workflow in App:\n", 'heading'),
+            ("1. Go to Contest tab\n", 'numbered'),
+            ("2. Select 'SKS - Weekday Sprint'\n", 'numbered'),
+            ("3. Update bonus values from SKCC website\n", 'numbered'),
+            ("4. Enter designated member callsign\n", 'numbered'),
+            ("5. Click 'Start Contest' at 0000 UTC\n", 'numbered'),
+            ("6. Log QSOs rapidly - duplicates prevented per band\n", 'numbered'),
+            ("7. Monitor your rate (QSOs per hour)\n", 'numbered'),
+            ("8. Click 'End Contest' at 0200 UTC\n", 'numbered'),
+            ("9. Export for SKCC submission\n\n", 'numbered'),
+
+            ("Exchange:\n", 'heading'),
+            ("Send: RST + State/Province + SKCC# or SPF\n", ()),
+            ("Receive: Same information from other station\n\n", ()),
+
+            ("Duplicates:\n", 'heading'),
+            ("Same as WES - can work same station on different bands:\n", ()),
+            ("• N1ABC on 40m = Valid\n", 'bullet'),
+            ("• N1ABC on 20m = Valid (different band)\n", 'bullet'),
+            ("• N1ABC on 40m again = DUPE\n\n", 'bullet'),
+
+            ("Tips for SKS Success:\n", 'heading'),
+            ("• Pre-tune to popular SKCC frequencies (3.550, 7.055, 14.050)\n", 'bullet'),
+            ("• Keep exchanges brief - it's a sprint!\n", 'bullet'),
+            ("• Send at comfortable speed (12-18 WPM typical)\n", 'bullet'),
+            ("• Listen for the designated member on multiple bands\n", 'bullet'),
+            ("• Watch your QSO rate - aim for 20+ QSOs/hour\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Contest Scoring", 'link', 'link_contest_scoring'), (" - Detailed scoring breakdown\n", ()),
+            ("• ", ()), ("Exporting Results", 'link', 'link_contest_export'), (" - Submit to SKCC\n", ()),
+            ("• ", ()), ("Contest Overview", 'link', 'link_contest_overview'), (" - All contest features\n", ())
+        ]
 
     @staticmethod
     def k3y_contest():
-        return [("K3Y - Straight Key Month\n", 'title'),
-                ("\nJanuary celebration of straight key operation.\n\n", ())]
+        return [
+            ("K3Y - Straight Key Month\n", 'title'),
+            ("\nK3Y is SKCC's annual January celebration of straight key operation, honoring the legacy of hand-sent Morse code.\n\n", ()),
+
+            ("Schedule:\n", 'heading'),
+            ("• Entire month of January (January 1-31)\n", 'bullet'),
+            ("• 31 days to participate\n", 'bullet'),
+            ("• CW (Morse code) only\n", 'bullet'),
+            ("• Straight keys ONLY (no bugs or sidesipers for K3Y)\n\n", 'bullet'),
+
+            ("Special Significance:\n", 'heading'),
+            ("K3Y celebrates the traditional straight key, the oldest and most basic form of CW operation. SKCC considers it the 'purist' form of hand-sent Morse.\n\n", ()),
+
+            ("Objective:\n", 'heading'),
+            ("Work as many SKCC members as possible throughout January using only a straight key.\n\n", ()),
+
+            ("Scoring Formula:\n", 'heading'),
+            ("Score = (QSO Points × Multipliers) + Bonuses\n\n", 'bold'),
+
+            ("• QSO Points: 2 points per SKCC member contact\n", 'bullet'),
+            ("• Multipliers: Unique states/provinces/countries worked\n", 'bullet'),
+            ("• Bonuses: C/T/S achievements, KS1KCC station\n\n", 'bullet'),
+
+            ("KS1KCC Special Station:\n", 'heading'),
+            ("The KS1KCC special event station operates during K3Y:\n", ()),
+            ("• Bonus: 25 points per band worked\n", 'bullet'),
+            ("• Listen for KS1KCC on popular bands\n", 'bullet'),
+            ("• Working multiple bands multiplies the bonus\n", 'bullet'),
+            ("• Example: KS1KCC on 40m, 20m, 15m = 75 points\n\n", 'bullet'),
+
+            ("Bonus Points (Check SKCC website):\n", 'heading'),
+            ("• Centurion (C): Typically 5 points\n", 'bullet'),
+            ("• Tribune (T): Typically 10 points\n", 'bullet'),
+            ("• Senator (S): Typically 15 points\n", 'bullet'),
+            ("• KS1KCC: 25 points per band\n\n", 'bullet'),
+
+            ("K3Y Workflow in App:\n", 'heading'),
+            ("1. Go to Contest tab\n", 'numbered'),
+            ("2. Select 'K3Y - Straight Key Month'\n", 'numbered'),
+            ("3. Update bonus values from SKCC website\n", 'numbered'),
+            ("4. Click 'Start Contest' (anytime in January)\n", 'numbered'),
+            ("5. Log QSOs throughout the month\n", 'numbered'),
+            ("6. Watch for KS1KCC on multiple bands\n", 'numbered'),
+            ("7. Track your score and multipliers\n", 'numbered'),
+            ("8. Click 'End Contest' at end of January\n", 'numbered'),
+            ("9. Export for SKCC submission\n\n", 'numbered'),
+
+            ("Exchange:\n", 'heading'),
+            ("Send: RST + State/Province + SKCC# or SPF\n", ()),
+            ("Receive: Same information from other station\n\n", ()),
+
+            ("Duplicates:\n", 'heading'),
+            ("Same as WES/SKS - can work same station on different bands:\n", ()),
+            ("• W2XYZ on 40m = Valid\n", 'bullet'),
+            ("• W2XYZ on 20m = Valid (different band)\n", 'bullet'),
+            ("• W2XYZ on 40m again = DUPE\n\n", 'bullet'),
+
+            ("Important Notes:\n", 'heading'),
+            ("• ONLY straight keys are valid for K3Y (bugs/sidesipers not allowed)\n", 'bullet'),
+            ("• Record your key type in Notes field for proof\n", 'bullet'),
+            ("• Entire month gives more time for casual operation\n", 'bullet'),
+            ("• Focus on quality contacts and clean sending\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Contest Scoring", 'link', 'link_contest_scoring'), (" - Detailed scoring breakdown\n", ()),
+            ("• ", ()), ("Exporting Results", 'link', 'link_contest_export'), (" - Submit to SKCC\n", ()),
+            ("• ", ()), ("Contest Overview", 'link', 'link_contest_overview'), (" - All contest features\n", ())
+        ]
 
     @staticmethod
     def contest_scoring():
-        return [("Scoring and Bonuses\n", 'title'),
-                ("\nScore = (QSO Points × Multipliers) + Bonuses\n\n", ())]
+        return [
+            ("Contest Scoring and Bonuses\n", 'title'),
+            ("\nDetailed breakdown of how SKCC contest scores are calculated.\n\n", ()),
+
+            ("Scoring Formula:\n", 'heading'),
+            ("Final Score = (QSO Points × Multipliers) + All Bonuses\n\n", 'bold'),
+
+            ("Component 1: QSO Points\n", 'heading'),
+            ("• 2 points per SKCC member contact\n", 'bullet'),
+            ("• Non-SKCC stations: 0 points (can still be multipliers)\n", 'bullet'),
+            ("• Example: 50 SKCC contacts = 100 QSO points\n\n", 'bullet'),
+
+            ("Component 2: Multipliers\n", 'heading'),
+            ("Unique states, provinces, and countries worked:\n", ()),
+            ("• Each unique US state = 1 multiplier\n", 'bullet'),
+            ("• Each unique Canadian province/territory = 1 multiplier\n", 'bullet'),
+            ("• Each unique DX country = 1 multiplier\n", 'bullet'),
+            ("• Work same state on different bands = still 1 multiplier\n", 'bullet'),
+            ("• Example: 25 states/provinces/countries = ×25\n\n", 'bullet'),
+
+            ("Component 3: Achievement Bonuses\n", 'heading'),
+            ("Earned when working SKCC members with awards:\n\n", ()),
+
+            ("Centurion (C) Bonus:\n", 'subheading'),
+            ("• Contact has 'C' suffix (e.g., 12345C)\n", 'bullet'),
+            ("• Typically 5 points per contact\n", 'bullet'),
+            ("• Only counted once per unique callsign\n", 'bullet'),
+            ("• Example: Work 10 different Centurions = 50 bonus points\n\n", 'bullet'),
+
+            ("Tribune (T) Bonus:\n", 'subheading'),
+            ("• Contact has 'T' suffix (e.g., 12345T)\n", 'bullet'),
+            ("• Typically 10 points per contact\n", 'bullet'),
+            ("• Only counted once per unique callsign\n", 'bullet'),
+            ("• Example: Work 5 different Tribunes = 50 bonus points\n\n", 'bullet'),
+
+            ("Senator (S) Bonus:\n", 'subheading'),
+            ("• Contact has 'S' suffix (e.g., 12345S)\n", 'bullet'),
+            ("• Typically 15 points per contact\n", 'bullet'),
+            ("• Only counted once per unique callsign\n", 'bullet'),
+            ("• Example: Work 3 different Senators = 45 bonus points\n\n", 'bullet'),
+
+            ("Component 4: Special Station Bonuses\n", 'heading'),
+
+            ("KS1KCC Bonus (WES/K3Y):\n", 'subheading'),
+            ("• Work the KS1KCC special event station\n", 'bullet'),
+            ("• Typically 25 points PER BAND\n", 'bullet'),
+            ("• Counted separately for each band\n", 'bullet'),
+            ("• Example: KS1KCC on 40m, 20m, 15m = 75 points\n\n", 'bullet'),
+
+            ("Designated Member Bonus (SKS Only):\n", 'subheading'),
+            ("• Work the monthly designated member\n", 'bullet'),
+            ("• Typically 25 points PER BAND\n", 'bullet'),
+            ("• Changes monthly - check SKCC website\n", 'bullet'),
+            ("• Configure in Contest tab → SKS Member field\n\n", 'bullet'),
+
+            ("Component 5: Monthly Theme Bonus (WES Only)\n", 'heading'),
+            ("Earn bonus points by matching the monthly theme:\n", ()),
+            ("• Theme changes each month\n", 'bullet'),
+            ("• Bonus values vary (typically 5-10 points)\n", 'bullet'),
+            ("• Select theme from dropdown in Contest tab\n", 'bullet'),
+            ("• Examples:\n", 'bullet'),
+            ("  - January: Use 160m or 80m (Winter Bands)\n", ()),
+            ("  - March: Use bug or cootie key\n", ()),
+            ("  - June: Use 10m, 15m, or 20m (Summer Bands)\n\n", ()),
+
+            ("Scoring Example (WES):\n", 'heading'),
+            ("50 QSO points × 25 multipliers = 1,250 base score\n", ()),
+            ("+ 5 Centurions × 5 pts = 25\n", ()),
+            ("+ 3 Tribunes × 10 pts = 30\n", ()),
+            ("+ 1 Senator × 15 pts = 15\n", ()),
+            ("+ KS1KCC on 3 bands × 25 pts = 75\n", ()),
+            ("+ 10 theme bonus QSOs × 5 pts = 50\n", ()),
+            ("Total Score = 1,445 points\n\n", 'bold'),
+
+            ("Live Score Display:\n", 'heading'),
+            ("The app shows real-time scoring as you log:\n", ()),
+            ("• QSO count and points\n", 'bullet'),
+            ("• Multiplier count\n", 'bullet'),
+            ("• Each bonus category breakdown\n", 'bullet'),
+            ("• Current total score\n", 'bullet'),
+            ("• QSO rate (per hour)\n\n", 'bullet'),
+
+            ("Important Notes:\n", 'heading'),
+            ("• Bonus values change monthly - always check SKCC website\n", 'bullet'),
+            ("• Update values in Contest tab before starting\n", 'bullet'),
+            ("• App validates SKCC numbers against roster\n", 'bullet'),
+            ("• Achievement bonuses (C/T/S) counted once per unique call\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("WES Contest", 'link', 'link_wes_contest'), ("\n", ()),
+            ("• ", ()), ("SKS Contest", 'link', 'link_sks_contest'), ("\n", ()),
+            ("• ", ()), ("K3Y Contest", 'link', 'link_k3y_contest'), ("\n", ())
+        ]
 
     @staticmethod
     def contest_export():
-        return [("Exporting Contest Results\n", 'title'),
-                ("\nClick 'Export for SKCC' button.\n\n", ())]
+        return [
+            ("Exporting Contest Results\n", 'title'),
+            ("\nExport your contest log for submission to SKCC in the proper format.\n\n", ()),
+
+            ("Location: Contest tab → Export for SKCC button\n\n", 'italic'),
+
+            ("Export Process:\n", 'heading'),
+            ("1. Complete your contest operating\n", 'numbered'),
+            ("2. Click 'End Contest' button\n", 'numbered'),
+            ("3. Click 'Export for SKCC' button\n", 'numbered'),
+            ("4. Choose save location and filename\n", 'numbered'),
+            ("5. Submit the file to SKCC website\n\n", 'numbered'),
+
+            ("Export File Contents:\n", 'heading'),
+            ("The exported file includes:\n\n", ()),
+
+            ("Header Section:\n", 'subheading'),
+            ("• Your callsign\n", 'bullet'),
+            ("• Contest type (WES/SKS/K3Y)\n", 'bullet'),
+            ("• Contest date/time period\n", 'bullet'),
+            ("• Score summary with complete breakdown\n", 'bullet'),
+            ("• QSO count, multipliers, and all bonuses\n\n", 'bullet'),
+
+            ("QSO Section:\n", 'subheading'),
+            ("Each contact line includes:\n", ()),
+            ("• Date and time (UTC)\n", 'bullet'),
+            ("• Callsign worked\n", 'bullet'),
+            ("• Frequency and band\n", 'bullet'),
+            ("• RST sent and received\n", 'bullet'),
+            ("• SKCC number received\n", 'bullet'),
+            ("• State/province/country\n", 'bullet'),
+            ("• Any bonuses earned (C/T/S, theme, etc.)\n\n", 'bullet'),
+
+            ("Score Summary Section:\n", 'subheading'),
+            ("Complete breakdown showing:\n", ()),
+            ("• Total QSOs and QSO points\n", 'bullet'),
+            ("• Multipliers (with list of states/provinces/countries)\n", 'bullet'),
+            ("• Centurion bonuses (count and points)\n", 'bullet'),
+            ("• Tribune bonuses (count and points)\n", 'bullet'),
+            ("• Senator bonuses (count and points)\n", 'bullet'),
+            ("• KS1KCC bonuses (bands and points)\n", 'bullet'),
+            ("• Designated member bonuses (SKS)\n", 'bullet'),
+            ("• Monthly theme bonuses (WES)\n", 'bullet'),
+            ("• Final total score\n\n", 'bullet'),
+
+            ("File Format:\n", 'heading'),
+            ("• Plain text format\n", 'bullet'),
+            ("• Human-readable\n", 'bullet'),
+            ("• Ready for SKCC submission\n", 'bullet'),
+            ("• Can be opened in any text editor\n\n", 'bullet'),
+
+            ("Submitting to SKCC:\n", 'heading'),
+            ("1. Visit skccgroup.com\n", 'numbered'),
+            ("2. Log into your account\n", 'numbered'),
+            ("3. Navigate to contest results submission\n", 'numbered'),
+            ("4. Upload or paste your exported file\n", 'numbered'),
+            ("5. Verify your score matches\n", 'numbered'),
+            ("6. Submit!\n\n", 'numbered'),
+
+            ("Alternative Export:\n", 'heading'),
+            ("You can also export contest QSOs as ADIF:\n", ()),
+            ("1. Note the contest start/end times\n", 'numbered'),
+            ("2. Go to File → Export by Date/Time Range\n", 'numbered'),
+            ("3. Enter contest time period\n", 'numbered'),
+            ("4. Export in ADIF format\n", 'numbered'),
+            ("5. Import into other logging software if needed\n\n", 'numbered'),
+
+            ("Tips:\n", 'heading'),
+            ("• Export immediately after contest while fresh\n", 'bullet'),
+            ("• Keep a copy of your export file for records\n", 'bullet'),
+            ("• Verify score matches your final display\n", 'bullet'),
+            ("• Submit within SKCC deadline (usually 1 week)\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Contest Scoring", 'link', 'link_contest_scoring'), (" - How scores are calculated\n", ()),
+            ("• ", ()), ("ADIF Export", 'link', 'link_adif_export'), (" - Alternative export format\n", ()),
+            ("• ", ()), ("Contest Overview", 'link', 'link_contest_overview'), (" - All contest features\n", ())
+        ]
 
     @staticmethod
     def brag_overview():
-        return [("SKCC Monthly Brag\n", 'title'),
-                ("\nWork unique SKCC members each month.\n\n", ())]
+        return [
+            ("SKCC Monthly Brag\n", 'title'),
+            ("\nThe SKCC Monthly Brag is a year-round activity where you work unique SKCC members each month and report your totals.\n\n", ()),
+
+            ("What is Monthly Brag?\n", 'heading'),
+            ("A friendly monthly competition to work as many different SKCC members as possible during regular (non-contest) operation.\n\n", ()),
+
+            ("Objective:\n", 'heading'),
+            ("• Work unique SKCC members during the calendar month\n", 'bullet'),
+            ("• Contest QSOs (WES/SKS/K3Y) are excluded\n", 'bullet'),
+            ("• Only regular contacts count\n", 'bullet'),
+            ("• Report your count to SKCC monthly\n\n", 'bullet'),
+
+            ("Scoring:\n", 'heading'),
+            ("Simple and straightforward:\n", ()),
+            ("• Base Score: Count of unique SKCC members worked\n", 'bullet'),
+            ("• Bonus Member: +25 points if you work the monthly bonus member\n", 'bullet'),
+            ("• Final Score: Unique Members + Bonus (if applicable)\n\n", 'bullet'),
+
+            ("Example:\n", 'italic'),
+            ("Work 42 unique SKCC members in March\n", ()),
+            ("Work the bonus member (N4ABC)\n", ()),
+            ("Total Score: 42 + 25 = 67 points\n\n", ()),
+
+            ("Contest Exclusion:\n", 'heading'),
+            ("The app automatically excludes:\n", ()),
+            ("• All WES Weekend Sprintathon contacts\n", 'bullet'),
+            ("• All SKS Weekday Sprint contacts\n", 'bullet'),
+            ("• All K3Y Straight Key Month contacts\n", 'bullet'),
+            ("• Only regular operating contacts are counted\n\n", 'bullet'),
+
+            ("This ensures fair competition and rewards regular activity.\n\n", 'italic'),
+
+            ("Bonus Member:\n", 'heading'),
+            ("SKCC designates one member each month as a bonus:\n", ()),
+            ("• Changes monthly - check SKCC website\n", 'bullet'),
+            ("• Worth 25 bonus points if worked\n", 'bullet'),
+            ("• Configure in Settings or Monthly Brag dialog\n", 'bullet'),
+            ("• Must work during the calendar month\n\n", 'bullet'),
+
+            ("Reporting Period:\n", 'heading'),
+            ("• Reports cover a calendar month (1st-last day)\n", 'bullet'),
+            ("• Submit by SKCC deadline (usually first week of next month)\n", 'bullet'),
+            ("• Can generate reports for any past month\n", 'bullet'),
+            ("• Great way to track your SKCC activity\n\n", 'bullet'),
+
+            ("Why Participate?\n", 'heading'),
+            ("• Encourages regular SKCC activity year-round\n", 'bullet'),
+            ("• Friendly monthly competition\n", 'bullet'),
+            ("• Separate from high-pressure contests\n", 'bullet'),
+            ("• Works toward your Centurion award progress\n", 'bullet'),
+            ("• Recognition on SKCC website\n\n", 'bullet'),
+
+            ("How to Use:\n", 'heading'),
+            ("1. Operate normally throughout the month\n", 'numbered'),
+            ("2. Log all SKCC contacts in the app\n", 'numbered'),
+            ("3. At month end, generate Monthly Brag Report\n", 'numbered'),
+            ("4. Export and submit to SKCC\n\n", 'numbered'),
+
+            ("See ", ()), ("Using Monthly Brag Report", 'link', 'link_brag_usage'), (" for step-by-step instructions.\n\n", ()),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Using the Report", 'link', 'link_brag_usage'), (" - Generate report\n", ()),
+            ("• ", ()), ("Submitting Results", 'link', 'link_brag_submission'), (" - Submit to SKCC\n", ()),
+            ("• ", ()), ("SKCC Contests", 'link', 'link_contest_overview'), (" - Contest activities\n", ())
+        ]
 
     @staticmethod
     def brag_usage():
-        return [("Using Monthly Brag Report\n", 'title'),
-                ("\nReports → SKCC Monthly Brag Report\n\n", ())]
+        return [
+            ("Using Monthly Brag Report\n", 'title'),
+            ("\nStep-by-step guide to generating your SKCC Monthly Brag report.\n\n", ()),
+
+            ("Location: Reports menu → SKCC Monthly Brag Report\n\n", 'italic'),
+
+            ("Report Generation Steps:\n", 'heading'),
+
+            ("1. Open the Report Dialog\n", 'subheading'),
+            ("• Click 'Reports' in the menu bar\n", 'bullet'),
+            ("• Select 'SKCC Monthly Brag Report'\n", 'bullet'),
+            ("• Dialog window opens\n\n", 'bullet'),
+
+            ("2. Select Month and Year\n", 'subheading'),
+            ("• Year: Use spinner or type (2010-2050)\n", 'bullet'),
+            ("• Month: Select from dropdown (1-12)\n", 'bullet'),
+            ("• Defaults to current month\n", 'bullet'),
+            ("• Can generate reports for any past month\n\n", 'bullet'),
+
+            ("3. Configure Bonus Member (Optional)\n", 'subheading'),
+            ("• Enter the monthly bonus member callsign\n", 'bullet'),
+            ("• Check SKCC website for current month's bonus member\n", 'bullet'),
+            ("• Leave blank if not applicable\n", 'bullet'),
+            ("• Worth +25 points if you worked them\n\n", 'bullet'),
+
+            ("4. Generate the Report\n", 'subheading'),
+            ("• Click 'Generate Report' button\n", 'bullet'),
+            ("• App queries database for the selected month\n", 'bullet'),
+            ("• Automatically excludes all contest contacts\n", 'bullet'),
+            ("• Calculates unique members and bonus\n\n", 'bullet'),
+
+            ("What You'll See:\n", 'heading'),
+
+            ("Summary Section:\n", 'subheading'),
+            ("• Total unique SKCC members worked\n", 'bullet'),
+            ("• Bonus member status (worked or not)\n", 'bullet'),
+            ("• Final score\n", 'bullet'),
+            ("• Month and year\n\n", 'bullet'),
+
+            ("Members List:\n", 'subheading'),
+            ("• Scrollable list of all SKCC numbers worked\n", 'bullet'),
+            ("• Sorted for easy verification\n", 'bullet'),
+            ("• Shows which members counted\n", 'bullet'),
+            ("• Bonus member highlighted if worked\n\n", 'bullet'),
+
+            ("5. Export the Report\n", 'subheading'),
+            ("• Click 'Export for SKCC Submission' button\n", 'bullet'),
+            ("• Choose save location\n", 'bullet'),
+            ("• File saved in text format\n", 'bullet'),
+            ("• Ready for SKCC submission\n\n", 'bullet'),
+
+            ("Report File Contents:\n", 'heading'),
+            ("The exported file includes:\n", ()),
+            ("• Your callsign and SKCC number\n", 'bullet'),
+            ("• Month and year\n", 'bullet'),
+            ("• Total unique members worked\n", 'bullet'),
+            ("• Bonus member (if worked)\n", 'bullet'),
+            ("• Final score\n", 'bullet'),
+            ("• Complete list of SKCC numbers worked\n\n", 'bullet'),
+
+            ("Contest Contact Handling:\n", 'heading'),
+            ("The app intelligently filters out contests:\n", ()),
+            ("• Checks if contact occurred during WES weekend\n", 'bullet'),
+            ("• Checks if contact occurred during SKS (0000-0200 UTC, 4th Wed)\n", 'bullet'),
+            ("• Checks if contact occurred during K3Y (January)\n", 'bullet'),
+            ("• Only non-contest contacts are counted\n\n", 'bullet'),
+
+            ("Historical Reports:\n", 'heading'),
+            ("• Generate reports for any past month\n", 'bullet'),
+            ("• Useful for missed submissions\n", 'bullet'),
+            ("• Review your activity trends\n", 'bullet'),
+            ("• Compare month-to-month performance\n\n", 'bullet'),
+
+            ("Tips:\n", 'heading'),
+            ("• Update bonus member callsign at start of each month\n", 'bullet'),
+            ("• Generate report before end of month to check progress\n", 'bullet'),
+            ("• Keep exported files for your records\n", 'bullet'),
+            ("• Listen for the bonus member during the month\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Monthly Brag Overview", 'link', 'link_brag_overview'), (" - What is Monthly Brag\n", ()),
+            ("• ", ()), ("Submitting Results", 'link', 'link_brag_submission'), (" - How to submit\n", ()),
+            ("• ", ()), ("SKCC Contests", 'link', 'link_contest_overview'), (" - Contest activities\n", ())
+        ]
 
     @staticmethod
     def brag_submission():
-        return [("Submitting Monthly Brag\n", 'title'),
-                ("\nExport and submit to SKCC website.\n\n", ())]
+        return [
+            ("Submitting Monthly Brag Results\n", 'title'),
+            ("\nHow to submit your Monthly Brag report to SKCC for recognition and scoring.\n\n", ()),
+
+            ("Prerequisites:\n", 'heading'),
+            ("Before submitting:\n", ()),
+            ("• Generated your Monthly Brag report\n", 'bullet'),
+            ("• Exported the report file\n", 'bullet'),
+            ("• Have SKCC website account (free at skccgroup.com)\n\n", 'bullet'),
+
+            ("Submission Process:\n", 'heading'),
+
+            ("1. Generate and Export Report\n", 'subheading'),
+            ("• Reports → SKCC Monthly Brag Report\n", 'bullet'),
+            ("• Select month and year\n", 'bullet'),
+            ("• Enter bonus member callsign (if applicable)\n", 'bullet'),
+            ("• Click 'Generate Report'\n", 'bullet'),
+            ("• Click 'Export for SKCC Submission'\n", 'bullet'),
+            ("• Save the text file\n\n", 'bullet'),
+
+            ("2. Visit SKCC Website\n", 'subheading'),
+            ("• Go to skccgroup.com\n", 'bullet'),
+            ("• Log into your account\n", 'bullet'),
+            ("• Navigate to Monthly Brag submission page\n", 'bullet'),
+            ("• Select the appropriate month\n\n", 'bullet'),
+
+            ("3. Submit Your Results\n", 'subheading'),
+            ("Two submission methods:\n\n", ()),
+
+            ("Method A - File Upload:\n", 'italic'),
+            ("• Use the file upload feature\n", 'bullet'),
+            ("• Select your exported text file\n", 'bullet'),
+            ("• Upload\n\n", 'bullet'),
+
+            ("Method B - Copy/Paste:\n", 'italic'),
+            ("• Open exported file in text editor\n", 'bullet'),
+            ("• Copy all contents\n", 'bullet'),
+            ("• Paste into SKCC submission form\n", 'bullet'),
+            ("• Submit\n\n", 'bullet'),
+
+            ("4. Verify Submission\n", 'subheading'),
+            ("• Check that your score appears correctly\n", 'bullet'),
+            ("• Verify unique member count\n", 'bullet'),
+            ("• Confirm bonus member credit (if worked)\n", 'bullet'),
+            ("• Save confirmation for records\n\n", 'bullet'),
+
+            ("Submission Deadline:\n", 'heading'),
+            ("• Usually first week of following month\n", 'bullet'),
+            ("• Check SKCC website for exact deadline\n", 'bullet'),
+            ("• Late submissions may not be accepted\n", 'bullet'),
+            ("• Set calendar reminder for monthly submission\n\n", 'bullet'),
+
+            ("What Gets Submitted:\n", 'heading'),
+            ("• Your callsign and SKCC number\n", 'bullet'),
+            ("• Month and year of report\n", 'bullet'),
+            ("• Count of unique members worked\n", 'bullet'),
+            ("• Bonus member (if applicable)\n", 'bullet'),
+            ("• Final score\n", 'bullet'),
+            ("• Optional: List of members worked (for verification)\n\n", 'bullet'),
+
+            ("Recognition:\n", 'heading'),
+            ("After submission:\n", ()),
+            ("• Your score appears on SKCC Monthly Brag leaderboard\n", 'bullet'),
+            ("• Top scores recognized monthly\n", 'bullet'),
+            ("• Year-end awards for consistent participation\n", 'bullet'),
+            ("• Encourages regular SKCC activity\n\n", 'bullet'),
+
+            ("Troubleshooting:\n", 'heading'),
+            ("• Score seems wrong? Review Members List in report dialog\n", 'bullet'),
+            ("• Missing members? Check if worked during contest time\n", 'bullet'),
+            ("• Can't submit? Verify SKCC account and deadline\n", 'bullet'),
+            ("• Need help? Contact SKCC support\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Monthly Brag Overview", 'link', 'link_brag_overview'), (" - What is Monthly Brag\n", ()),
+            ("• ", ()), ("Using the Report", 'link', 'link_brag_usage'), (" - Generate report\n", ()),
+            ("• ", ()), ("SKCC Contests", 'link', 'link_contest_overview'), (" - Contest activities\n", ())
+        ]
 
     @staticmethod
     def cluster_connect():
-        return [("Connecting to DX Clusters\n", 'title'),
-                ("\n10+ worldwide clusters available.\n\n", ())]
+        return [
+            ("Connecting to DX Clusters\n", 'title'),
+            ("\nConnect to worldwide DX spotting networks to see real-time band activity and find stations to work.\n\n", ()),
+
+            ("Location: DX Clusters tab\n\n", 'italic'),
+
+            ("What are DX Clusters?\n", 'heading'),
+            ("DX clusters are worldwide networks where operators share real-time information about:\n", ()),
+            ("• Stations currently on the air\n", 'bullet'),
+            ("• Frequencies they're operating on\n", 'bullet'),
+            ("• Rare DX stations\n", 'bullet'),
+            ("• SKCC members active\n", 'bullet'),
+            ("• Propagation conditions\n\n", 'bullet'),
+
+            ("Available Clusters (20+ nodes):\n", 'heading'),
+
+            ("North America (RBN-Enabled):\n", 'subheading'),
+            ("• AE5E - Thief River Falls, MN\n", 'bullet'),
+            ("• K1AX-11 - N. Virginia\n", 'bullet'),
+            ("• AI9T - Marshall, IL\n", 'bullet'),
+            ("• K7TJ-1 - Spokane, WA\n", 'bullet'),
+            ("• AI6W-1 - Newcastle, CA\n", 'bullet'),
+            ("• KB8PMY-3 - Hamilton, OH\n", 'bullet'),
+            ("• K9LC - Rockford, IL\n", 'bullet'),
+            ("• AE3N-2 - Virginia\n", 'bullet'),
+            ("• K4GSO-2 - Ocala, FL\n", 'bullet'),
+            ("• K2CAN - Oswego, NY\n\n", 'bullet'),
+
+            ("North America (Traditional):\n", 'subheading'),
+            ("• NC7J - Syracuse, UT (Skimmer)\n", 'bullet'),
+            ("• W1NR - Marlborough, MA\n", 'bullet'),
+            ("• W1NR-9 - US DX (zones 1-8)\n", 'bullet'),
+            ("• K1TTT - Peru, MA\n", 'bullet'),
+            ("• W3LPL - Glenwood, MD\n", 'bullet'),
+            ("• W6RFU - Santa Barbara, CA\n\n", 'bullet'),
+
+            ("International:\n", 'subheading'),
+            ("• G6NHU-2 - Essex, UK (RBN feed)\n", 'bullet'),
+            ("• DL8LAS - Kiel, Germany (Skimmer)\n", 'bullet'),
+            ("• S50CLX - Slovenia (Multi-mode)\n", 'bullet'),
+            ("• ZL2ARN-10 - New Zealand\n\n", 'bullet'),
+
+            ("RBN = Reverse Beacon Network (automated CW spotting)\n\n", 'italic'),
+
+            ("Connection Steps:\n", 'heading'),
+
+            ("1. Configure Your Callsign\n", 'subheading'),
+            ("• Enter your callsign in the 'Your Callsign' field\n", 'bullet'),
+            ("• Or configure once in Settings → Station Information\n", 'bullet'),
+            ("• Callsign is required for cluster login\n\n", 'bullet'),
+
+            ("2. Select a Cluster\n", 'subheading'),
+            ("• Open 'Select Cluster' dropdown\n", 'bullet'),
+            ("• Choose from 20+ available clusters\n", 'bullet'),
+            ("• Recommendation: Start with AE5E or K1AX-11 (RBN-enabled)\n", 'bullet'),
+            ("• US operators: Choose North American clusters for lower latency\n", 'bullet'),
+            ("• DX operators: Choose clusters in your region\n\n", 'bullet'),
+
+            ("3. Connect\n", 'subheading'),
+            ("• Click 'Connect' button\n", 'bullet'),
+            ("• App connects via telnet\n", 'bullet'),
+            ("• Status changes to 'Connected' (green)\n", 'bullet'),
+            ("• Cluster info displays (software version, node)\n", 'bullet'),
+            ("• Spots begin appearing in table\n\n", 'bullet'),
+
+            ("Connection Status Indicators:\n", 'heading'),
+            ("• Disconnected (red) - Not connected\n", 'bullet'),
+            ("• Connecting... - Connection in progress\n", 'bullet'),
+            ("• Connected (green) - Active connection\n", 'bullet'),
+            ("• Error (red) - Connection failed\n\n", 'bullet'),
+
+            ("Auto-Connect on Startup:\n", 'heading'),
+            ("Configure automatic connection:\n", ()),
+            ("1. Go to Settings → DX Cluster Preferences\n", 'numbered'),
+            ("2. Select your preferred cluster\n", 'numbered'),
+            ("3. Enable 'Auto-connect on startup'\n", 'numbered'),
+            ("4. Save settings\n", 'numbered'),
+            ("5. Next launch automatically connects\n\n", 'numbered'),
+
+            ("Disconnecting:\n", 'heading'),
+            ("• Click 'Disconnect' button (replaces Connect when active)\n", 'bullet'),
+            ("• Cleanly closes telnet connection\n", 'bullet'),
+            ("• Stops receiving spots\n", 'bullet'),
+            ("• Can reconnect anytime\n\n", 'bullet'),
+
+            ("Cluster Information Display:\n", 'heading'),
+            ("When connected, you'll see:\n", ()),
+            ("• Cluster software (DX Spider, AR-Cluster, etc.)\n", 'bullet'),
+            ("• Node callsign and location\n", 'bullet'),
+            ("• Connection status\n", 'bullet'),
+            ("• RBN support indicator\n\n", 'bullet'),
+
+            ("Troubleshooting Connection Issues:\n", 'heading'),
+            ("• Can't connect? Try a different cluster\n", 'bullet'),
+            ("• Firewall blocking? Check port 7300 or 7373\n", 'bullet'),
+            ("• Timeout? Choose cluster closer to your location\n", 'bullet'),
+            ("• See ", ()), ("Cluster Troubleshooting", 'link', 'link_cluster_issues'), (" for more help\n\n", ()),
+
+            ("Best Practices:\n", 'heading'),
+            ("• Choose clusters near your geographic location\n", 'bullet'),
+            ("• RBN clusters provide more CW spots (automated)\n", 'bullet'),
+            ("• Traditional clusters have human spotters\n", 'bullet'),
+            ("• Try different clusters to find your favorite\n", 'bullet'),
+            ("• Disconnect when not actively using\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Cluster Commands", 'link', 'link_cluster_commands'), (" - Send commands to cluster\n", ()),
+            ("• ", ()), ("Reading Spots", 'link', 'link_cluster_spots'), (" - Understanding spot display\n", ()),
+            ("• ", ()), ("SKCC Highlighting", 'link', 'link_skcc_highlighting'), (" - C/T/S member spots\n", ()),
+            ("• ", ()), ("Troubleshooting", 'link', 'link_cluster_issues'), (" - Connection problems\n", ())
+        ]
 
     @staticmethod
     def cluster_commands():
-        return [("DX Cluster Commands\n", 'title'),
-                ("\nSH/DX, SH/WWV, SH/SUN, etc.\n\n", ())]
+        return [
+            ("DX Cluster Commands\n", 'title'),
+            ("\nSend commands to the DX cluster for information and configuration.\n\n", ()),
+
+            ("Location: DX Clusters tab → Command input field\n\n", 'italic'),
+
+            ("How to Send Commands:\n", 'heading'),
+            ("1. Ensure you're connected to a cluster\n", 'numbered'),
+            ("2. Type command in the command input field\n", 'numbered'),
+            ("3. Press Enter\n", 'numbered'),
+            ("4. Response appears in the cluster output window\n\n", 'numbered'),
+
+            ("Common Commands:\n", 'heading'),
+
+            ("Spot Information:\n", 'subheading'),
+            ("• SH/DX - Show recent DX spots\n", 'bullet'),
+            ("• SH/DX 25 - Show last 25 spots\n", 'bullet'),
+            ("• SH/DX on 20m - Show spots on 20 meters\n", 'bullet'),
+            ("• SH/DX K1ABC - Show spots for specific callsign\n\n", 'bullet'),
+
+            ("Propagation Information:\n", 'subheading'),
+            ("• SH/WWV - Show WWV/WWVH propagation bulletins\n", 'bullet'),
+            ("• SH/WCY - Show WCY propagation data\n", 'bullet'),
+            ("• SH/SUN - Show solar data (SFI, A/K index)\n\n", 'bullet'),
+
+            ("Station Information:\n", 'subheading'),
+            ("• SH/QRZ W1AW - Show callsign info from QRZ\n", 'bullet'),
+            ("• SH/PREFIX VP2 - Show DXCC prefix information\n\n", 'bullet'),
+
+            ("Announcements:\n", 'subheading'),
+            ("• SH/ANNOUNCE - Show recent announcements\n", 'bullet'),
+            ("• SH/WX - Show weather information\n\n", 'bullet'),
+
+            ("User Management:\n", 'subheading'),
+            ("• SET/NAME your_name - Set your name\n", 'bullet'),
+            ("• SET/QTH your_location - Set your location\n", 'bullet'),
+            ("• SET/HOMENODE callsign - Set your home node\n\n", 'bullet'),
+
+            ("Filtering (if supported):\n", 'subheading'),
+            ("• SET/FILTER - Configure spot filters\n", 'bullet'),
+            ("• ACCEPT/SPOTS on hf/cw - Show only HF CW spots\n", 'bullet'),
+            ("• REJECT/SPOTS on vhf - Reject VHF spots\n\n", 'bullet'),
+
+            ("Spotting (when appropriate):\n", 'subheading'),
+            ("• DX 14.250 W1AW - Spot W1AW on 14.250 MHz\n", 'bullet'),
+            ("• DX 7.055 N4ABC SKCC - Spot with comment\n\n", 'bullet'),
+
+            ("Important: Only spot stations you've actually heard!\n\n", 'italic'),
+
+            ("Help Commands:\n", 'subheading'),
+            ("• HELP - Show available commands\n", 'bullet'),
+            ("• HELP SH/DX - Help for specific command\n\n", 'bullet'),
+
+            ("Cluster-Specific Commands:\n", 'heading'),
+
+            ("DX Spider Clusters:\n", 'subheading'),
+            ("• SHOW/STATION - Your station info\n", 'bullet'),
+            ("• SHOW/TIME - Current UTC time\n", 'bullet'),
+            ("• SHOW/MOON - Moon position and phase\n\n", 'bullet'),
+
+            ("AR-Cluster:\n", 'subheading'),
+            ("• SHOW INFO - Cluster information\n", 'bullet'),
+            ("• SHOW USERS - Currently connected users\n\n", 'bullet'),
+
+            ("Command Syntax Notes:\n", 'heading'),
+            ("• Commands are NOT case-sensitive\n", 'bullet'),
+            ("• SH is short for SHOW\n", 'bullet'),
+            ("• Most clusters support abbreviations\n", 'bullet'),
+            ("• Parameters separated by spaces\n", 'bullet'),
+            ("• Type HELP for cluster-specific commands\n\n", 'bullet'),
+
+            ("App Command Input:\n", 'heading'),
+            ("The command input field in the app:\n", ()),
+            ("• Located below spot filters\n", 'bullet'),
+            ("• Type command and press Enter\n", 'bullet'),
+            ("• Response shown in cluster output area\n", 'bullet'),
+            ("• Previous commands accessible with Up arrow\n\n", 'bullet'),
+
+            ("Useful for SKCC:\n", 'heading'),
+            ("• SH/DX on 40m - Find 40m activity\n", 'bullet'),
+            ("• SH/DX SKCC - Find spots mentioning SKCC\n", 'bullet'),
+            ("• DX 7.055 N1ABC SKCC 12345C - Spot SKCC member\n\n", 'bullet'),
+
+            ("Command Etiquette:\n", 'heading'),
+            ("• Only spot stations you've actually heard\n", 'bullet'),
+            ("• Don't spam commands\n", 'bullet'),
+            ("• Include helpful info in spot comments\n", 'bullet'),
+            ("• Be courteous to other cluster users\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Connecting to Clusters", 'link', 'link_cluster_connect'), (" - Connection setup\n", ()),
+            ("• ", ()), ("Reading Spots", 'link', 'link_cluster_spots'), (" - Understanding spots\n", ()),
+            ("• ", ()), ("Commands Reference", 'link', 'link_cluster_commands_ref'), (" - Complete command list\n", ())
+        ]
 
     @staticmethod
     def cluster_spots():
