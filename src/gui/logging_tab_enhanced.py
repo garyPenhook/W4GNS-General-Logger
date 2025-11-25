@@ -6,6 +6,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 import threading
+import urllib.request
+import json
+import socket
+import struct
+import time
 from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
@@ -30,9 +35,13 @@ class EnhancedLoggingTab:
         self.auto_refresh = False
         self.refresh_interval = 60
         self.current_pota_spots = []
+        self._pota_grid_set = False  # Track if grid was set from POTA spot
 
         # Time tracking for QSO
         self.time_on_captured = False  # Track if time_on has been set for current contact
+
+        # Time offset from online reference (in seconds)
+        self.time_offset = 0.0
 
         self.create_widgets()
 
@@ -47,6 +56,9 @@ class EnhancedLoggingTab:
 
         # Start the UTC clock
         self.update_clock()
+
+        # Start online time sync (runs every hour)
+        self.sync_online_time()
 
         # Focus on callsign field
         self.callsign_entry.focus()
@@ -457,12 +469,148 @@ class EnhancedLoggingTab:
         ttk.Label(pota_info_row, text="Showing: CW spots only",
                  foreground=get_info_color(self.config), font=('', 9, 'bold')).pack(side='left')
 
+    def get_corrected_utc(self):
+        """Get UTC time corrected by online time offset"""
+        from datetime import timedelta
+        return datetime.utcnow() + timedelta(seconds=self.time_offset)
+
     def update_clock(self):
         """Update the UTC clock display every second"""
-        now = datetime.utcnow()
+        now = self.get_corrected_utc()
         self.clock_label.config(text=now.strftime("%H:%M:%S"))
+        # Update date field if UTC date has changed (midnight crossing)
+        current_date = now.strftime("%Y-%m-%d")
+        if self.date_var.get() != current_date:
+            self.date_var.set(current_date)
         # Schedule next update in 1 second
         self.frame.after(1000, self.update_clock)
+
+    def sync_online_time(self):
+        """Sync time with online reference every hour"""
+        def fetch_time():
+            # Try NTP first (most reliable), then fall back to HTTP APIs
+            # NTP servers from pool.ntp.org - designed for high availability
+            ntp_servers = [
+                'pool.ntp.org',
+                'time.nist.gov',
+                'time.google.com',
+                'time.cloudflare.com'
+            ]
+
+            # Try NTP time synchronization first
+            for ntp_server in ntp_servers:
+                try:
+                    ntp_time = self._get_ntp_time(ntp_server, timeout=3)
+                    if ntp_time:
+                        local_utc = datetime.utcnow()
+                        self.time_offset = (ntp_time - local_utc).total_seconds()
+                        print(f"Time synced with {ntp_server} (NTP). Offset: {self.time_offset:.2f}s")
+                        return
+                except Exception as e:
+                    print(f"NTP sync failed ({ntp_server}): {e}")
+                    continue
+
+            # Fall back to HTTP time APIs if NTP fails
+            # Using HTTP instead of HTTPS to avoid SSL/TLS issues
+            time_sources = [
+                ("http://worldtimeapi.org/api/timezone/Etc/UTC", self._parse_worldtimeapi),
+                ("http://timeapi.io/api/Time/current/zone?timeZone=UTC", self._parse_timeapi),
+            ]
+
+            # Retry parameters - fewer retries since we have multiple sources
+            max_retries = 2
+            retry_delays = [1, 2]  # Shorter delays
+
+            for url, parser in time_sources:
+                source_name = url.split('/')[2]
+
+                # Try each source with retry logic
+                for attempt in range(max_retries):
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'W4GNS-Logger/1.0'})
+                        with urllib.request.urlopen(req, timeout=5) as response:
+                            data = json.loads(response.read().decode())
+                            online_time = parser(data)
+                            if online_time:
+                                local_utc = datetime.utcnow()
+                                self.time_offset = (online_time - local_utc).total_seconds()
+                                print(f"Time synced with {source_name} (HTTP). Offset: {self.time_offset:.2f}s")
+                                return
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            delay = retry_delays[attempt]
+                            print(f"Time sync {source_name} (attempt {attempt + 1}/{max_retries}): {e.reason if hasattr(e, 'reason') else e}, retrying in {delay}s...")
+                            time.sleep(delay)
+                            continue
+                        else:
+                            print(f"Time sync failed ({source_name}): {e.reason if hasattr(e, 'reason') else e}")
+                            break
+
+            print("All time sync sources failed, using local system clock")
+
+        # Run in background thread to not block UI
+        thread = threading.Thread(target=fetch_time, daemon=True)
+        thread.start()
+
+        # Schedule next sync in 1 hour (3600000 ms)
+        self.frame.after(3600000, self.sync_online_time)
+
+    def _parse_worldtimeapi(self, data):
+        """Parse time from worldtimeapi.org response"""
+        online_time_str = data['datetime'][:19]
+        return datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
+
+    def _parse_worldclockapi(self, data):
+        """Parse time from worldclockapi.com response"""
+        # Expected format: "2025-01-15T12:34:56Z"
+        online_time_str = data['currentDateTime'][:19]
+        return datetime.strptime(online_time_str, "%Y-%m-%dT%H:%M:%S")
+
+    def _parse_timeapi(self, data):
+        """Parse time from timeapi.io response"""
+        return datetime(
+            data['year'], data['month'], data['day'],
+            data['hour'], data['minute'], data['seconds']
+        )
+
+    def _get_ntp_time(self, ntp_server, timeout=3):
+        """
+        Get time from NTP server using SNTP protocol (RFC 4330)
+        More reliable than HTTP-based time APIs
+        """
+        # NTP constants
+        NTP_PACKET_FORMAT = "!12I"
+        NTP_DELTA = 2208988800  # Seconds between 1900 and 1970
+        NTP_PORT = 123
+
+        try:
+            # Create NTP request packet (48 bytes, mode 3 = client)
+            packet = bytearray(48)
+            packet[0] = 0x1B  # LI=0, VN=3, Mode=3
+
+            # Send request to NTP server
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.settimeout(timeout)
+                sock.sendto(packet, (ntp_server, NTP_PORT))
+                response, _ = sock.recvfrom(1024)
+
+            # Parse response - extract transmit timestamp (bytes 40-47)
+            unpacked = struct.unpack(NTP_PACKET_FORMAT, response)
+            tx_timestamp_int = unpacked[10]
+            tx_timestamp_frac = unpacked[11]
+
+            # Convert from NTP time (since 1900) to Unix time (since 1970)
+            ntp_time = tx_timestamp_int - NTP_DELTA
+
+            # Convert to datetime
+            return datetime.utcfromtimestamp(ntp_time)
+
+        except socket.timeout:
+            return None
+        except socket.gaierror:
+            return None
+        except Exception:
+            return None
 
     def on_callsign_keypress(self, event=None):
         """Display previous QSOs as user types in callsign field"""
@@ -476,7 +624,7 @@ class EnhancedLoggingTab:
 
         # Capture time_on if callsign has content and time hasn't been captured yet
         if callsign and not self.time_on_captured:
-            current_time = datetime.utcnow().strftime("%H:%M")
+            current_time = self.get_corrected_utc().strftime("%H:%M")
             self.time_on_var.set(current_time)
             self.time_on_captured = True
             print(f"Time ON captured: {current_time}")
@@ -667,7 +815,8 @@ class EnhancedLoggingTab:
                 if 'first_name' in qrz_data:
                     self.first_name_var.set(qrz_data['first_name'])
 
-            if 'gridsquare' in qrz_data:
+            if 'gridsquare' in qrz_data and not self._pota_grid_set:
+                # Only set grid from QRZ if not already set from POTA spot
                 self.grid_var.set(qrz_data['gridsquare'])
 
             if 'state' in qrz_data:
@@ -842,7 +991,7 @@ class EnhancedLoggingTab:
             return
 
         # Capture time_off when logging contact
-        current_time = datetime.utcnow().strftime("%H:%M")
+        current_time = self.get_corrected_utc().strftime("%H:%M")
         self.time_off_var.set(current_time)
         print(f"Time OFF captured: {current_time}")
 
@@ -947,10 +1096,11 @@ class EnhancedLoggingTab:
     def clear_form(self):
         """Clear all input fields"""
         self.callsign_var.set('')
-        self.date_var.set(datetime.utcnow().strftime("%Y-%m-%d"))
+        self.date_var.set(self.get_corrected_utc().strftime("%Y-%m-%d"))
         self.time_on_var.set('')  # Clear time_on (will be captured on next callsign entry)
         self.time_off_var.set('')  # Clear time_off
         self.time_on_captured = False  # Reset flag for next contact
+        self._pota_grid_set = False  # Reset POTA grid flag for next contact
         self.freq_var.set('')
         self.band_var.set('')
         self.mode_var.set('')
@@ -1179,12 +1329,14 @@ class EnhancedLoggingTab:
             time = values[6]
             qsos = values[7]
 
-            # Find full spot details for park name
+            # Find full spot details for park name and grid
             park_name = ""
+            park_grid = ""
             for spot in self.current_pota_spots:
                 if (spot.get('activator') == activator and
                     spot.get('park_ref') == park_ref):
                     park_name = spot.get('park_name', '')
+                    park_grid = spot.get('grid', '')
                     break
 
             # Populate the logging form
@@ -1195,6 +1347,11 @@ class EnhancedLoggingTab:
 
             # Add POTA reference and park name to POTA field and notes
             self.pota_var.set(park_ref)
+
+            # Set grid from POTA spot (park location) instead of QRZ (home location)
+            if park_grid:
+                self.grid_var.set(park_grid)
+                self._pota_grid_set = True
 
             # Build descriptive note
             pota_note = f"POTA: {park_ref}"
