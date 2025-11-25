@@ -117,6 +117,43 @@ Comprehensive support for SKCC (Straight Key Century Club) contests with automat
 6. Click "End Contest" when finished
 7. Export for SKCC submission
 
+### 📊 **SKCC Monthly Brag Report**
+Track and report your monthly SKCC activity with automatic unique member counting:
+
+**What is the Monthly Brag?**
+- Monthly activity where you work as many unique SKCC members as possible
+- Each member counts only once (no multi-band contacts)
+- Excludes WES/SKS/K3Y contest contacts
+- Optional bonus member (announced monthly): +25 points
+- Submit by the 15th of the following month
+
+**Features:**
+- **Automatic counting**: Scans your log for unique SKCC members in any month
+- **Contest exclusion**: Automatically filters out WES/SKS/K3Y contest contacts
+- **Bonus member tracking**: Configure monthly bonus member and track if worked
+- **Export for submission**: One-click export with complete member list and score
+- **Historical reports**: Generate reports for any past month
+
+**How to Use:**
+1. Log your regular SKCC contacts throughout the month
+2. At month end: **Reports** menu → **SKCC Monthly Brag Report**
+3. Select the month and year
+4. Enter the bonus member callsign (optional)
+5. Click **Generate Report**
+6. Review unique member count and score
+7. Click **Export for SKCC Submission**
+
+**Example Output:**
+```
+SKCC Monthly Brag Report
+Month: November 2024
+Unique SKCC Members Worked: 42
+Bonus Member (W0BZ): YES (+25 points)
+TOTAL SCORE: 67
+```
+
+The report includes a complete list of all SKCC numbers worked, ready for submission to the SKCC website.
+
 ### ⚙️ **Configuration & Preferences**
 - **Station Information**: Callsign, grid square, default power, default RST
 - **QRZ Integration**: Username, password, API key, auto-upload toggle
@@ -450,6 +487,7 @@ W4GNS-General-Logger/
         ├── skcc_awards_tab.py       # SKCC awards tracking
         ├── settings_tab.py          # Settings interface
         ├── date_range_dialog.py     # Date/time range selection dialog
+        ├── monthly_brag_dialog.py   # SKCC Monthly Brag report
         ├── space_weather_tab.py     # Space weather information
         └── weather_tab.py           # Weather information
 ```
@@ -546,6 +584,7 @@ Completed features:
 - [x] Google Drive automatic backups ✅
 - [x] Dark/Light themes ✅
 - [x] Contest logging for SKCC (WES/SKS/K3Y) with automatic scoring ✅
+- [x] SKCC Monthly Brag reporting and tracking ✅
 
 Potential future features:
 - [ ] Rig control (CAT interface via Hamlib)

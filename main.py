@@ -27,6 +27,7 @@ from src.gui.weather_tab import WeatherTab
 from src.gui.settings_tab import SettingsTab
 from src.gui.contest_tab import ContestTab
 from src.gui.date_range_dialog import DateRangeDialog
+from src.gui.monthly_brag_dialog import MonthlyBragDialog
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
 
@@ -94,6 +95,11 @@ class W4GNSLogger:
         file_menu.add_command(label="Import Log (ADIF)...", command=self.import_adif)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_closing)
+
+        # Reports menu
+        reports_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Reports", menu=reports_menu)
+        reports_menu.add_command(label="SKCC Monthly Brag Report...", command=self.show_monthly_brag_report)
 
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
@@ -599,6 +605,10 @@ class W4GNSLogger:
 
         except Exception as e:
             messagebox.showerror("Import Failed", f"Failed to import log:\n{str(e)}")
+
+    def show_monthly_brag_report(self):
+        """Show SKCC Monthly Brag Report dialog"""
+        MonthlyBragDialog(self.root, self.database, self.config)
 
     def show_about(self):
         """Show about dialog"""
