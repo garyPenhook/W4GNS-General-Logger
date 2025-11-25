@@ -28,6 +28,7 @@ from src.gui.settings_tab import SettingsTab
 from src.gui.contest_tab import ContestTab
 from src.gui.date_range_dialog import DateRangeDialog
 from src.gui.monthly_brag_dialog import MonthlyBragDialog
+from src.gui.help_dialog import HelpDialog
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
 
 
@@ -104,6 +105,8 @@ class W4GNSLogger:
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Help Topics", command=self.show_help)
+        help_menu.add_separator()
         help_menu.add_command(label="About", command=self.show_about)
 
     def create_main_interface(self):
@@ -609,6 +612,10 @@ class W4GNSLogger:
     def show_monthly_brag_report(self):
         """Show SKCC Monthly Brag Report dialog"""
         MonthlyBragDialog(self.root, self.database, self.config)
+
+    def show_help(self):
+        """Show comprehensive help dialog"""
+        HelpDialog(self.root)
 
     def show_about(self):
         """Show about dialog"""
