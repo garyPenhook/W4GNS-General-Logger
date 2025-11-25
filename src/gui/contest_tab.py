@@ -31,6 +31,14 @@ class ContestTab:
         self.bonus_s = config.get('contest.bonus_s', 15)
         self.bonus_kcc = config.get('contest.bonus_kcc', 25)
 
+        # SKS Designated Member (changes monthly)
+        self.designated_member = config.get('contest.designated_member', '')
+        self.bonus_designated = config.get('contest.bonus_designated', 25)
+
+        # WES Monthly Theme
+        self.monthly_theme = config.get('contest.monthly_theme', 'None')
+        self.bonus_theme = config.get('contest.bonus_theme', 5)
+
         # Scoring data
         self.qso_points = 0
         self.multipliers = set()  # States/provinces/countries
@@ -38,6 +46,8 @@ class ContestTab:
         self.tribunes = set()  # Callsigns with T bonus
         self.senators = set()  # Callsigns with S bonus
         self.ks1kcc_bands = set()  # Bands worked KS1KCC
+        self.designated_bands = set()  # Bands worked designated member (SKS)
+        self.monthly_theme_qsos = []  # QSOs earning monthly theme bonus (WES)
         self.worked_stations = {}  # {callsign: set of bands}
         self.contest_qsos = []  # List of QSOs in current contest
 
@@ -119,6 +129,40 @@ class ContestTab:
         ttk.Entry(bonus_row1, textvariable=self.bonus_kcc_var, width=4).pack(side='left', padx=2)
 
         ttk.Button(bonus_row1, text="Save", command=self.save_bonus_values, width=6).pack(side='left', padx=(10, 0))
+
+        # Row 2: SKS Designated Member and WES Monthly Theme
+        bonus_row2 = ttk.Frame(bonus_frame)
+        bonus_row2.pack(fill='x', pady=5)
+
+        ttk.Label(bonus_row2, text="SKS Member:", width=12).pack(side='left')
+        self.designated_member_var = tk.StringVar(value=self.designated_member)
+        ttk.Entry(bonus_row2, textvariable=self.designated_member_var, width=10).pack(side='left', padx=2)
+
+        ttk.Label(bonus_row2, text="Pts:", width=4).pack(side='left', padx=(10, 0))
+        self.bonus_designated_var = tk.StringVar(value=str(self.bonus_designated))
+        ttk.Entry(bonus_row2, textvariable=self.bonus_designated_var, width=4).pack(side='left', padx=2)
+
+        # WES Monthly Theme
+        ttk.Label(bonus_row2, text="WES Theme:", width=10).pack(side='left', padx=(20, 0))
+        self.monthly_theme_var = tk.StringVar(value=self.monthly_theme)
+        theme_combo = ttk.Combobox(bonus_row2, textvariable=self.monthly_theme_var,
+                                   width=20, state='readonly')
+        theme_combo['values'] = (
+            'None',
+            'Jan - Winter Bands',
+            'Feb - Boat Anchors',
+            'Mar - Bug/Cootie',
+            'Apr - Easter Egg Hunt',
+            'May - First Year Members',
+            'Jun - Old Timers/Summer',
+            'Jul - 13 Colonies',
+            'Aug - Home Brew Key',
+            'Sep - Club Calls',
+            'Oct - TKA',
+            'Nov - Veterans',
+            'Dec - Reindeer'
+        )
+        theme_combo.pack(side='left', padx=2)
 
         ttk.Label(bonus_frame, text="Check skccgroup.com/operating_activities/weekend_sprintathon for current values",
                   font=('', 8), foreground=get_muted_color(self.config)).pack(pady=2)
@@ -265,6 +309,20 @@ class ContestTab:
         self.kcc_var = tk.StringVar(value="0")
         ttk.Label(kcc_row, textvariable=self.kcc_var).pack(side='right')
 
+        # Designated Member Bonus (SKS)
+        designated_row = ttk.Frame(breakdown_frame)
+        designated_row.pack(fill='x', pady=1)
+        ttk.Label(designated_row, text="Designated Bonus:").pack(side='left')
+        self.designated_var = tk.StringVar(value="0")
+        ttk.Label(designated_row, textvariable=self.designated_var).pack(side='right')
+
+        # Monthly Theme Bonus (WES)
+        theme_row = ttk.Frame(breakdown_frame)
+        theme_row.pack(fill='x', pady=1)
+        ttk.Label(theme_row, text="Theme Bonus:").pack(side='left')
+        self.theme_var = tk.StringVar(value="0")
+        ttk.Label(theme_row, textvariable=self.theme_var).pack(side='right')
+
         # Rate display
         rate_frame = ttk.LabelFrame(right_frame, text="Rate", padding=10)
         rate_frame.pack(fill='x', pady=5)
@@ -367,11 +425,20 @@ class ContestTab:
             self.bonus_t = int(self.bonus_t_var.get())
             self.bonus_s = int(self.bonus_s_var.get())
             self.bonus_kcc = int(self.bonus_kcc_var.get())
+            self.bonus_designated = int(self.bonus_designated_var.get())
 
             self.config.set('contest.bonus_c', self.bonus_c)
             self.config.set('contest.bonus_t', self.bonus_t)
             self.config.set('contest.bonus_s', self.bonus_s)
             self.config.set('contest.bonus_kcc', self.bonus_kcc)
+            self.config.set('contest.bonus_designated', self.bonus_designated)
+
+            # Save designated member and monthly theme
+            self.designated_member = self.designated_member_var.get().strip().upper()
+            self.monthly_theme = self.monthly_theme_var.get()
+
+            self.config.set('contest.designated_member', self.designated_member)
+            self.config.set('contest.monthly_theme', self.monthly_theme)
 
             # Recalculate score with new values
             self.update_score_display()
@@ -411,6 +478,8 @@ class ContestTab:
         self.tribunes = set()
         self.senators = set()
         self.ks1kcc_bands = set()
+        self.designated_bands = set()
+        self.monthly_theme_qsos = []
         self.worked_stations = {}
         self.contest_qsos = []
 
@@ -498,10 +567,20 @@ class ContestTab:
                 self.centurions.add(skcc_num)
                 bonus_pts = self.bonus_c
 
-        # Check for KS1KCC bonus
+        # Check for KS1KCC bonus (WES/K3Y)
         if callsign == 'KS1KCC' and band not in self.ks1kcc_bands:
             self.ks1kcc_bands.add(band)
             bonus_pts += self.bonus_kcc
+
+        # Check for designated member bonus (SKS)
+        if (self.contest_type == 'SKS' and self.designated_member and
+            callsign == self.designated_member.upper() and band not in self.designated_bands):
+            self.designated_bands.add(band)
+            bonus_pts += self.bonus_designated
+
+        # Check for WES monthly theme bonus
+        theme_bonus = self._calculate_theme_bonus(callsign, band, skcc)
+        bonus_pts += theme_bonus
 
         # Update QSO points
         self.qso_points += qso_pts
@@ -564,6 +643,46 @@ class ContestTab:
         except Exception as e:
             print(f"Error saving contest QSO to database: {e}")
 
+    def _calculate_theme_bonus(self, callsign, band, skcc):
+        """Calculate WES monthly theme bonus if applicable"""
+        if self.contest_type != 'WES' or self.monthly_theme == 'None':
+            return 0
+
+        theme_bonus = 0
+        theme = self.monthly_theme
+
+        # January - Winter Bands (160m and 80m)
+        if theme == 'Jan - Winter Bands':
+            if band in ('160m', '80m'):
+                theme_bonus = self.bonus_theme
+                self.monthly_theme_qsos.append(callsign)
+
+        # March - Bug/Cootie (requires manual verification, award for all QSOs in March)
+        elif theme == 'Mar - Bug/Cootie':
+            # This requires operator to verify they used bug/cootie
+            # For now, we'll need a checkbox or assume all QSOs qualify
+            pass
+
+        # May - First Year Members (SKCC #2546 or lower)
+        elif theme == 'May - First Year Members':
+            if skcc:
+                skcc_num = ''.join(c for c in skcc if c.isdigit())
+                if skcc_num and int(skcc_num) <= 2546:
+                    theme_bonus = self.bonus_theme
+                    self.monthly_theme_qsos.append(callsign)
+
+        # June - Old Timers/Summer Bands (10m, 15m, 20m summer bands)
+        elif theme == 'Jun - Old Timers/Summer':
+            if band in ('10m', '15m', '20m'):
+                theme_bonus = self.bonus_theme
+                self.monthly_theme_qsos.append(callsign)
+
+        # Other themes require special callsigns or external data
+        # These will need to be tracked manually or with additional UI elements
+        # For now, operators can add points manually via the bonus config
+
+        return theme_bonus
+
     def update_score_display(self):
         """Update all score displays"""
         # Calculate bonuses using configurable values
@@ -571,7 +690,9 @@ class ContestTab:
         t_bonus = len(self.tribunes) * self.bonus_t
         s_bonus = len(self.senators) * self.bonus_s
         kcc_bonus = len(self.ks1kcc_bands) * self.bonus_kcc
-        total_bonus = c_bonus + t_bonus + s_bonus + kcc_bonus
+        designated_bonus = len(self.designated_bands) * self.bonus_designated
+        theme_bonus = len(self.monthly_theme_qsos) * self.bonus_theme
+        total_bonus = c_bonus + t_bonus + s_bonus + kcc_bonus + designated_bonus + theme_bonus
 
         # Calculate total: (QSO points × Multipliers) + Bonuses
         mult_count = len(self.multipliers)
@@ -586,6 +707,13 @@ class ContestTab:
         self.mult_var.set(str(len(self.multipliers)))
         self.bonus_var.set(str(c_bonus + t_bonus + s_bonus))
         self.kcc_var.set(str(kcc_bonus))
+
+        # Update designated/theme bonus displays if they exist
+        if hasattr(self, 'designated_var'):
+            self.designated_var.set(str(designated_bonus))
+        if hasattr(self, 'theme_var'):
+            self.theme_var.set(str(theme_bonus))
+
         self.qso_count_var.set(str(len(self.contest_qsos)))
 
     def update_rate(self):
@@ -792,7 +920,10 @@ class ContestTab:
                 t_bonus = len(self.tribunes) * self.bonus_t
                 s_bonus = len(self.senators) * self.bonus_s
                 kcc_bonus = len(self.ks1kcc_bands) * self.bonus_kcc
-                total = (self.qso_points * mult_count) + c_bonus + t_bonus + s_bonus + kcc_bonus
+                designated_bonus = len(self.designated_bands) * self.bonus_designated
+                theme_bonus = len(self.monthly_theme_qsos) * self.bonus_theme
+                total_bonuses = c_bonus + t_bonus + s_bonus + kcc_bonus + designated_bonus + theme_bonus
+                total = (self.qso_points * mult_count) + total_bonuses
 
                 f.write("SCORE SUMMARY\n")
                 f.write(f"QSO Points: {self.qso_points}\n")
@@ -801,8 +932,12 @@ class ContestTab:
                 f.write(f"Tribunes: {len(self.tribunes)} (×{self.bonus_t} = {t_bonus})\n")
                 f.write(f"Senators: {len(self.senators)} (×{self.bonus_s} = {s_bonus})\n")
                 f.write(f"KS1KCC Bands: {len(self.ks1kcc_bands)} (×{self.bonus_kcc} = {kcc_bonus})\n")
+                if designated_bonus > 0:
+                    f.write(f"Designated Member Bands: {len(self.designated_bands)} (×{self.bonus_designated} = {designated_bonus})\n")
+                if theme_bonus > 0:
+                    f.write(f"Monthly Theme QSOs: {len(self.monthly_theme_qsos)} (×{self.bonus_theme} = {theme_bonus})\n")
                 f.write(f"\nTOTAL SCORE: {total}\n")
-                f.write(f"Formula: ({self.qso_points} × {mult_count}) + {c_bonus + t_bonus + s_bonus + kcc_bonus}\n")
+                f.write(f"Formula: ({self.qso_points} × {mult_count}) + {total_bonuses}\n")
                 f.write(f"\n{'=' * 50}\n\n")
 
                 # Multiplier list
