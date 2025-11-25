@@ -73,8 +73,8 @@ class ContestTab:
         ttk.Label(type_row, text="Contest:", width=10).pack(side='left')
         self.contest_type_var = tk.StringVar(value='WES')
         contest_combo = ttk.Combobox(type_row, textvariable=self.contest_type_var,
-                                     width=20, state='readonly')
-        contest_combo['values'] = ('WES - Weekend Sprintathon', 'K3Y - Straight Key Month')
+                                     width=30, state='readonly')
+        contest_combo['values'] = ('WES - Weekend Sprintathon', 'SKS - Weekday Sprint', 'K3Y - Straight Key Month')
         contest_combo.pack(side='left', padx=5)
 
         # Start/Stop buttons
