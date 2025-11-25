@@ -354,7 +354,8 @@ class GoogleDriveBackup:
                     last_backup = datetime.fromisoformat(last_backup_str)
                     if datetime.now() - last_backup > timedelta(seconds=interval_seconds):
                         should_backup = True
-                except:
+                except (ValueError, TypeError) as e:
+                    print(f"Warning: Invalid last backup timestamp: {e}")
                     should_backup = True
 
             if should_backup and self.is_authenticated:
@@ -382,8 +383,8 @@ class GoogleDriveBackup:
         if os.path.exists(self.token_path):
             try:
                 os.remove(self.token_path)
-            except:
-                pass
+            except (OSError, PermissionError) as e:
+                print(f"Warning: Could not remove token file: {e}")
 
 
 def format_file_size(size_bytes):
@@ -395,7 +396,7 @@ def format_file_size(size_bytes):
                 return f"{size_bytes:.1f} {unit}"
             size_bytes /= 1024.0
         return f"{size_bytes:.1f} TB"
-    except:
+    except (ValueError, TypeError):
         return "Unknown"
 
 
@@ -404,5 +405,5 @@ def format_timestamp(iso_timestamp):
     try:
         dt = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
         return dt.strftime('%Y-%m-%d %H:%M:%S')
-    except:
+    except (ValueError, TypeError, AttributeError):
         return iso_timestamp

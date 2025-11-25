@@ -31,45 +31,146 @@ class ContactsTab:
         search_frame = ttk.LabelFrame(self.frame, text="Search Contacts", padding=10)
         search_frame.pack(fill='x', padx=10, pady=5)
 
-        # Search controls row
-        search_row = ttk.Frame(search_frame)
-        search_row.pack(fill='x', pady=2)
+        # Row 1: Callsign, Lookup, Prefix, Country, State
+        search_row1 = ttk.Frame(search_frame)
+        search_row1.pack(fill='x', pady=2)
 
         # Callsign search
-        ttk.Label(search_row, text="Callsign:", width=10).pack(side='left', padx=2)
+        ttk.Label(search_row1, text="Callsign:", width=10).pack(side='left', padx=2)
         self.callsign_search_var = tk.StringVar()
         self.callsign_search_var.trace('w', lambda *args: self.apply_search())
-        callsign_entry = ttk.Entry(search_row, textvariable=self.callsign_search_var, width=15)
-        callsign_entry.pack(side='left', padx=5)
+        callsign_entry = ttk.Entry(search_row1, textvariable=self.callsign_search_var, width=12)
+        callsign_entry.pack(side='left', padx=2)
         callsign_entry.bind('<Return>', lambda e: self.lookup_callsign())
         callsign_entry.bind('<Tab>', lambda e: (self.lookup_callsign(), 'break')[1])
 
         # Lookup button
-        self.lookup_btn = ttk.Button(search_row, text="Lookup", command=self.lookup_callsign, width=8)
+        self.lookup_btn = ttk.Button(search_row1, text="Lookup", command=self.lookup_callsign, width=7)
         self.lookup_btn.pack(side='left', padx=2)
 
         # Prefix search
-        ttk.Label(search_row, text="Prefix:", width=8).pack(side='left', padx=2)
+        ttk.Label(search_row1, text="Prefix:", width=6).pack(side='left', padx=2)
         self.prefix_search_var = tk.StringVar()
         self.prefix_search_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row, textvariable=self.prefix_search_var, width=10).pack(side='left', padx=5)
+        ttk.Entry(search_row1, textvariable=self.prefix_search_var, width=8).pack(side='left', padx=2)
 
         # Country search
-        ttk.Label(search_row, text="Country:", width=8).pack(side='left', padx=2)
+        ttk.Label(search_row1, text="Country:", width=8).pack(side='left', padx=2)
         self.country_search_var = tk.StringVar()
         self.country_search_var.trace('w', lambda *args: self.apply_search())
-        ttk.Entry(search_row, textvariable=self.country_search_var, width=20).pack(side='left', padx=5)
+        ttk.Entry(search_row1, textvariable=self.country_search_var, width=15).pack(side='left', padx=2)
+
+        # State search
+        ttk.Label(search_row1, text="State:", width=6).pack(side='left', padx=2)
+        self.state_search_var = tk.StringVar()
+        self.state_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row1, textvariable=self.state_search_var, width=8).pack(side='left', padx=2)
+
+        # Continent search
+        ttk.Label(search_row1, text="Continent:", width=10).pack(side='left', padx=2)
+        self.continent_search_var = tk.StringVar()
+        self.continent_search_var.trace('w', lambda *args: self.apply_search())
+        continent_values = ['', 'AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA']
+        ttk.Combobox(search_row1, textvariable=self.continent_search_var, values=continent_values, width=5, state='readonly').pack(side='left', padx=2)
+
+        # Row 2: Band, Mode, Date range
+        search_row2 = ttk.Frame(search_frame)
+        search_row2.pack(fill='x', pady=2)
+
+        # Band search
+        ttk.Label(search_row2, text="Band:", width=10).pack(side='left', padx=2)
+        self.band_search_var = tk.StringVar()
+        self.band_search_var.trace('w', lambda *args: self.apply_search())
+        band_values = ['', '160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', '70cm']
+        ttk.Combobox(search_row2, textvariable=self.band_search_var, values=band_values, width=8, state='readonly').pack(side='left', padx=2)
+
+        # Mode search
+        ttk.Label(search_row2, text="Mode:", width=6).pack(side='left', padx=2)
+        self.mode_search_var = tk.StringVar()
+        self.mode_search_var.trace('w', lambda *args: self.apply_search())
+        mode_values = ['', 'CW', 'SSB', 'AM', 'FM', 'FT8', 'FT4', 'RTTY', 'PSK31', 'JS8']
+        ttk.Combobox(search_row2, textvariable=self.mode_search_var, values=mode_values, width=8, state='readonly').pack(side='left', padx=2)
+
+        # Date From
+        ttk.Label(search_row2, text="From:", width=6).pack(side='left', padx=2)
+        self.date_from_var = tk.StringVar()
+        self.date_from_var.trace('w', lambda *args: self.apply_search())
+        date_from_entry = ttk.Entry(search_row2, textvariable=self.date_from_var, width=10)
+        date_from_entry.pack(side='left', padx=2)
+        date_from_entry.insert(0, 'YYYY-MM-DD')
+        date_from_entry.config(foreground='gray')
+        date_from_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
+        date_from_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_from_entry, self.date_from_var, 'YYYY-MM-DD'))
+
+        # Date To
+        ttk.Label(search_row2, text="To:", width=4).pack(side='left', padx=2)
+        self.date_to_var = tk.StringVar()
+        self.date_to_var.trace('w', lambda *args: self.apply_search())
+        date_to_entry = ttk.Entry(search_row2, textvariable=self.date_to_var, width=10)
+        date_to_entry.pack(side='left', padx=2)
+        date_to_entry.insert(0, 'YYYY-MM-DD')
+        date_to_entry.config(foreground='gray')
+        date_to_entry.bind('<FocusIn>', lambda e: self._clear_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
+        date_to_entry.bind('<FocusOut>', lambda e: self._set_placeholder(date_to_entry, self.date_to_var, 'YYYY-MM-DD'))
+
+        # CQ Zone
+        ttk.Label(search_row2, text="CQ Zone:", width=8).pack(side='left', padx=2)
+        self.cq_zone_var = tk.StringVar()
+        self.cq_zone_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row2, textvariable=self.cq_zone_var, width=4).pack(side='left', padx=2)
+
+        # ITU Zone
+        ttk.Label(search_row2, text="ITU Zone:", width=9).pack(side='left', padx=2)
+        self.itu_zone_var = tk.StringVar()
+        self.itu_zone_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row2, textvariable=self.itu_zone_var, width=4).pack(side='left', padx=2)
+
+        # Row 3: DXCC, POTA, SOTA, SKCC, QRP
+        search_row3 = ttk.Frame(search_frame)
+        search_row3.pack(fill='x', pady=2)
+
+        # DXCC entity
+        ttk.Label(search_row3, text="DXCC:", width=10).pack(side='left', padx=2)
+        self.dxcc_search_var = tk.StringVar()
+        self.dxcc_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row3, textvariable=self.dxcc_search_var, width=10).pack(side='left', padx=2)
+
+        # POTA reference
+        ttk.Label(search_row3, text="POTA:", width=6).pack(side='left', padx=2)
+        self.pota_search_var = tk.StringVar()
+        self.pota_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row3, textvariable=self.pota_search_var, width=10).pack(side='left', padx=2)
+
+        # SOTA reference
+        ttk.Label(search_row3, text="SOTA:", width=6).pack(side='left', padx=2)
+        self.sota_search_var = tk.StringVar()
+        self.sota_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row3, textvariable=self.sota_search_var, width=10).pack(side='left', padx=2)
+
+        # SKCC number
+        ttk.Label(search_row3, text="SKCC#:", width=7).pack(side='left', padx=2)
+        self.skcc_search_var = tk.StringVar()
+        self.skcc_search_var.trace('w', lambda *args: self.apply_search())
+        ttk.Entry(search_row3, textvariable=self.skcc_search_var, width=8).pack(side='left', padx=2)
+
+        # QRP checkbox (5W or less)
+        self.qrp_var = tk.BooleanVar()
+        self.qrp_var.trace('w', lambda *args: self.apply_search())
+        ttk.Checkbutton(search_row3, text="QRP (≤5W)", variable=self.qrp_var).pack(side='left', padx=10)
+
+        # Search button
+        ttk.Button(search_row3, text="Search", command=self.apply_search).pack(side='left', padx=5)
 
         # Clear search button
-        ttk.Button(search_row, text="Clear Search", command=self.clear_search).pack(side='left', padx=10)
+        ttk.Button(search_row3, text="Clear", command=self.clear_search).pack(side='left', padx=5)
 
         # Loading indicator
-        self.loading_label = ttk.Label(search_row, text="", foreground='blue', font=('', 9))
-        self.loading_label.pack(side='left', padx=10)
+        self.loading_label = ttk.Label(search_row3, text="", foreground='blue', font=('', 9))
+        self.loading_label.pack(side='left', padx=5)
 
         # Results count label
-        self.results_label = ttk.Label(search_row, text="", font=('', 9))
-        self.results_label.pack(side='left', padx=10)
+        self.results_label = ttk.Label(search_row3, text="", font=('', 9))
+        self.results_label.pack(side='left', padx=5)
 
         # Log display frame
         log_frame = ttk.LabelFrame(self.frame, text="Contact Log", padding=10)
@@ -145,7 +246,11 @@ class ContactsTab:
         self.is_loading = False
 
     def apply_search(self):
-        """Apply search filters and update display"""
+        """Apply search filters and update display using database query"""
+        # Guard against early calls during widget creation
+        if not hasattr(self, 'log_tree'):
+            return
+
         # Clear existing items
         for item in self.log_tree.get_children():
             self.log_tree.delete(item)
@@ -154,26 +259,107 @@ class ContactsTab:
         callsign_search = self.callsign_search_var.get().strip().upper()
         prefix_search = self.prefix_search_var.get().strip().upper()
         country_search = self.country_search_var.get().strip().upper()
+        state_search = self.state_search_var.get().strip().upper()
+        continent_search = self.continent_search_var.get().strip().upper()
+        band_search = self.band_search_var.get().strip().upper()
+        mode_search = self.mode_search_var.get().strip().upper()
+        date_from = self.date_from_var.get().strip()
+        date_to = self.date_to_var.get().strip()
+        # Ignore placeholder text
+        if date_from == 'YYYY-MM-DD':
+            date_from = ''
+        if date_to == 'YYYY-MM-DD':
+            date_to = ''
+        cq_zone_search = self.cq_zone_var.get().strip()
+        itu_zone_search = self.itu_zone_var.get().strip()
+        dxcc_search = self.dxcc_search_var.get().strip().upper()
+        pota_search = self.pota_search_var.get().strip().upper()
+        sota_search = self.sota_search_var.get().strip().upper()
+        skcc_search = self.skcc_search_var.get().strip().upper()
+        qrp_only = self.qrp_var.get()
 
-        # Filter contacts
-        filtered_contacts = []
-        for contact in self.all_contacts:
-            callsign = contact.get('callsign', '').upper()
-            country = contact.get('country', '').upper()
+        # Build SQL query with filters
+        query = "SELECT * FROM contacts WHERE 1=1"
+        params = []
 
-            # Callsign filter (partial match)
-            if callsign_search and callsign_search not in callsign:
-                continue
+        if callsign_search:
+            query += " AND UPPER(callsign) LIKE ?"
+            params.append(f"%{callsign_search}%")
 
-            # Prefix filter (starts with)
-            if prefix_search and not callsign.startswith(prefix_search):
-                continue
+        if prefix_search:
+            query += " AND UPPER(callsign) LIKE ?"
+            params.append(f"{prefix_search}%")
 
-            # Country filter (partial match)
-            if country_search and country_search not in country:
-                continue
+        if country_search:
+            query += " AND UPPER(country) LIKE ?"
+            params.append(f"%{country_search}%")
 
-            filtered_contacts.append(contact)
+        if state_search:
+            query += " AND UPPER(state) LIKE ?"
+            params.append(f"%{state_search}%")
+
+        if continent_search:
+            query += " AND UPPER(continent) = ?"
+            params.append(continent_search)
+
+        if band_search:
+            query += " AND UPPER(band) = ?"
+            params.append(band_search)
+
+        if mode_search:
+            query += " AND UPPER(mode) = ?"
+            params.append(mode_search)
+
+        if date_from:
+            query += " AND date >= ?"
+            params.append(date_from)
+
+        if date_to:
+            query += " AND date <= ?"
+            params.append(date_to)
+
+        if cq_zone_search:
+            query += " AND cq_zone = ?"
+            params.append(cq_zone_search)
+
+        if itu_zone_search:
+            query += " AND itu_zone = ?"
+            params.append(itu_zone_search)
+
+        if dxcc_search:
+            query += " AND (UPPER(dxcc_entity) LIKE ? OR UPPER(dxcc) LIKE ?)"
+            params.append(f"%{dxcc_search}%")
+            params.append(f"%{dxcc_search}%")
+
+        if pota_search:
+            query += " AND UPPER(pota) LIKE ?"
+            params.append(f"%{pota_search}%")
+
+        if sota_search:
+            query += " AND UPPER(sota) LIKE ?"
+            params.append(f"%{sota_search}%")
+
+        if skcc_search:
+            query += " AND UPPER(skcc_number) LIKE ?"
+            params.append(f"%{skcc_search}%")
+
+        if qrp_only:
+            query += " AND (CAST(REPLACE(REPLACE(power, 'W', ''), ' ', '') AS REAL) <= 5 OR CAST(power_watts AS REAL) <= 5)"
+
+        query += " ORDER BY date DESC, time_on DESC"
+
+        # Execute query
+        try:
+            cursor = self.database.conn.cursor()
+            cursor.execute(query, params)
+            columns = [description[0] for description in cursor.description]
+            filtered_contacts = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception as e:
+            self.loading_label.config(text=f"Query error: {str(e)}", foreground='red')
+            filtered_contacts = []
+
+        # Store for double-click handler
+        self.all_contacts = filtered_contacts
 
         # Add filtered contacts to treeview (most recent first)
         for contact in filtered_contacts:
@@ -193,19 +379,55 @@ class ContactsTab:
             self.log_tree.item(item_id, tags=(str(contact.get('id', '')),))
 
         # Update results label
-        total = len(self.all_contacts)
         shown = len(filtered_contacts)
-        if callsign_search or prefix_search or country_search:
+        has_filter = any([callsign_search, prefix_search, country_search, state_search,
+                        continent_search, band_search, mode_search, date_from, date_to,
+                        cq_zone_search, itu_zone_search, dxcc_search, pota_search,
+                        sota_search, skcc_search, qrp_only])
+        if has_filter:
+            # Get total count from database
+            try:
+                cursor = self.database.conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM contacts")
+                total = cursor.fetchone()[0]
+            except Exception as e:
+                print(f"Warning: Could not get total count: {e}")
+                total = shown
             self.results_label.config(text=f"Showing {shown} of {total} contacts")
         else:
-            self.results_label.config(text=f"Total: {total} contacts")
+            self.results_label.config(text=f"Total: {shown} contacts")
 
     def clear_search(self):
         """Clear all search filters"""
         self.callsign_search_var.set('')
         self.prefix_search_var.set('')
         self.country_search_var.set('')
+        self.state_search_var.set('')
+        self.continent_search_var.set('')
+        self.band_search_var.set('')
+        self.mode_search_var.set('')
+        self.date_from_var.set('')
+        self.date_to_var.set('')
+        self.cq_zone_var.set('')
+        self.itu_zone_var.set('')
+        self.dxcc_search_var.set('')
+        self.pota_search_var.set('')
+        self.sota_search_var.set('')
+        self.skcc_search_var.set('')
+        self.qrp_var.set(False)
         # apply_search() will be called automatically via trace
+
+    def _clear_placeholder(self, entry, var, placeholder):
+        """Clear placeholder text when entry gains focus"""
+        if var.get() == placeholder:
+            entry.delete(0, 'end')
+            entry.config(foreground='black')
+
+    def _set_placeholder(self, entry, var, placeholder):
+        """Set placeholder text when entry loses focus and is empty"""
+        if not var.get():
+            entry.insert(0, placeholder)
+            entry.config(foreground='gray')
 
     def on_contact_double_click(self, event):
         """Handle double-click on a contact to open detail view"""
@@ -458,16 +680,16 @@ class ContactsTab:
 
                     try:
                         qrz_data = self.qrz_session.lookup_callsign(callsign)
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"QRZ lookup failed for {callsign}: {e}")
 
             # Look up SKCC number
             try:
                 member_info = self.skcc_roster.lookup_member(callsign)
                 if member_info and member_info.get('skcc_number'):
                     skcc_number = member_info['skcc_number']
-            except:
-                pass
+            except Exception as e:
+                print(f"SKCC roster lookup failed for {callsign}: {e}")
 
             if not skcc_number:
                 try:
@@ -480,8 +702,8 @@ class ContactsTab:
                     result = cursor.fetchone()
                     if result:
                         skcc_number = result[0]
-                except:
-                    pass
+                except Exception as e:
+                    print(f"SKCC database lookup failed for {callsign}: {e}")
 
             self.frame.after(0, lambda: self._show_lookup_results(
                 callsign, original_button_text, qrz_data, skcc_number

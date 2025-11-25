@@ -58,12 +58,109 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Data from HamQSL.com (N0NBH), NOAA SWPC, and NASA DONKI
 - Auto-refresh every 5 minutes
 
+### 🏆 **Contest Logging**
+Comprehensive support for SKCC (Straight Key Century Club) contests with automatic scoring and bonus tracking:
+
+**Supported Contests:**
+- **WES** - Weekend Sprintathon (monthly weekend events)
+- **SKS** - Weekday Sprint (4th Wednesday of each month, 0000-0200 UTC)
+- **K3Y** - Straight Key Month (January celebration)
+
+**Scoring Features:**
+- **Real-time scoring**: QSO points × Multipliers + Bonuses
+- **Automatic multiplier tracking**: States, provinces, and countries (one per entity)
+- **Duplicate checking**: Per-band contact tracking with visual warnings
+- **Rate calculator**: QSOs per hour display
+- **Live score breakdown**: See exactly where your points come from
+
+**Bonus Point Tracking:**
+- **Achievement Awards**: Automatic detection and scoring for:
+  - Centurion (C suffix): 5 points per unique member
+  - Tribune (T suffix): 10 points per unique member
+  - Senator (S suffix): 15 points per unique member
+- **Special Station Bonuses**:
+  - KS1KCC (WES/K3Y): 25 points per band worked
+  - Designated Member (SKS): Configurable rotating member each month, 25 points per band
+- **WES Monthly Theme Bonuses**: All 12 monthly themes supported:
+  - January: Winter Bands (160m/80m)
+  - February: Boat Anchors
+  - March: Bug/Cootie
+  - April: Easter Egg Hunt
+  - May: First Year Members (SKCC #2546 or lower)
+  - June: Old Timers/Summer Bands (10m/15m/20m)
+  - July: 13 Colonies
+  - August: Home Brew Key
+  - September: Club Calls
+  - October: TKA (Triple Key Award)
+  - November: Veterans
+  - December: Reindeer
+
+**Configurable Bonus Values:**
+- All bonus point values are configurable (update monthly per SKCC rules)
+- Set designated member callsign for SKS contests
+- Select current monthly theme for WES contests
+- Values saved and persist across sessions
+
+**Contest Features:**
+- **QRZ and SKCC roster integration**: Auto-lookup name, QTH, and SKCC numbers
+- **Band-specific duplicate warnings**: "DUPE on 40m!" or "Worked: 20m, 15m"
+- **Contest log display**: Real-time table of all logged QSOs
+- **SKCC Export**: One-click export with complete score summary for submission
+- **Database integration**: All contest QSOs saved to main logbook
+
+**Quick Contest Workflow:**
+1. Select contest type (WES, SKS, or K3Y)
+2. Configure monthly bonus values if needed
+3. Click "Start Contest"
+4. Log contacts with automatic scoring
+5. Monitor real-time score and multipliers
+6. Click "End Contest" when finished
+7. Export for SKCC submission
+
+### 📊 **SKCC Monthly Brag Report**
+Track and report your monthly SKCC activity with automatic unique member counting:
+
+**What is the Monthly Brag?**
+- Monthly activity where you work as many unique SKCC members as possible
+- Each member counts only once (no multi-band contacts)
+- Excludes WES/SKS/K3Y contest contacts
+- Optional bonus member (announced monthly): +25 points
+- Submit by the 15th of the following month
+
+**Features:**
+- **Automatic counting**: Scans your log for unique SKCC members in any month
+- **Contest exclusion**: Automatically filters out WES/SKS/K3Y contest contacts
+- **Bonus member tracking**: Configure monthly bonus member and track if worked
+- **Export for submission**: One-click export with complete member list and score
+- **Historical reports**: Generate reports for any past month
+
+**How to Use:**
+1. Log your regular SKCC contacts throughout the month
+2. At month end: **Reports** menu → **SKCC Monthly Brag Report**
+3. Select the month and year
+4. Enter the bonus member callsign (optional)
+5. Click **Generate Report**
+6. Review unique member count and score
+7. Click **Export for SKCC Submission**
+
+**Example Output:**
+```
+SKCC Monthly Brag Report
+Month: November 2024
+Unique SKCC Members Worked: 42
+Bonus Member (W0BZ): YES (+25 points)
+TOTAL SCORE: 67
+```
+
+The report includes a complete list of all SKCC numbers worked, ready for submission to the SKCC website.
+
 ### ⚙️ **Configuration & Preferences**
 - **Station Information**: Callsign, grid square, default power, default RST
 - **QRZ Integration**: Username, password, API key, auto-upload toggle
 - **NASA Space Weather**: API key configuration for DONKI event alerts
 - **Logging Preferences**: Auto-lookup, duplicate warnings, auto time-off
 - **DX Cluster Preferences**: Auto-connect, spot filtering (CW/SSB/Digital)
+- **Contest Settings**: Bonus values, designated members, monthly themes
 - **Google Drive Auto-Backup**: Automatic cloud backups with OAuth authentication
 - All settings persist across sessions
 - Test QRZ connection before saving credentials
@@ -255,6 +352,64 @@ On the **Log Contacts** tab, DX spots for SKCC members with special achievements
 - `SH/MUF <prefix>` - Show MUF to location
 - `BYE` or `QUIT` - Disconnect (or use Disconnect button)
 
+### Contest Logging
+
+**Setting Up for a Contest:**
+1. Go to the **Contest** tab
+2. Select contest type: WES, SKS, or K3Y
+3. Update bonus point values (check SKCC website for current month):
+   - C (Centurion), T (Tribune), S (Senator), KS1KCC points
+   - For SKS: Enter designated member callsign (e.g., NX1K for November)
+   - For WES: Select monthly theme (e.g., "Nov - Veterans")
+4. Click **Save** to store bonus configuration
+
+**During the Contest:**
+1. Click **Start Contest** (confirms and resets if data exists)
+2. Enter callsign and tab out - auto-lookup fills:
+   - Name, QTH from QRZ
+   - SKCC number from roster or previous contacts
+   - Achievement indicator (Centurion/Tribune/Senator)
+3. Fill exchange: RST, Name, QTH, SKCC number
+4. Select band and enter frequency
+5. Press **Enter** or click **Log QSO**
+6. Watch the score update automatically:
+   - QSO Points and Multipliers
+   - C/T/S Bonus (unique members)
+   - KS1KCC or Designated Member Bonus (per band)
+   - Theme Bonus (if applicable)
+   - Rate (QSOs/hour)
+
+**Duplicate Checking:**
+- As you type callsigns, watch for duplicate warnings
+- "DUPE on 40m!" = already worked this band
+- "Worked: 20m, 15m" = worked on other bands (OK to log)
+
+**After the Contest:**
+1. Click **End Contest** to stop the timer
+2. Review final score and QSO count
+3. Click **Export for SKCC** to create submission file:
+   - Complete score breakdown
+   - List of multipliers
+   - Full QSO log with all exchanges
+   - Formatted text file ready for SKCC submission
+
+**Example Contest Session:**
+```
+Contest: SKS (Weekday Sprint)
+Duration: 2 hours (0000-0200 UTC, 4th Wednesday)
+Designated Member: NX1K (November example)
+
+Score: 1,234 points
+- QSO Points: 45
+- Multipliers: 18 (states/provinces/countries)
+- Centurions: 5 × 5 = 25
+- Tribunes: 2 × 10 = 20
+- Senators: 1 × 15 = 15
+- Designated Member (NX1K): 3 bands × 25 = 75
+
+Formula: (45 × 18) + 135 = 945 points
+```
+
 ### ADIF Import/Export
 
 **Exporting Your Entire Log:**
@@ -326,11 +481,13 @@ W4GNS-General-Logger/
         ├── __init__.py
         ├── logging_tab_enhanced.py  # Log4OM-style logging interface
         ├── contacts_tab.py          # Contact log viewer
+        ├── contest_tab.py           # Contest logging (WES/SKS/K3Y)
         ├── dx_cluster_tab.py        # DX cluster interface
         ├── awards_tab.py            # ARRL awards tracking
         ├── skcc_awards_tab.py       # SKCC awards tracking
         ├── settings_tab.py          # Settings interface
         ├── date_range_dialog.py     # Date/time range selection dialog
+        ├── monthly_brag_dialog.py   # SKCC Monthly Brag report
         ├── space_weather_tab.py     # Space weather information
         └── weather_tab.py           # Weather information
 ```
@@ -426,10 +583,12 @@ Completed features:
 - [x] Space weather integration with NASA DONKI ✅
 - [x] Google Drive automatic backups ✅
 - [x] Dark/Light themes ✅
+- [x] Contest logging for SKCC (WES/SKS/K3Y) with automatic scoring ✅
+- [x] SKCC Monthly Brag reporting and tracking ✅
 
 Potential future features:
 - [ ] Rig control (CAT interface via Hamlib)
-- [ ] Contest logging modes (field day, sweepstakes, etc.)
+- [ ] Additional contest modes (ARRL Field Day, Sweepstakes, CQWW, etc.)
 - [ ] Digital mode integration (WSJT-X, JTDX, Fldigi)
 - [ ] LOTW direct upload
 - [ ] Logbook statistics and reports (DXCC progress, WAS, etc.)
