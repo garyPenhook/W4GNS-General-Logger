@@ -1502,130 +1502,1464 @@ class HelpContent:
 
     @staticmethod
     def cluster_spots():
-        return [("Reading DX Spots\n", 'title'),
-                ("\nReal-time spots in table.\n\n", ())]
+        return [
+            ("Reading DX Spots\n", 'title'),
+            ("\nUnderstand how to read and interpret DX spots from the cluster.\n\n", ()),
+
+            ("Location: DX Clusters tab → Spots table\n\n", 'italic'),
+
+            ("What is a DX Spot?\n", 'heading'),
+            ("A DX spot is a real-time report that a station is active on a specific frequency. It includes:\n", ()),
+            ("• Callsign of the station being spotted (DX station)\n", 'bullet'),
+            ("• Frequency in kHz\n", 'bullet'),
+            ("• Callsign of the spotter (who heard them)\n", 'bullet'),
+            ("• Time of the spot (UTC)\n", 'bullet'),
+            ("• Optional comment\n\n", 'bullet'),
+
+            ("Spot Table Columns:\n", 'heading'),
+            ("Time - UTC time when spot was posted (HH:MM)\n", 'bullet'),
+            ("Frequency - Operating frequency in kHz\n", 'bullet'),
+            ("DX Callsign - Station that was spotted\n", 'bullet'),
+            ("Spotter - Who posted the spot\n", 'bullet'),
+            ("Comment - Additional information\n\n", 'bullet'),
+
+            ("Understanding RBN Spots:\n", 'heading'),
+            ("Reverse Beacon Network (RBN) spots:\n", ()),
+            ("• Automated CW spotting system\n", 'bullet'),
+            ("• Very accurate frequencies\n", 'bullet'),
+            ("• Shows callsigns heard by RBN receivers worldwide\n", 'bullet'),
+            ("• Great for finding CW activity\n\n", 'bullet'),
+
+            ("Color Coding:\n", 'heading'),
+            ("• Cyan/Blue: SKCC members (C/T/S detected)\n", 'bullet'),
+            ("• Standard: Regular spots\n\n", 'bullet'),
+
+            ("Using Spots:\n", 'heading'),
+            ("1. Watch spot table for activity\n", 'numbered'),
+            ("2. Look for SKCC members (cyan highlights)\n", 'numbered'),
+            ("3. Note the frequency\n", 'numbered'),
+            ("4. Tune radio to that frequency\n", 'numbered'),
+            ("5. Listen before calling\n\n", 'numbered'),
+
+            ("Tips:\n", 'heading'),
+            ("• Fresh spots (0-5 min) = station likely still there\n", 'bullet'),
+            ("• Use band filters to show only desired bands\n", 'bullet'),
+            ("• Sort by clicking column headers\n", 'bullet'),
+            ("• Multiple spots of same call = strong signal\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("SKCC Highlighting", 'link', 'link_skcc_highlighting'), ("\n", ()),
+            ("• ", ()), ("Connecting", 'link', 'link_cluster_connect'), ("\n", ())
+        ]
 
     @staticmethod
     def skcc_highlighting():
-        return [("SKCC Member Highlighting\n", 'title'),
-                ("\nC/T/S members highlighted in cyan.\n\n", ())]
+        return [
+            ("SKCC Member Highlighting\n", 'title'),
+            ("\nAutomatic highlighting of SKCC Centurion, Tribune, and Senator members in DX spots.\n\n", ()),
+
+            ("Location: DX Clusters tab → Spots table\n\n", 'italic'),
+
+            ("What is SKCC Highlighting?\n", 'heading'),
+            ("The app automatically detects and highlights SKCC members with achievement awards in the spot table, making them easy to find.\n\n", ()),
+
+            ("How It Works:\n", 'heading'),
+            ("The app scans each spot for SKCC suffixes:\n", ()),
+            ("• Centurion (C) - Example: 12345C\n", 'bullet'),
+            ("• Tribune (T) - Example: 12345T\n", 'bullet'),
+            ("• Senator (S) - Example: 12345S\n\n", 'bullet'),
+
+            ("When detected in comments, the entire spot row is highlighted in cyan/blue.\n\n", ()),
+
+            ("Visual Indicators:\n", 'heading'),
+            ("• Cyan/Blue background - SKCC member with C/T/S\n", 'bullet'),
+            ("• Standard background - Regular spots\n\n", 'bullet'),
+
+            ("Detection Methods:\n", 'heading'),
+            ("The app looks for patterns like:\n", ()),
+            ("• 'SKCC 12345C' in comment field\n", 'bullet'),
+            ("• '12345T' anywhere in comment\n", 'bullet'),
+            ("• Spots from SKCC roster members\n\n", 'bullet'),
+
+            ("Why This Matters:\n", 'heading'),
+            ("• Quickly find SKCC members for awards progress\n", 'bullet'),
+            ("• Identify bonus-worthy contacts for contests\n", 'bullet'),
+            ("• See who's active in SKCC community\n", 'bullet'),
+            ("• Work toward Centurion/Tribune/Senator awards\n\n", 'bullet'),
+
+            ("Best Practices:\n", 'heading'),
+            ("• Check comments for SKCC numbers\n", 'bullet'),
+            ("• Highlighted spots good for award QSOs\n", 'bullet'),
+            ("• During contests, these earn bonus points\n", 'bullet'),
+            ("• Log SKCC numbers when working these stations\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Reading Spots", 'link', 'link_cluster_spots'), ("\n", ()),
+            ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ()),
+            ("• ", ()), ("Contests", 'link', 'link_contest_overview'), ("\n", ())
+        ]
 
     @staticmethod
     def arrl_awards():
-        return [("ARRL Awards\n", 'title'),
-                ("\nWAS, DXCC, and more.\n\n", ())]
+        return [
+            ("ARRL Awards Tracking\n", 'title'),
+            ("\nTrack your progress toward ARRL (American Radio Relay League) awards including WAS, DXCC, and WAC.\n\n", ()),
+
+            ("Location: ARRL Awards tab\n\n", 'italic'),
+
+            ("Supported ARRL Awards:\n", 'heading'),
+
+            ("WAS - Worked All States:\n", 'subheading'),
+            ("• Contact all 50 US states\n", 'bullet'),
+            ("• Can be achieved on any band/mode\n", 'bullet'),
+            ("• App tracks which states you've worked\n", 'bullet'),
+            ("• Progress bar shows completion percentage\n", 'bullet'),
+            ("• List shows confirmed states\n\n", 'bullet'),
+
+            ("DXCC - DX Century Club:\n", 'subheading'),
+            ("• Contact 100+ DXCC entities (countries/territories)\n", 'bullet'),
+            ("• Prestigious international award\n", 'bullet'),
+            ("• App tracks unique DXCC entities\n", 'bullet'),
+            ("• Automatic entity detection from callsign\n", 'bullet'),
+            ("• Shows progress toward 100\n\n", 'bullet'),
+
+            ("WAC - Worked All Continents:\n", 'subheading'),
+            ("• Contact all 6 continents\n", 'bullet'),
+            ("• NA, SA, EU, AF, AS, OC\n", 'bullet'),
+            ("• Simple but satisfying award\n", 'bullet'),
+            ("• Great starter award\n\n", 'bullet'),
+
+            ("Features:\n", 'heading'),
+            ("• Real-time progress tracking\n", 'bullet'),
+            ("• Visual progress bars\n", 'bullet'),
+            ("• Lists of worked/needed entities\n", 'bullet'),
+            ("• Automatic updates as you log QSOs\n", 'bullet'),
+            ("• Export lists for ARRL applications\n\n", 'bullet'),
+
+            ("Using the Tab:\n", 'heading'),
+            ("1. Navigate to ARRL Awards tab\n", 'numbered'),
+            ("2. Select award from dropdown\n", 'numbered'),
+            ("3. View your progress\n", 'numbered'),
+            ("4. See what you still need\n", 'numbered'),
+            ("5. Export for award application\n\n", 'numbered'),
+
+            ("Award Applications:\n", 'heading'),
+            ("To apply for ARRL awards:\n", ()),
+            ("• Visit arrl.org/awards\n", 'bullet'),
+            ("• Most require QSL card confirmation\n", 'bullet'),
+            ("• LOTW (Logbook of the World) accepted\n", 'bullet'),
+            ("• Fees apply for most awards\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ()),
+            ("• ", ()), ("Contact Logging", 'link', 'link_log_qso'), ("\n", ())
+        ]
 
     @staticmethod
     def skcc_awards():
-        return [("SKCC Awards\n", 'title'),
-                ("\nAll 11 awards supported.\n\n", ())]
+        return [
+            ("SKCC Awards Tracking\n", 'title'),
+            ("\nComprehensive tracking for all 11 Straight Key Century Club awards with automatic validation and progress monitoring.\n\n", ()),
+
+            ("Location: SKCC Awards tab\n\n", 'italic'),
+
+            ("All 11 SKCC Awards:\n", 'heading'),
+
+            ("1. Centurion (C) Award:\n", 'subheading'),
+            ("• Work 100+ unique SKCC members\n", 'bullet'),
+            ("• Foundation award for SKCC\n", 'bullet'),
+            ("• Endorsements: x2, x3, x4... up to x40+\n", 'bullet'),
+            ("• Mechanical keys only\n\n", 'bullet'),
+
+            ("2. Tribune (T) Award:\n", 'subheading'),
+            ("• Work 50+ Tribune or Senator members\n", 'bullet'),
+            ("• Requires Centurion first\n", 'bullet'),
+            ("• Endorsements: x2 through x30\n", 'bullet'),
+            ("• QSOs after earning Centurion\n\n", 'bullet'),
+
+            ("3. Senator (S) Award:\n", 'subheading'),
+            ("• Work 200+ Tribune/Senator members\n", 'bullet'),
+            ("• Requires Tribune x8 first\n", 'bullet'),
+            ("• Endorsements: x2 through x10\n", 'bullet'),
+            ("• QSOs after Tribune x8 date\n\n", 'bullet'),
+
+            ("4. Triple Key Award (TKA):\n", 'subheading'),
+            ("• Work 100+ members with EACH key type:\n", 'bullet'),
+            ("  - 100+ with straight key\n", ()),
+            ("  - 100+ with bug\n", ()),
+            ("  - 100+ with sideswiper\n", ()),
+            ("• Endorsements: x2, x3, x5, x10\n", 'bullet'),
+            ("• Effective date: Nov 10, 2018\n\n", 'bullet'),
+
+            ("5. Rag Chew Award:\n", 'subheading'),
+            ("• Complete 30+ QSOs of 30+ minutes each\n", 'bullet'),
+            ("• Total = 900+ minutes (15 hours)\n", 'bullet'),
+            ("• Encourages leisurely conversations\n", 'bullet'),
+            ("• Endorsements based on total minutes\n\n", 'bullet'),
+
+            ("6. SKCC WAS - Worked All States:\n", 'subheading'),
+            ("• Work all 50 US states with SKCC members\n", 'bullet'),
+            ("• Different from ARRL WAS\n", 'bullet'),
+            ("• Only SKCC members count\n\n", 'bullet'),
+
+            ("7. SKCC WAS-T:\n", 'subheading'),
+            ("• Work all 50 states with Tribune/Senator\n", 'bullet'),
+            ("• More challenging than basic WAS\n\n", 'bullet'),
+
+            ("8. SKCC WAS-S:\n", 'subheading'),
+            ("• Work all 50 states with Senators\n", 'bullet'),
+            ("• Most challenging WAS variant\n\n", 'bullet'),
+
+            ("9. Canadian Maple Leaf:\n", 'subheading'),
+            ("• Work all 10 Canadian provinces\n", 'bullet'),
+            ("• Plus 3 territories for endorsement\n", 'bullet'),
+            ("• BC, AB, SK, MB, ON, QC, NB, NS, PE, NL\n\n", 'bullet'),
+
+            ("10. SKCC DX Award:\n", 'subheading'),
+            ("• Work SKCC members in DX countries\n", 'bullet'),
+            ("• Endorsements for increasing country count\n\n", 'bullet'),
+
+            ("11. PFX - Callsign Prefix Award:\n", 'subheading'),
+            ("• Work unique callsign prefixes\n", 'bullet'),
+            ("• W1, W2, K4, VE3, G, etc.\n", 'bullet'),
+            ("• Endorsements for milestone counts\n\n", 'bullet'),
+
+            ("Key Features:\n", 'heading'),
+            ("• Real-time progress tracking\n", 'bullet'),
+            ("• Automatic SKCC roster validation\n", 'bullet'),
+            ("• Endorsement level calculation\n", 'bullet'),
+            ("• Qualifying contact lists\n", 'bullet'),
+            ("• Export applications in text format\n", 'bullet'),
+            ("• Date-based validation (effective dates)\n\n", 'bullet'),
+
+            ("Important Requirements:\n", 'heading'),
+            ("• SKCC join date MUST be configured\n", 'bullet'),
+            ("• Centurion date needed for Tribune/Senator\n", 'bullet'),
+            ("• Tribune x8 date needed for Senator\n", 'bullet'),
+            ("• Only mechanical keys valid (no keyers)\n", 'bullet'),
+            ("• Special event calls may not count\n\n", 'bullet'),
+
+            ("Configure in Settings → SKCC Award Configuration\n\n", 'italic'),
+
+            ("Using the Awards Tab:\n", 'heading'),
+            ("1. Go to SKCC Awards tab\n", 'numbered'),
+            ("2. Select award from list\n", 'numbered'),
+            ("3. View progress and endorsement level\n", 'numbered'),
+            ("4. Review qualifying contacts\n", 'numbered'),
+            ("5. Export application when ready\n", 'numbered'),
+            ("6. Submit to SKCC for approval\n\n", 'numbered'),
+
+            ("Award Applications:\n", 'heading'),
+            ("• Visit skccgroup.com/awards\n", 'bullet'),
+            ("• Most awards are free\n", 'bullet'),
+            ("• No QSL cards required\n", 'bullet'),
+            ("• Self-certify your contacts\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Settings", 'link', 'link_station_info'), (" - Configure dates\n", ()),
+            ("• ", ()), ("ARRL Awards", 'link', 'link_arrl_awards'), ("\n", ())
+        ]
 
     @staticmethod
     def adif_export():
-        return [("ADIF Export\n", 'title'),
-                ("\nFile → Export Log (ADIF)\n\n", ())]
+        return [
+            ("ADIF Export - Full Log\n", 'title'),
+            ("\nExport your entire contact log in ADIF 3.x format for use with other logging software.\n\n", ()),
+
+            ("Location: File menu → Export Log (ADIF)\n\n", 'italic'),
+
+            ("What is ADIF?\n", 'heading'),
+            ("Amateur Data Interchange Format - the universal standard for amateur radio logging data exchange. Compatible with:\n", ()),
+            ("• LOTW (Logbook of the World)\n", 'bullet'),
+            ("• QRZ.com Logbook\n", 'bullet'),
+            ("• eQSL\n", 'bullet'),
+            ("• Log4OM, N1MM, WSJT-X\n", 'bullet'),
+            ("• All major logging software\n\n", 'bullet'),
+
+            ("Export Process:\n", 'heading'),
+            ("1. Click File → Export Log (ADIF)\n", 'numbered'),
+            ("2. Choose save location\n", 'numbered'),
+            ("3. Enter filename (e.g., mylog.adi)\n", 'numbered'),
+            ("4. Click Save\n", 'numbered'),
+            ("5. All contacts exported\n\n", 'numbered'),
+
+            ("What's Included:\n", 'heading'),
+            ("Every contact in your database with all fields:\n", ()),
+            ("• Callsign, date, time, frequency, band, mode\n", 'bullet'),
+            ("• RST sent/received\n", 'bullet'),
+            ("• Name, QTH, grid, state, county, country\n", 'bullet'),
+            ("• SKCC, POTA, SOTA, IOTA references\n", 'bullet'),
+            ("• Notes and comments\n", 'bullet'),
+            ("• All 25+ logged fields\n\n", 'bullet'),
+
+            ("Use Cases:\n", 'heading'),
+            ("• Backup your entire log\n", 'bullet'),
+            ("• Transfer to another logging program\n", 'bullet'),
+            ("• Submit to LOTW for confirmations\n", 'bullet'),
+            ("• Upload to QRZ.com\n", 'bullet'),
+            ("• Share with friends\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Date Range Export", 'link', 'link_adif_date_range'), (" - Export specific period\n", ()),
+            ("• ", ()), ("SKCC Export", 'link', 'link_adif_skcc'), (" - SKCC contacts only\n", ()),
+            ("• ", ()), ("Import", 'link', 'link_adif_import'), ("\n", ())
+        ]
 
     @staticmethod
     def adif_date_range():
-        return [("Date Range Export\n", 'title'),
-                ("\nFile → Export by Date/Time Range\n\n", ())]
+        return [
+            ("ADIF Export - Date/Time Range\n", 'title'),
+            ("\nExport contacts from a specific time period - perfect for contests or event logs.\n\n", ()),
+
+            ("Location: File menu → Export by Date/Time Range\n\n", 'italic'),
+
+            ("Why Use Date Range Export?\n", 'heading'),
+            ("• Export contest logs only\n", 'bullet'),
+            ("• Submit specific event periods\n", 'bullet'),
+            ("• Share weekend operation\n", 'bullet'),
+            ("• Isolate special activations\n\n", 'bullet'),
+
+            ("Export Process:\n", 'heading'),
+            ("1. Click File → Export by Date/Time Range\n", 'numbered'),
+            ("2. Dialog opens with date/time selectors\n", 'numbered'),
+            ("3. Enter start date and time (UTC)\n", 'numbered'),
+            ("4. Enter end date and time (UTC)\n", 'numbered'),
+            ("5. Click Export\n", 'numbered'),
+            ("6. Choose filename and save\n\n", 'numbered'),
+
+            ("Date/Time Format:\n", 'heading'),
+            ("• Date: YYYY-MM-DD (e.g., 2024-01-15)\n", 'bullet'),
+            ("• Time: HH:MM (24-hour UTC)\n", 'bullet'),
+            ("• Always use UTC, not local time\n\n", 'bullet'),
+
+            ("Example Use Cases:\n", 'heading'),
+
+            ("Contest Export:\n", 'subheading'),
+            ("WES runs Friday 1800 - Sunday 1800 UTC\n", ()),
+            ("Start: 2024-01-05 18:00\n", ()),
+            ("End: 2024-01-07 18:00\n\n", ()),
+
+            ("Field Day:\n", 'subheading'),
+            ("Start: 2024-06-22 18:00\n", ()),
+            ("End: 2024-06-23 21:00\n\n", ()),
+
+            ("What's Exported:\n", 'heading'),
+            ("Only contacts within the specified time range, with all fields intact.\n\n", ()),
+
+            ("Tips:\n", 'heading'),
+            ("• Double-check UTC times\n", 'bullet'),
+            ("• Include buffer time before/after\n", 'bullet'),
+            ("• Use for contest submissions\n", 'bullet'),
+            ("• Keep original exports as backup\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Full Export", 'link', 'link_adif_export'), ("\n", ()),
+            ("• ", ()), ("Contest Export", 'link', 'link_contest_export'), ("\n", ())
+        ]
 
     @staticmethod
     def adif_skcc():
-        return [("SKCC Export\n", 'title'),
-                ("\nFile → Export SKCC Contacts\n\n", ())]
+        return [
+            ("ADIF Export - SKCC Contacts Only\n", 'title'),
+            ("\nExport only contacts with SKCC numbers - useful for SKCC-specific submissions.\n\n", ()),
+
+            ("Location: File menu → Export SKCC Contacts\n\n", 'italic'),
+
+            ("What Gets Exported:\n", 'heading'),
+            ("Only contacts where you logged an SKCC number in the SKCC Number field.\n\n", ()),
+
+            ("Export Process:\n", 'heading'),
+            ("1. Click File → Export SKCC Contacts\n", 'numbered'),
+            ("2. Choose save location\n", 'numbered'),
+            ("3. Enter filename\n", 'numbered'),
+            ("4. Click Save\n\n", 'numbered'),
+
+            ("Use Cases:\n", 'heading'),
+            ("• Submit to SKCC for awards\n", 'bullet'),
+            ("• Analyze SKCC activity\n", 'bullet'),
+            ("• Share with SKCC friends\n", 'bullet'),
+            ("• Import to SKCC-specific software\n\n", 'bullet'),
+
+            ("What's Included:\n", 'heading'),
+            ("All fields for SKCC contacts:\n", ()),
+            ("• Callsign and SKCC number\n", 'bullet'),
+            ("• Date, time, frequency, mode\n", 'bullet'),
+            ("• State/province/country\n", 'bullet'),
+            ("• All other logged fields\n\n", 'bullet'),
+
+            ("Filtering:\n", 'heading'),
+            ("The app automatically filters to include only contacts with non-empty SKCC numbers.\n\n", ()),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Full Export", 'link', 'link_adif_export'), ("\n", ()),
+            ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ())
+        ]
 
     @staticmethod
     def adif_import():
-        return [("ADIF Import\n", 'title'),
-                ("\nFile → Import Log (ADIF)\n\n", ())]
+        return [
+            ("ADIF Import\n", 'title'),
+            ("\nImport contacts from other logging software via ADIF 3.x format.\n\n", ()),
+
+            ("Location: File menu → Import Log (ADIF)\n\n", 'italic'),
+
+            ("What Can You Import?\n", 'heading'),
+            ("ADIF files from:\n", ()),
+            ("• Other W4GNS Logger backups\n", 'bullet'),
+            ("• Log4OM, N1MM, WSJT-X exports\n", 'bullet'),
+            ("• QRZ.com logbook downloads\n", 'bullet'),
+            ("• LOTW ADIF exports\n", 'bullet'),
+            ("• Any ADIF 3.x compliant file\n\n", 'bullet'),
+
+            ("Import Process:\n", 'heading'),
+            ("1. Click File → Import Log (ADIF)\n", 'numbered'),
+            ("2. Select ADIF file (.adi or .adif)\n", 'numbered'),
+            ("3. App validates file format\n", 'numbered'),
+            ("4. Progress bar shows import status\n", 'numbered'),
+            ("5. Duplicate detection runs automatically\n", 'numbered'),
+            ("6. Summary shows imported contacts\n\n", 'numbered'),
+
+            ("Duplicate Detection:\n", 'heading'),
+            ("The app checks for duplicates using:\n", ()),
+            ("• Same callsign\n", 'bullet'),
+            ("• Same date\n", 'bullet'),
+            ("• Within 10 minutes of time\n", 'bullet'),
+            ("• Skips true duplicates\n", 'bullet'),
+            ("• Reports duplicate count\n\n", 'bullet'),
+
+            ("Supported Fields:\n", 'heading'),
+            ("All standard ADIF fields:\n", ()),
+            ("• Call, QSO date, time on/off\n", 'bullet'),
+            ("• Frequency, band, mode\n", 'bullet'),
+            ("• RST sent/received\n", 'bullet'),
+            ("• Name, QTH, grid, state, county\n", 'bullet'),
+            ("• SKCC, POTA, SOTA, IOTA\n", 'bullet'),
+            ("• And more\n\n", 'bullet'),
+
+            ("Important Notes:\n", 'heading'),
+            ("• Always backup before importing\n", 'bullet'),
+            ("• Large imports may take time\n", 'bullet'),
+            ("• Review import summary\n", 'bullet'),
+            ("• Duplicates are skipped, not merged\n\n", 'bullet'),
+
+            ("Troubleshooting:\n", 'heading'),
+            ("• File won't import? Check ADIF format validity\n", 'bullet'),
+            ("• Missing fields? Some data may not map\n", 'bullet'),
+            ("• Many duplicates? Expected if re-importing\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Export", 'link', 'link_adif_export'), ("\n", ()),
+            ("• ", ()), ("Troubleshooting", 'link', 'link_database_issues'), ("\n", ())
+        ]
 
     @staticmethod
     def qrz_setup():
-        return [("QRZ Setup\n", 'title'),
-                ("\nSettings → QRZ.com Integration\n\n", ())]
+        return [
+            ("QRZ.com Integration Setup\n", 'title'),
+            ("\nConfigure QRZ.com integration for automatic callsign lookups and logbook uploads.\n\n", ()),
+
+            ("Location: Settings tab → QRZ.com Integration\n\n", 'italic'),
+
+            ("What You Need:\n", 'heading'),
+            ("• QRZ.com account (free at qrz.com)\n", 'bullet'),
+            ("• XML Subscription ($$$) for lookups\n", 'bullet'),
+            ("• API Key (free) for logbook uploads\n\n", 'bullet'),
+
+            ("Setup Steps:\n", 'heading'),
+
+            ("1. Create QRZ Account:\n", 'subheading'),
+            ("• Visit qrz.com\n", 'bullet'),
+            ("• Click Register / Sign Up\n", 'bullet'),
+            ("• Complete registration\n\n", 'bullet'),
+
+            ("2. Get XML Subscription (for lookups):\n", 'subheading'),
+            ("• Log into QRZ.com\n", 'bullet'),
+            ("• Go to Account → Subscriptions\n", 'bullet'),
+            ("• Purchase XML Subscription\n", 'bullet'),
+            ("• Required for automatic name/QTH/grid lookups\n\n", 'bullet'),
+
+            ("3. Get API Key (for uploads):\n", 'subheading'),
+            ("• Log into QRZ.com\n", 'bullet'),
+            ("• Go to Logbook → Settings → API\n", 'bullet'),
+            ("• Copy your API key\n", 'bullet'),
+            ("• Free for all users\n\n", 'bullet'),
+
+            ("4. Configure in App:\n", 'subheading'),
+            ("• Go to Settings → QRZ.com Integration\n", 'bullet'),
+            ("• Enter QRZ username\n", 'bullet'),
+            ("• Enter QRZ password\n", 'bullet'),
+            ("• Paste API key\n", 'bullet'),
+            ("• Enable 'Auto-lookup'\n", 'bullet'),
+            ("• Enable 'Auto-upload' (optional)\n", 'bullet'),
+            ("• Click 'Test QRZ Connection'\n", 'bullet'),
+            ("• Verify success message\n\n", 'bullet'),
+
+            ("Settings Explained:\n", 'heading'),
+
+            ("Auto-lookup:\n", 'subheading'),
+            ("• Automatically looks up callsigns when entered\n", 'bullet'),
+            ("• Fills name, QTH, grid, state, county\n", 'bullet'),
+            ("• Requires XML subscription\n\n", 'bullet'),
+
+            ("Auto-upload:\n", 'subheading'),
+            ("• Uploads contacts to QRZ immediately after logging\n", 'bullet'),
+            ("• Keeps QRZ logbook in sync\n", 'bullet'),
+            ("• Requires API key\n\n", 'bullet'),
+
+            ("Testing Connection:\n", 'heading'),
+            ("The 'Test QRZ Connection' button verifies:\n", ()),
+            ("• Username/password correct\n", 'bullet'),
+            ("• XML subscription active\n", 'bullet'),
+            ("• Network connectivity\n", 'bullet'),
+            ("• API key valid\n\n", 'bullet'),
+
+            ("Troubleshooting:\n", 'heading'),
+            ("• Connection fails? Check credentials\n", 'bullet'),
+            ("• Lookup not working? Verify XML subscription active\n", 'bullet'),
+            ("• Upload fails? Verify API key\n", 'bullet'),
+            ("• See ", ()), ("QRZ Troubleshooting", 'link', 'link_qrz_issues'), ("\n\n", ()),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QRZ Lookups", 'link', 'link_qrz_lookup'), ("\n", ()),
+            ("• ", ()), ("QRZ Upload", 'link', 'link_qrz_upload'), ("\n", ())
+        ]
 
     @staticmethod
     def qrz_lookup():
-        return [("QRZ Lookups\n", 'title'),
-                ("\nRequires XML subscription.\n\n", ())]
+        return [
+            ("QRZ.com XML Lookups\n", 'title'),
+            ("\nAutomatic callsign information retrieval from QRZ.com's database.\n\n", ()),
+
+            ("Requirements:\n", 'heading'),
+            ("• QRZ.com XML Subscription (paid)\n", 'bullet'),
+            ("• Configured credentials in Settings\n", 'bullet'),
+            ("• Auto-lookup enabled\n\n", 'bullet'),
+
+            ("How It Works:\n", 'heading'),
+            ("1. Enter callsign in Log Contacts tab\n", 'numbered'),
+            ("2. Press Tab or click outside field\n", 'numbered'),
+            ("3. App queries QRZ XML API\n", 'numbered'),
+            ("4. Data auto-fills within 1-2 seconds\n\n", 'numbered'),
+
+            ("What Gets Looked Up:\n", 'heading'),
+            ("• Operator's first name\n", 'bullet'),
+            ("• QTH (location)\n", 'bullet'),
+            ("• Grid square\n", 'bullet'),
+            ("• State (US stations)\n", 'bullet'),
+            ("• County (US stations)\n", 'bullet'),
+            ("• License class\n", 'bullet'),
+            ("• Country, continent, zones\n\n", 'bullet'),
+
+            ("Lookup Without Subscription:\n", 'heading'),
+            ("Without XML subscription, you still get:\n", ()),
+            ("• Country from built-in DXCC database\n", 'bullet'),
+            ("• Continent\n", 'bullet'),
+            ("• CQ/ITU zones\n", 'bullet'),
+            ("• No name/QTH/grid\n\n", 'bullet'),
+
+            ("Manual Lookup:\n", 'heading'),
+            ("Even with auto-lookup disabled:\n", ()),
+            ("• Click 'Lookup' button next to callsign\n", 'bullet'),
+            ("• Performs one-time lookup\n\n", 'bullet'),
+
+            ("Tips:\n", 'heading'),
+            ("• Lookups use internet - require connection\n", 'bullet'),
+            ("• Failed lookup? Station may not be in QRZ\n", 'bullet'),
+            ("• Can manually override auto-filled data\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QRZ Setup", 'link', 'link_qrz_setup'), ("\n", ()),
+            ("• ", ()), ("Auto-Lookup", 'link', 'link_auto_lookup'), ("\n", ())
+        ]
 
     @staticmethod
     def qrz_upload():
-        return [("QRZ Upload\n", 'title'),
-                ("\nRequires API key.\n\n", ())]
+        return [
+            ("QRZ.com Logbook Upload\n", 'title'),
+            ("\nAutomatically or manually upload contacts to your QRZ.com logbook.\n\n", ()),
+
+            ("Requirements:\n", 'heading'),
+            ("• QRZ.com account (free)\n", 'bullet'),
+            ("• QRZ API key (free)\n", 'bullet'),
+            ("• Configured in Settings\n\n", 'bullet'),
+
+            ("Auto-Upload:\n", 'heading'),
+            ("When enabled, contacts upload immediately after logging:\n", ()),
+            ("1. Log contact (Ctrl+Enter)\n", 'numbered'),
+            ("2. Contact saves to database\n", 'numbered'),
+            ("3. Automatically uploads to QRZ\n", 'numbered'),
+            ("4. Confirmation message appears\n\n", 'numbered'),
+
+            ("Manual Upload:\n", 'heading'),
+            ("If auto-upload disabled:\n", ()),
+            ("• Click 'Upload to QRZ' button after logging\n", 'bullet'),
+            ("• Uploads most recent contact\n", 'bullet'),
+            ("• Good for selective uploads\n\n", 'bullet'),
+
+            ("What Gets Uploaded:\n", 'heading'),
+            ("All contact details:\n", ()),
+            ("• Callsign, date, time\n", 'bullet'),
+            ("• Frequency, band, mode\n", 'bullet'),
+            ("• RST sent/received\n", 'bullet'),
+            ("• Name, QTH, grid\n", 'bullet'),
+            ("• Power, notes\n\n", 'bullet'),
+
+            ("Benefits:\n", 'heading'),
+            ("• Keep QRZ logbook synced automatically\n", 'bullet'),
+            ("• Access log from anywhere via QRZ website\n", 'bullet'),
+            ("• Share with QRZ users\n", 'bullet'),
+            ("• Backup in cloud\n\n", 'bullet'),
+
+            ("Troubleshooting:\n", 'heading'),
+            ("• Upload fails? Check API key\n", 'bullet'),
+            ("• Duplicate QSOs? Normal if re-uploading\n", 'bullet'),
+            ("• See ", ()), ("QRZ Troubleshooting", 'link', 'link_qrz_issues'), ("\n\n", ()),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QRZ Setup", 'link', 'link_qrz_setup'), ("\n", ()),
+            ("• ", ()), ("ADIF Export", 'link', 'link_adif_export'), (" - Bulk upload alternative\n", ())
+        ]
 
     @staticmethod
     def space_weather_overview():
-        return [("Space Weather\n", 'title'),
-                ("\nReal-time conditions.\n\n", ())]
+        return [
+            ("Space Weather Overview\n", 'title'),
+            ("\nReal-time solar and geomagnetic conditions for HF propagation forecasting.\n\n", ()),
+
+            ("Location: Space Weather tab\n\n", 'italic'),
+
+            ("What is Space Weather?\n", 'heading'),
+            ("Space weather refers to solar activity that affects radio wave propagation on Earth. Key factors:\n", ()),
+            ("• Solar flux - Sun's radio emissions\n", 'bullet'),
+            ("• Sunspot numbers - Solar activity level\n", 'bullet'),
+            ("• Geomagnetic indices (K/A) - Earth's magnetic field disturbances\n", 'bullet'),
+            ("• Solar flares - Sudden radiation bursts\n", 'bullet'),
+            ("• CMEs - Coronal Mass Ejections\n\n", 'bullet'),
+
+            ("Data Sources:\n", 'heading'),
+            ("The app integrates three data sources:\n", ()),
+            ("• HamQSL.com (N0NBH) - Solar indices\n", 'bullet'),
+            ("• NOAA SWPC - Space weather predictions\n", 'bullet'),
+            ("• NASA DONKI - Event alerts and warnings\n\n", 'bullet'),
+
+            ("Displayed Information:\n", 'heading'),
+            ("• Solar Flux Index (SFI) - Higher = better propagation\n", 'bullet'),
+            ("• Sunspot Number (SSN) - Solar activity indicator\n", 'bullet'),
+            ("• A-Index - 24-hour geomagnetic activity (lower = better)\n", 'bullet'),
+            ("• K-Index - 3-hour geomagnetic activity (0-9 scale)\n", 'bullet'),
+            ("• Solar Wind speed\n", 'bullet'),
+            ("• X-Ray flux\n\n", 'bullet'),
+
+            ("NASA DONKI Alerts:\n", 'heading'),
+            ("Real-time space weather events:\n", ()),
+            ("• Solar flare alerts (M-class, X-class)\n", 'bullet'),
+            ("• CME tracking and predictions\n", 'bullet'),
+            ("• Geomagnetic storm warnings\n", 'bullet'),
+            ("• Radio blackout predictions\n\n", 'bullet'),
+
+            ("Band Conditions:\n", 'heading'),
+            ("Forecast for day and night:\n", ()),
+            ("• 80m-40m bands\n", 'bullet'),
+            ("• 30m-20m bands\n", 'bullet'),
+            ("• 17m-15m bands\n", 'bullet'),
+            ("• 12m-10m bands\n", 'bullet'),
+            ("• Color-coded: Good/Fair/Poor\n\n", 'bullet'),
+
+            ("Auto-Refresh:\n", 'heading'),
+            ("• Data refreshes every 5 minutes\n", 'bullet'),
+            ("• 24-hour cache minimizes API calls\n", 'bullet'),
+            ("• Manual refresh available\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("NASA API Setup", 'link', 'link_nasa_api'), ("\n", ()),
+            ("• ", ()), ("Propagation", 'link', 'link_propagation'), ("\n", ())
+        ]
 
     @staticmethod
     def nasa_api():
-        return [("NASA API\n", 'title'),
-                ("\nGet key from api.nasa.gov\n\n", ())]
+        return [
+            ("NASA API Configuration\n", 'title'),
+            ("\nGet space weather alerts and forecasts from NASA's DONKI system.\n\n", ()),
+
+            ("Location: Settings tab → NASA Space Weather API\n\n", 'italic'),
+
+            ("Getting Your API Key:\n", 'heading'),
+            ("1. Visit https://api.nasa.gov/\n", 'numbered'),
+            ("2. Click 'Get Your API Key' or 'Generate API Key'\n", 'numbered'),
+            ("3. Fill out simple form (name and email)\n", 'numbered'),
+            ("4. Receive API key instantly\n", 'numbered'),
+            ("5. Copy the key\n\n", 'numbered'),
+
+            ("Configuration:\n", 'heading'),
+            ("1. Open Settings tab\n", 'numbered'),
+            ("2. Find NASA Space Weather API section\n", 'numbered'),
+            ("3. Paste your API key\n", 'numbered'),
+            ("4. Set cache duration (default 24 hours)\n", 'numbered'),
+            ("5. Save settings\n\n", 'numbered'),
+
+            ("Default API Key:\n", 'heading'),
+            ("A demo API key is included, but has strict rate limits. Getting your own key (free) provides:\n", ()),
+            ("• Higher rate limits\n", 'bullet'),
+            ("• More reliable access\n", 'bullet'),
+            ("• Better performance\n\n", 'bullet'),
+
+            ("Cache Duration:\n", 'heading'),
+            ("Set how long to cache NASA data:\n", ()),
+            ("• 24 hours (default) - Good balance\n", 'bullet'),
+            ("• 12 hours - More frequent updates\n", 'bullet'),
+            ("• 48 hours - Less API calls\n\n", 'bullet'),
+
+            ("What You Get:\n", 'heading'),
+            ("With NASA API configured:\n", ()),
+            ("• Solar flare alerts\n", 'bullet'),
+            ("• CME tracking\n", 'bullet'),
+            ("• Geomagnetic storm forecasts\n", 'bullet'),
+            ("• Solar Energetic Particle events\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Space Weather", 'link', 'link_space_weather_overview'), ("\n", ()),
+            ("• ", ()), ("Settings", 'link', 'link_station_info'), ("\n", ())
+        ]
 
     @staticmethod
     def propagation():
-        return [("Propagation\n", 'title'),
-                ("\nHF band conditions.\n\n", ())]
+        return [
+            ("HF Propagation Forecasts\n", 'title'),
+            ("\nUnderstanding and using band condition forecasts.\n\n", ()),
+
+            ("Location: Space Weather tab → Band Conditions\n\n", 'italic'),
+
+            ("What Affects Propagation?\n", 'heading'),
+            ("• Solar flux - Higher = better HF propagation\n", 'bullet'),
+            ("• Sunspot number - More sunspots = better high bands\n", 'bullet'),
+            ("• K-Index - Higher = worse propagation (geomagnetic storms)\n", 'bullet'),
+            ("• A-Index - Magnetic field disturbances\n", 'bullet'),
+            ("• Time of day - Day vs night propagation differs\n\n", 'bullet'),
+
+            ("Reading Conditions:\n", 'heading'),
+            ("The app shows forecast for each band:\n", ()),
+            ("• Good (Green) - Excellent propagation expected\n", 'bullet'),
+            ("• Fair (Yellow) - Moderate conditions\n", 'bullet'),
+            ("• Poor (Red) - Difficult propagation\n\n", 'bullet'),
+
+            ("Day vs Night:\n", 'heading'),
+
+            ("Daytime Propagation:\n", 'subheading'),
+            ("• Higher bands better (20m-10m)\n", 'bullet'),
+            ("• 40m/80m limited to regional\n", 'bullet'),
+            ("• 10m/15m can be amazing with high solar flux\n\n", 'bullet'),
+
+            ("Nighttime Propagation:\n", 'subheading'),
+            ("• Lower bands better (40m/80m/160m)\n", 'bullet'),
+            ("• 20m transitions day/night\n", 'bullet'),
+            ("• 10m/15m usually dead at night\n\n", 'bullet'),
+
+            ("Solar Flux Index (SFI):\n", 'heading'),
+            ("• < 70: Very poor, mainly 40m/80m\n", 'bullet'),
+            ("• 70-100: Fair, 20m okay\n", 'bullet'),
+            ("• 100-150: Good, 15m/20m excellent\n", 'bullet'),
+            ("• 150+: Excellent, 10m/12m open\n\n", 'bullet'),
+
+            ("K-Index (Geomagnetic):\n", 'heading'),
+            ("• 0-1: Quiet, excellent propagation\n", 'bullet'),
+            ("• 2-3: Unsettled, good propagation\n", 'bullet'),
+            ("• 4-5: Active, degraded propagation\n", 'bullet'),
+            ("• 6-7: Storm, poor propagation\n", 'bullet'),
+            ("• 8-9: Severe storm, very poor\n\n", 'bullet'),
+
+            ("Using Forecasts:\n", 'heading'),
+            ("• Check before contests\n", 'bullet'),
+            ("• Plan DX attempts for good conditions\n", 'bullet'),
+            ("• Adjust band selection based on forecast\n", 'bullet'),
+            ("• Watch for sudden changes (flares)\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Space Weather", 'link', 'link_space_weather_overview'), ("\n", ()),
+            ("• ", ()), ("NASA API", 'link', 'link_nasa_api'), ("\n", ())
+        ]
 
     @staticmethod
     def station_info():
-        return [("Station Information\n", 'title'),
-                ("\nSettings → Station Information\n\n", ())]
+        return [
+            ("Station Information Settings\n", 'title'),
+            ("\nConfigure your station details used throughout the application.\n\n", ()),
+
+            ("Location: Settings tab → Station Information\n\n", 'italic'),
+
+            ("Required Settings:\n", 'heading'),
+
+            ("Your Callsign:\n", 'subheading'),
+            ("• Your amateur radio call sign\n", 'bullet'),
+            ("• Used for contest logging, DX cluster login\n", 'bullet'),
+            ("• Example: W4GNS, N1ABC, K2XYZ\n\n", 'bullet'),
+
+            ("Optional But Recommended:\n", 'heading'),
+
+            ("Operator Name:\n", 'subheading'),
+            ("• Your full name for award applications\n", 'bullet'),
+            ("• Example: John Smith\n\n", 'bullet'),
+
+            ("Grid Square:\n", 'subheading'),
+            ("• Maidenhead grid locator\n", 'bullet'),
+            ("• 4 or 6 character format\n", 'bullet'),
+            ("• Example: EM73, FN20ab\n\n", 'bullet'),
+
+            ("SKCC Number:\n", 'subheading'),
+            ("• Your SKCC membership number if member\n", 'bullet'),
+            ("• Include suffix (C/T/S) if earned\n", 'bullet'),
+            ("• Example: 12345, 12345C, 12345T\n\n", 'bullet'),
+
+            ("Default RST:\n", 'subheading'),
+            ("• Signal report sent by default\n", 'bullet'),
+            ("• 59 for phone, 599 for CW\n", 'bullet'),
+            ("• Can be overridden per QSO\n\n", 'bullet'),
+
+            ("Default Power:\n", 'subheading'),
+            ("• Your typical transmit power in watts\n", 'bullet'),
+            ("• Example: 100, 5, 1500\n\n", 'bullet'),
+
+            ("Zip Code:\n", 'subheading'),
+            ("• For local weather display\n", 'bullet'),
+            ("• US zip codes only\n\n", 'bullet'),
+
+            ("SKCC Award Dates:\n", 'heading'),
+            ("Critical for award tracking:\n\n", ()),
+
+            ("Join Date (YYYYMMDD):\n", 'subheading'),
+            ("• When you joined SKCC\n", 'bullet'),
+            ("• Required for ALL awards\n", 'bullet'),
+            ("• Example: 20240115\n\n", 'bullet'),
+
+            ("Centurion Date (YYYYMMDD):\n", 'subheading'),
+            ("• When you earned Centurion\n", 'bullet'),
+            ("• Required for Tribune/Senator tracking\n", 'bullet'),
+            ("• QSOs before this don't count for T/S\n\n", 'bullet'),
+
+            ("Tribune x8 Date (YYYYMMDD):\n", 'subheading'),
+            ("• When you earned Tribune x8\n", 'bullet'),
+            ("• Required for Senator tracking\n", 'bullet'),
+            ("• QSOs before this don't count for Senator\n\n", 'bullet'),
+
+            ("Saving Settings:\n", 'heading'),
+            ("• Click 'Save Settings' button\n", 'bullet'),
+            ("• Settings persist across sessions\n", 'bullet'),
+            ("• Stored in config.json\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("First Time Setup", 'link', 'link_first_time_setup'), ("\n", ()),
+            ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ())
+        ]
 
     @staticmethod
     def preferences():
-        return [("Preferences\n", 'title'),
-                ("\nSettings → Logging Preferences\n\n", ())]
+        return [
+            ("Logging Preferences\n", 'title'),
+            ("\nCustomize how the logging interface behaves.\n\n", ()),
+
+            ("Location: Settings tab → Logging Preferences\n\n", 'italic'),
+
+            ("Available Preferences:\n", 'heading'),
+
+            ("Auto-lookup:\n", 'subheading'),
+            ("• Automatically lookup callsigns when entered\n", 'bullet'),
+            ("• Requires QRZ XML subscription\n", 'bullet'),
+            ("• Fills name, QTH, grid automatically\n", 'bullet'),
+            ("• Recommended: Enabled\n\n", 'bullet'),
+
+            ("Warn duplicates:\n", 'subheading'),
+            ("• Show warning for duplicate contacts\n", 'bullet'),
+            ("• Checks same call/band/mode/day\n", 'bullet'),
+            ("• Prevents accidental re-logging\n", 'bullet'),
+            ("• Recommended: Enabled\n\n", 'bullet'),
+
+            ("Auto-fill Time OFF:\n", 'subheading'),
+            ("• Automatically set end time when logging\n", 'bullet'),
+            ("• Sets to current UTC time\n", 'bullet'),
+            ("• Most contacts have same ON/OFF time\n", 'bullet'),
+            ("• Recommended: Enabled\n\n", 'bullet'),
+
+            ("DX Cluster Preferences:\n", 'heading'),
+
+            ("Selected Cluster:\n", 'subheading'),
+            ("• Choose default DX cluster\n", 'bullet'),
+            ("• 20+ clusters available\n", 'bullet'),
+            ("• Example: AE5E, W3LPL\n\n", 'bullet'),
+
+            ("Auto-connect on startup:\n", 'subheading'),
+            ("• Connect to cluster automatically\n", 'bullet'),
+            ("• Saves time if you always use clusters\n\n", 'bullet'),
+
+            ("Spot Filters:\n", 'subheading'),
+            ("• Which bands to show\n", 'bullet'),
+            ("• Which continents to include\n", 'bullet'),
+            ("• Saved per session\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Station Info", 'link', 'link_station_info'), ("\n", ()),
+            ("• ", ()), ("QRZ Setup", 'link', 'link_qrz_setup'), ("\n", ())
+        ]
 
     @staticmethod
     def backup():
-        return [("Google Drive Backup\n", 'title'),
-                ("\nAutomatic cloud backups.\n\n", ())]
+        return [
+            ("Google Drive Auto-Backup\n", 'title'),
+            ("\nAutomatic cloud backups of your log to Google Drive.\n\n", ()),
+
+            ("Location: Settings tab → Google Drive Auto-Backup\n\n", 'italic'),
+
+            ("Features:\n", 'heading'),
+            ("• Automatic scheduled backups\n", 'bullet'),
+            ("• Secure OAuth authentication\n", 'bullet'),
+            ("• Configurable backup interval\n", 'bullet'),
+            ("• Automatic backup rotation\n", 'bullet'),
+            ("• Database and config backups\n\n", 'bullet'),
+
+            ("Setup Process:\n", 'heading'),
+            ("1. Click 'Authenticate with Google'\n", 'numbered'),
+            ("2. Sign in to your Google account\n", 'numbered'),
+            ("3. Grant permissions to app\n", 'numbered'),
+            ("4. Set backup interval (hours)\n", 'numbered'),
+            ("5. Set max backups to keep\n", 'numbered'),
+            ("6. Enable 'Include config file'\n", 'numbered'),
+            ("7. Save settings\n\n", 'numbered'),
+
+            ("Configuration Options:\n", 'heading'),
+
+            ("Backup Interval:\n", 'subheading'),
+            ("• How often to backup (in hours)\n", 'bullet'),
+            ("• Example: 24 = daily, 168 = weekly\n", 'bullet'),
+            ("• Minimum: 1 hour\n\n", 'bullet'),
+
+            ("Max Backups:\n", 'subheading'),
+            ("• How many old backups to keep\n", 'bullet'),
+            ("• Older backups automatically deleted\n", 'bullet'),
+            ("• Example: 7 = keep last 7 backups\n\n", 'bullet'),
+
+            ("Include Config:\n", 'subheading'),
+            ("• Also backup config.json file\n", 'bullet'),
+            ("• Includes all settings\n", 'bullet'),
+            ("• Recommended: Enabled\n\n", 'bullet'),
+
+            ("Manual Backup:\n", 'heading'),
+            ("• Click 'Backup Now' for immediate backup\n", 'bullet'),
+            ("• Useful before major changes\n\n", 'bullet'),
+
+            ("Restore Process:\n", 'heading'),
+            ("1. Download backup from Google Drive\n", 'numbered'),
+            ("2. Close application\n", 'numbered'),
+            ("3. Replace logger.db with backup\n", 'numbered'),
+            ("4. Restart application\n\n", 'numbered'),
+
+            ("Security:\n", 'heading'),
+            ("• OAuth 2.0 secure authentication\n", 'bullet'),
+            ("• App only accesses its own files\n", 'bullet'),
+            ("• No password stored locally\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("ADIF Export", 'link', 'link_adif_export'), (" - Alternative backup\n", ())
+        ]
 
     @staticmethod
     def themes():
-        return [("Themes\n", 'title'),
-                ("\nLight and dark themes.\n\n", ())]
+        return [
+            ("Themes and Appearance\n", 'title'),
+            ("\nCustomize the visual appearance of the application.\n\n", ()),
+
+            ("Location: Settings tab → Appearance\n\n", 'italic'),
+
+            ("Available Themes:\n", 'heading'),
+
+            ("Light Theme (Default):\n", 'subheading'),
+            ("• Traditional light background\n", 'bullet'),
+            ("• Dark text on light background\n", 'bullet'),
+            ("• Good for daytime use\n", 'bullet'),
+            ("• Easy on paper printouts\n\n", 'bullet'),
+
+            ("Dark Theme:\n", 'subheading'),
+            ("• Dark background\n", 'bullet'),
+            ("• Light text on dark background\n", 'bullet'),
+            ("• Easier on eyes at night\n", 'bullet'),
+            ("• Reduces screen glare\n\n", 'bullet'),
+
+            ("Changing Themes:\n", 'heading'),
+            ("1. Go to Settings tab\n", 'numbered'),
+            ("2. Find Appearance section\n", 'numbered'),
+            ("3. Select Light or Dark\n", 'numbered'),
+            ("4. Theme applies immediately\n", 'numbered'),
+            ("5. Preference saved automatically\n\n", 'numbered'),
+
+            ("Theme Affects:\n", 'heading'),
+            ("• All tabs and windows\n", 'bullet'),
+            ("• Buttons and controls\n", 'bullet'),
+            ("• Tables and lists\n", 'bullet'),
+            ("• Help dialog\n", 'bullet'),
+            ("• All UI elements\n\n", 'bullet'),
+
+            ("Tips:\n", 'heading'),
+            ("• Use Dark theme for night logging\n", 'bullet'),
+            ("• Use Light theme for daytime\n", 'bullet'),
+            ("• Switch anytime without restart\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Settings", 'link', 'link_station_info'), ("\n", ())
+        ]
 
     @staticmethod
     def monthly_brag_report():
-        return [("Monthly Brag Report\n", 'title'),
-                ("\nReports → SKCC Monthly Brag Report\n\n", ())]
+        return [
+            ("Monthly Brag Report\n", 'title'),
+            ("\nSee ", ()), ("Using Monthly Brag Report", 'link', 'link_brag_usage'), (" for complete instructions.\n\n", ()),
+            ("This is the same as the Monthly Brag feature.\n\n", ()),
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Monthly Brag Overview", 'link', 'link_brag_overview'), ("\n", ()),
+            ("• ", ()), ("Using the Report", 'link', 'link_brag_usage'), ("\n", ()),
+            ("• ", ()), ("Submitting Results", 'link', 'link_brag_submission'), ("\n", ())
+        ]
 
     @staticmethod
     def qrz_issues():
-        return [("QRZ Troubleshooting\n", 'title'),
-                ("\nCommon issues and solutions.\n\n", ())]
+        return [
+            ("QRZ Troubleshooting\n", 'title'),
+            ("\nCommon QRZ.com integration issues and solutions.\n\n", ()),
+
+            ("Problem: Connection Test Fails\n", 'heading'),
+            ("Symptoms: 'Test QRZ Connection' shows error\n\n", ()),
+            ("Solutions:\n", 'subheading'),
+            ("• Verify username/password correct\n", 'bullet'),
+            ("• Check XML subscription is active\n", 'bullet'),
+            ("• Verify internet connection\n", 'bullet'),
+            ("• Try logging into qrz.com website directly\n", 'bullet'),
+            ("• Check subscription hasn't expired\n\n", 'bullet'),
+
+            ("Problem: Lookups Not Working\n", 'heading'),
+            ("Symptoms: Callsign lookup returns no data\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Verify XML subscription active (not just basic account)\n", 'bullet'),
+            ("• Check credentials configured correctly\n", 'bullet'),
+            ("• Enable 'Auto-lookup' in Settings\n", 'bullet'),
+            ("• Some callsigns may not be in QRZ database\n", 'bullet'),
+            ("• Try manual lookup button\n\n", 'bullet'),
+
+            ("Problem: Upload Fails\n", 'heading'),
+            ("Symptoms: 'Upload to QRZ' shows error\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Verify API key configured\n", 'bullet'),
+            ("• Check API key is correct (copy/paste from QRZ)\n", 'bullet'),
+            ("• Ensure internet connection active\n", 'bullet'),
+            ("• Check QRZ logbook is accessible\n", 'bullet'),
+            ("• Try uploading via ADIF export as alternative\n\n", 'bullet'),
+
+            ("Problem: Slow Lookups\n", 'heading'),
+            ("Symptoms: Lookups take 5+ seconds\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Check internet speed\n", 'bullet'),
+            ("• QRZ servers may be busy\n", 'bullet'),
+            ("• Try different time of day\n", 'bullet'),
+            ("• Consider disabling auto-lookup for manual control\n\n", 'bullet'),
+
+            ("Error Messages:\n", 'heading'),
+
+            ("'Invalid username or password':\n", 'subheading'),
+            ("• Double-check credentials\n", 'bullet'),
+            ("• Password is case-sensitive\n", 'bullet'),
+            ("• Try resetting password on QRZ website\n\n", 'bullet'),
+
+            ("'Subscription required':\n", 'subheading'),
+            ("• XML subscription needed for lookups\n", 'bullet'),
+            ("• Purchase at qrz.com/i/subscriptions.html\n", 'bullet'),
+            ("• Free accounts don't include XML access\n\n", 'bullet'),
+
+            ("'Network error':\n", 'subheading'),
+            ("• Check internet connection\n", 'bullet'),
+            ("• Firewall may be blocking\n", 'bullet'),
+            ("• Try ping qrz.com to verify connectivity\n\n", 'bullet'),
+
+            ("Still Having Issues?\n", 'heading'),
+            ("• Visit QRZ support at qrz.com/support\n", 'bullet'),
+            ("• Check QRZ system status\n", 'bullet'),
+            ("• Verify your subscription status on QRZ website\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QRZ Setup", 'link', 'link_qrz_setup'), ("\n", ()),
+            ("• ", ()), ("Common Problems", 'link', 'link_common_problems'), ("\n", ())
+        ]
 
     @staticmethod
     def cluster_issues():
-        return [("Cluster Troubleshooting\n", 'title'),
-                ("\nConnection problems.\n\n", ())]
+        return [
+            ("DX Cluster Troubleshooting\n", 'title'),
+            ("\nSolve connection and performance issues with DX clusters.\n\n", ()),
+
+            ("Problem: Can't Connect\n", 'heading'),
+            ("Symptoms: Connection fails or times out\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Verify callsign entered correctly\n", 'bullet'),
+            ("• Try different cluster from list\n", 'bullet'),
+            ("• Check internet connection\n", 'bullet'),
+            ("• Firewall may block ports 7300 or 7373\n", 'bullet'),
+            ("• Some clusters may be down temporarily\n\n", 'bullet'),
+
+            ("Problem: Connection Drops\n", 'heading'),
+            ("Symptoms: Connected but then disconnects\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Network instability - check connection\n", 'bullet'),
+            ("• Cluster may have kicked idle connections\n", 'bullet'),
+            ("• Reconnect - it happens occasionally\n", 'bullet'),
+            ("• Try cluster geographically closer\n\n", 'bullet'),
+
+            ("Problem: No Spots Appearing\n", 'heading'),
+            ("Symptoms: Connected but table empty\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Check band filters - may have all unchecked\n", 'bullet'),
+            ("• Check continent filters\n", 'bullet'),
+            ("• May be quiet time (middle of night)\n", 'bullet'),
+            ("• Try different cluster with more activity\n\n", 'bullet'),
+
+            ("Problem: Too Many Spots\n", 'heading'),
+            ("Symptoms: Spot table overwhelmed\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Use band filters to show only desired bands\n", 'bullet'),
+            ("• Use continent filters to reduce volume\n", 'bullet'),
+            ("• RBN clusters generate many automated spots\n", 'bullet'),
+            ("• Consider traditional cluster instead\n\n", 'bullet'),
+
+            ("Problem: Commands Don't Work\n", 'heading'),
+            ("Symptoms: Commands return errors or no response\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Different cluster software supports different commands\n", 'bullet'),
+            ("• DX Spider uses SH/ prefix\n", 'bullet'),
+            ("• AR-Cluster uses SHOW\n", 'bullet'),
+            ("• Type HELP to see cluster-specific commands\n\n", 'bullet'),
+
+            ("Firewall Configuration:\n", 'heading'),
+            ("If firewall blocking:\n", ()),
+            ("• Allow outbound TCP port 7300\n", 'bullet'),
+            ("• Allow outbound TCP port 7373\n", 'bullet'),
+            ("• Allow W4GNS Logger application\n\n", 'bullet'),
+
+            ("Cluster Selection Tips:\n", 'heading'),
+            ("• Choose cluster near your location\n", 'bullet'),
+            ("• RBN clusters best for CW activity\n", 'bullet'),
+            ("• Traditional clusters for all modes\n", 'bullet'),
+            ("• If one doesn't work, try another\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Connecting to Clusters", 'link', 'link_cluster_connect'), ("\n", ()),
+            ("• ", ()), ("Common Problems", 'link', 'link_common_problems'), ("\n", ())
+        ]
 
     @staticmethod
     def database_issues():
-        return [("Database Troubleshooting\n", 'title'),
-                ("\nDatabase errors.\n\n", ())]
+        return [
+            ("Database Troubleshooting\n", 'title'),
+            ("\nResolve issues with the SQLite database.\n\n", ()),
+
+            ("Problem: Database Locked Error\n", 'heading'),
+            ("Symptoms: 'Database is locked' message\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Close other instances of the app\n", 'bullet'),
+            ("• Check no other program accessing logger.db\n", 'bullet'),
+            ("• Restart application\n", 'bullet'),
+            ("• Reboot computer if persists\n\n", 'bullet'),
+
+            ("Problem: Database Corruption\n", 'heading'),
+            ("Symptoms: 'Database disk image is malformed'\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("1. Close application immediately\n", 'numbered'),
+            ("2. Copy logger.db to backup location\n", 'numbered'),
+            ("3. Try: sqlite3 logger.db '.dump' | sqlite3 new_logger.db\n", 'numbered'),
+            ("4. Replace old database with new one\n", 'numbered'),
+            ("5. If fails, restore from backup\n\n", 'numbered'),
+
+            ("Problem: Missing Contacts\n", 'heading'),
+            ("Symptoms: Contacts disappeared from log\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Check Contacts tab filters\n", 'bullet'),
+            ("• Verify sorting - may be at bottom\n", 'bullet'),
+            ("• Check date range if filtered\n", 'bullet'),
+            ("• Restore from backup if actually deleted\n\n", 'bullet'),
+
+            ("Problem: Import Fails\n", 'heading'),
+            ("Symptoms: ADIF import shows errors\n\n", ()),
+
+            ("Solutions:\n", 'subheading'),
+            ("• Verify ADIF file format valid\n", 'bullet'),
+            ("• Check file not corrupted\n", 'bullet'),
+            ("• Try smaller batch imports\n", 'bullet'),
+            ("• Examine error message for specific field\n\n", 'bullet'),
+
+            ("Prevention:\n", 'heading'),
+            ("Protect your database:\n", ()),
+            ("• Regular ADIF exports\n", 'bullet'),
+            ("• Enable Google Drive backup\n", 'bullet'),
+            ("• Manual backups before major changes\n", 'bullet'),
+            ("• Keep external backup drive copy\n", 'bullet'),
+            ("• Never edit logger.db directly\n\n", 'bullet'),
+
+            ("Backup Locations:\n", 'heading'),
+            ("App creates automatic backups:\n", ()),
+            ("• logs/ directory (last 5 backups)\n", 'bullet'),
+            ("• Google Drive (if configured)\n", 'bullet'),
+            ("• On shutdown\n\n", 'bullet'),
+
+            ("Recovery Steps:\n", 'heading'),
+            ("If database totally broken:\n", ()),
+            ("1. Find most recent backup\n", 'numbered'),
+            ("2. Close application\n", 'numbered'),
+            ("3. Rename broken logger.db to logger.db.bad\n", 'numbered'),
+            ("4. Copy backup to logger.db\n", 'numbered'),
+            ("5. Restart application\n\n", 'numbered'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("ADIF Export", 'link', 'link_adif_export'), (" - Manual backups\n", ()),
+            ("• ", ()), ("Google Drive Backup", 'link', 'link_backup'), ("\n", ())
+        ]
 
     @staticmethod
     def common_problems():
-        return [("Common Problems\n", 'title'),
-                ("\nFAQ and solutions.\n\n", ())]
+        return [
+            ("Common Problems and Solutions\n", 'title'),
+            ("\nFrequently asked questions and quick fixes.\n\n", ()),
+
+            ("Installation and Startup:\n", 'heading'),
+
+            ("Q: Application won't start\n", 'subheading'),
+            ("A: Check Python 3.12+ installed. Run: python3 --version\n\n", ()),
+
+            ("Q: Missing tkinter error\n", 'subheading'),
+            ("A: Install tkinter:\n", ()),
+            ("  Ubuntu: sudo apt-get install python3-tk\n", 'bullet'),
+            ("  macOS: Included with Python from python.org\n", 'bullet'),
+            ("  Windows: Included with Python installer\n\n", 'bullet'),
+
+            ("Q: Import errors on startup\n", 'subheading'),
+            ("A: Install dependencies: pip install -r requirements.txt\n\n", ()),
+
+            ("Logging Issues:\n", 'heading'),
+
+            ("Q: Callsign lookup not working\n", 'subheading'),
+            ("A: Requires QRZ XML subscription. See ", ()), ("QRZ Setup", 'link', 'link_qrz_setup'), ("\n\n", ()),
+
+            ("Q: Duplicate warning but not duplicate\n", 'subheading'),
+            ("A: Check band and mode. Same call different band/mode is valid.\n\n", ()),
+
+            ("Q: Can't log contact\n", 'subheading'),
+            ("A: Verify required fields filled: callsign, date, time, frequency, mode.\n\n", ()),
+
+            ("Q: Time showing wrong\n", 'subheading'),
+            ("A: All times are UTC. Convert your local time to UTC.\n\n", ()),
+
+            ("Contest Questions:\n", 'heading'),
+
+            ("Q: Score seems wrong\n", 'subheading'),
+            ("A: Verify bonus values updated monthly from SKCC website.\n\n", ()),
+
+            ("Q: Duplicate on different band\n", 'subheading'),
+            ("A: Per-band dupes only. Can work same call on different bands.\n\n", ()),
+
+            ("Q: SKCC number not recognized\n", 'subheading'),
+            ("A: Roster downloads automatically. Wait for download or check Settings.\n\n", ()),
+
+            ("Awards Questions:\n", 'heading'),
+
+            ("Q: Contacts not counting\n", 'subheading'),
+            ("A: Configure SKCC join date in Settings. QSOs before join don't count.\n\n", ()),
+
+            ("Q: Tribune/Senator not tracking\n", 'subheading'),
+            ("A: Set Centurion date (for Tribune) and Tribune x8 date (for Senator).\n\n", ()),
+
+            ("Q: Wrong endorsement level\n", 'subheading'),
+            ("A: Check effective dates configured correctly in Settings.\n\n", ()),
+
+            ("Export/Import Questions:\n", 'heading'),
+
+            ("Q: Where's my exported file?\n", 'subheading'),
+            ("A: Check location you selected in save dialog. Default is application directory.\n\n", ()),
+
+            ("Q: ADIF won't import into other software\n", 'subheading'),
+            ("A: File is ADIF 3.x compliant. Check other software's import settings.\n\n", ()),
+
+            ("Q: Duplicate contacts after import\n", 'subheading'),
+            ("A: Normal if re-importing same file. App skips duplicates automatically.\n\n", ()),
+
+            ("Performance Issues:\n", 'heading'),
+
+            ("Q: App running slow\n", 'subheading'),
+            ("A: Large database? Try ADIF export, create new database, re-import recent QSOs.\n\n", ()),
+
+            ("Q: DX cluster laggy\n", 'subheading'),
+            ("A: Try cluster geographically closer. Reduce spot filters.\n\n", ()),
+
+            ("Miscellaneous:\n", 'heading'),
+
+            ("Q: Can I edit logged contacts?\n", 'subheading'),
+            ("A: Not currently in UI. Export ADIF, edit, delete from log, re-import.\n\n", ()),
+
+            ("Q: Can I run on Mac/Linux/Windows?\n", 'subheading'),
+            ("A: Yes! Python 3.12+ works on all platforms.\n\n", ()),
+
+            ("Q: Is my data safe?\n", 'subheading'),
+            ("A: Enable Google Drive backup. Regular ADIF exports recommended.\n\n", ()),
+
+            ("Still Need Help?\n", 'heading'),
+            ("• Check specific troubleshooting topics\n", 'bullet'),
+            ("• Review relevant help sections\n", 'bullet'),
+            ("• Export ADIF as backup before major changes\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QRZ Issues", 'link', 'link_qrz_issues'), ("\n", ()),
+            ("• ", ()), ("Cluster Issues", 'link', 'link_cluster_issues'), ("\n", ()),
+            ("• ", ()), ("Database Issues", 'link', 'link_database_issues'), ("\n", ())
+        ]
 
     @staticmethod
     def keyboard_reference():
-        return [("Keyboard Reference\n", 'title'),
-                ("\nComplete list of shortcuts.\n\n", ())]
+        return [
+            ("Keyboard Shortcuts Reference\n", 'title'),
+            ("\nComplete list of keyboard shortcuts for faster operation.\n\n", ()),
+
+            ("Global Shortcuts:\n", 'heading'),
+            ("Ctrl+H - Open Help\n", 'bullet'),
+            ("Alt+1 through Alt+9 - Switch between tabs\n\n", 'bullet'),
+
+            ("Logging Tab:\n", 'heading'),
+            ("Ctrl+Enter - Log Contact\n", 'bullet'),
+            ("Esc - Clear Form\n", 'bullet'),
+            ("Tab - Next Field (triggers auto-lookup on callsign)\n", 'bullet'),
+            ("Shift+Tab - Previous Field\n\n", 'bullet'),
+
+            ("Contest Tab:\n", 'heading'),
+            ("Ctrl+Enter - Log Contact\n", 'bullet'),
+            ("Esc - Clear Form\n\n", 'bullet'),
+
+            ("DX Cluster Tab:\n", 'heading'),
+            ("Enter - Send Command (in command field)\n\n", 'bullet'),
+
+            ("Standard Text Editing:\n", 'heading'),
+            ("Ctrl+C - Copy\n", 'bullet'),
+            ("Ctrl+V - Paste\n", 'bullet'),
+            ("Ctrl+X - Cut\n", 'bullet'),
+            ("Ctrl+A - Select All\n\n", 'bullet'),
+
+            ("Tips:\n", 'heading'),
+            ("• Ctrl+Enter is fastest way to log contacts\n", 'bullet'),
+            ("• Use Alt+number for quick tab switching\n", 'bullet'),
+            ("• Tab through fields during QSO\n", 'bullet'),
+            ("• Esc clears form and prepares for next QSO\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Keyboard Shortcuts", 'link', 'link_keyboard_shortcuts'), ("\n", ()),
+            ("• ", ()), ("Logging QSOs", 'link', 'link_log_qso'), ("\n", ())
+        ]
 
     @staticmethod
     def field_reference():
-        return [("Field Reference\n", 'title'),
-                ("\nAll 25+ fields explained.\n\n", ())]
+        return [
+            ("QSO Field Reference\n", 'title'),
+            ("\nComplete list of all 25+ contact logging fields.\n\n", ()),
+
+            ("Required Fields:\n", 'heading'),
+            ("• Callsign - Station contacted\n", 'bullet'),
+            ("• Date - QSO date (YYYY-MM-DD)\n", 'bullet'),
+            ("• Time ON/OFF - Start/end time UTC\n", 'bullet'),
+            ("• Frequency - Operating frequency (MHz)\n", 'bullet'),
+            ("• Band - Ham band (auto-filled)\n", 'bullet'),
+            ("• Mode - CW, SSB, FT8, etc.\n\n", 'bullet'),
+
+            ("Signal Reports:\n", 'heading'),
+            ("• RST Sent - Signal report you sent\n", 'bullet'),
+            ("• RST Received - Report you received\n\n", 'bullet'),
+
+            ("Station Information:\n", 'heading'),
+            ("• Name - Operator's first name\n", 'bullet'),
+            ("• QTH - Their location\n", 'bullet'),
+            ("• Grid - Maidenhead grid square\n", 'bullet'),
+            ("• State - US state\n", 'bullet'),
+            ("• County - US county\n", 'bullet'),
+            ("• Country - DXCC entity\n", 'bullet'),
+            ("• Continent - NA, EU, AS, etc.\n", 'bullet'),
+            ("• CQ Zone - CQ magazine zone\n", 'bullet'),
+            ("• ITU Zone - ITU zone\n\n", 'bullet'),
+
+            ("Special Activities:\n", 'heading'),
+            ("• SKCC Number - Straight Key Century Club\n", 'bullet'),
+            ("• POTA - Parks On The Air reference\n", 'bullet'),
+            ("• SOTA - Summits On The Air reference\n", 'bullet'),
+            ("• IOTA - Islands On The Air reference\n\n", 'bullet'),
+
+            ("Technical:\n", 'heading'),
+            ("• Power - Transmit power (watts)\n", 'bullet'),
+            ("• Propagation Mode - How signal traveled\n", 'bullet'),
+            ("• Operator - Who operated (multi-op)\n\n", 'bullet'),
+
+            ("Notes:\n", 'heading'),
+            ("• Notes - Free-form comments, key type, rig, etc.\n\n", 'bullet'),
+
+            ("Auto-Fill Fields:\n", 'heading'),
+            ("These fields auto-fill from QRZ lookup:\n", ()),
+            ("• Name, QTH, Grid, State, County\n", 'bullet'),
+            ("• Country, Continent, Zones (from prefix)\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("QSO Fields", 'link', 'link_fields'), (" - Detailed explanations\n", ()),
+            ("• ", ()), ("Auto-Lookup", 'link', 'link_auto_lookup'), ("\n", ())
+        ]
 
     @staticmethod
     def cluster_commands_ref():
-        return [("Cluster Commands\n", 'title'),
-                ("\nComplete command reference.\n\n", ())]
+        return [
+            ("DX Cluster Commands Reference\n", 'title'),
+            ("\nCommon DX cluster commands. Type HELP on cluster for full list.\n\n", ()),
+
+            ("Show Commands:\n", 'heading'),
+            ("• SH/DX - Show recent DX spots\n", 'bullet'),
+            ("• SH/DX 25 - Show last 25 spots\n", 'bullet'),
+            ("• SH/DX on 20m - Spots on 20 meters\n", 'bullet'),
+            ("• SH/DX K1ABC - Spots for specific call\n", 'bullet'),
+            ("• SH/WWV - Propagation bulletins\n", 'bullet'),
+            ("• SH/WCY - WCY propagation data\n", 'bullet'),
+            ("• SH/SUN - Solar data\n", 'bullet'),
+            ("• SH/MOON - Moon position\n", 'bullet'),
+            ("• SH/QRZ W1AW - Lookup callsign\n", 'bullet'),
+            ("• SH/PREFIX VP2 - DXCC prefix info\n", 'bullet'),
+            ("• SH/ANNOUNCE - Recent announcements\n\n", 'bullet'),
+
+            ("User Commands:\n", 'heading'),
+            ("• SET/NAME John - Set your name\n", 'bullet'),
+            ("• SET/QTH Tampa, FL - Set location\n", 'bullet'),
+            ("• SET/HOMENODE W3LPL - Set home node\n\n", 'bullet'),
+
+            ("Spotting:\n", 'heading'),
+            ("• DX 14.250 W1AW - Spot W1AW on 14.250\n", 'bullet'),
+            ("• DX 7.055 K1ABC SKCC 12345C - With comment\n", 'bullet'),
+            ("• Only spot stations you've heard!\n\n", 'bullet'),
+
+            ("Filters (if supported):\n", 'heading'),
+            ("• ACCEPT/SPOTS on hf/cw - Only HF CW\n", 'bullet'),
+            ("• REJECT/SPOTS on vhf - No VHF\n\n", 'bullet'),
+
+            ("Utility:\n", 'heading'),
+            ("• HELP - Show available commands\n", 'bullet'),
+            ("• HELP SH/DX - Help for command\n", 'bullet'),
+            ("• TIME - Current UTC time\n\n", 'bullet'),
+
+            ("Notes:\n", 'heading'),
+            ("• Commands NOT case-sensitive\n", 'bullet'),
+            ("• SH = SHOW (abbreviation)\n", 'bullet'),
+            ("• Cluster software varies - type HELP\n\n", 'bullet'),
+
+            ("Related Topics:\n", 'heading'),
+            ("• ", ()), ("Cluster Commands", 'link', 'link_cluster_commands'), (" - How to use\n", ()),
+            ("• ", ()), ("Connecting", 'link', 'link_cluster_connect'), ("\n", ())
+        ]
