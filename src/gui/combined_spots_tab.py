@@ -241,6 +241,10 @@ class CombinedSpotsTab:
             if self.notebook:
                 self.notebook.select(0)  # First tab is Log Contacts
 
+            # Reset time_on flag so time can be captured when Tab is pressed
+            self.logging_tab.time_on_captured = False
+            self.logging_tab.time_on_var.set('')  # Clear time_on for new contact
+
             # Populate the logging form
             self.logging_tab.callsign_var.set(callsign)
             self.logging_tab.freq_var.set(frequency)
@@ -404,6 +408,10 @@ class CombinedSpotsTab:
             # Switch to Log Contacts tab
             if self.notebook:
                 self.notebook.select(0)  # First tab is Log Contacts
+
+            # Reset time_on flag so time can be captured when Tab is pressed
+            self.logging_tab.time_on_captured = False
+            self.logging_tab.time_on_var.set('')  # Clear time_on for new contact
 
             # Populate the logging form
             self.logging_tab.callsign_var.set(activator)
