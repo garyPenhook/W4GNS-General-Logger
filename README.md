@@ -2,8 +2,12 @@
 
 Amateur Radio Contact Logging Application with DX Cluster Integration
 
-![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/blob/master/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/commits)
+[![Stars](https://img.shields.io/github/stars/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/stargazers)
+[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey)](https://github.com/garyPenhook/W4GNS-General-Logger)
+[![Ham Radio](https://img.shields.io/badge/ham%20radio-W4GNS-red)](https://www.qrz.com/db/W4GNS)
 
 ## Features
 
