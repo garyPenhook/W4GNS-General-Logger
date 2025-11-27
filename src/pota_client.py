@@ -1,12 +1,20 @@
 """
 POTA (Parks on the Air) API Client
-Fetches activator spots from the POTA API
+Fetches activator spots from the POTA API with async support for better performance
 """
 
 import requests
 import logging
 import time
 from datetime import datetime
+
+# Optional async support
+try:
+    import asyncio
+    import aiohttp
+    ASYNC_AVAILABLE = True
+except ImportError:
+    ASYNC_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -197,3 +205,124 @@ class POTAClient:
             # ValueError for invalid ISO format, AttributeError for None/non-string
             print(f"Invalid time format '{iso_time}': {e}")
             return iso_time if iso_time else "N/A"
+
+    # Python data model methods for context manager protocol
+    def __enter__(self):
+        """Enable context manager: with POTAClient() as client:"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Automatic cleanup when exiting context"""
+        if self.session:
+            self.session.close()
+        return False  # Don't suppress exceptions
+
+    def __repr__(self):
+        """Developer-friendly representation"""
+        async_status = " [async available]" if ASYNC_AVAILABLE else ""
+        return f"<POTAClient(base_url={self.BASE_URL!r}{async_status})>"
+
+    # Async I/O methods for improved performance
+    async def get_spots_async(self):
+        """
+        Async version of get_spots() for non-blocking I/O
+
+        Returns:
+            list: List of spot dictionaries (same format as get_spots())
+
+        Example:
+            >>> async def main():
+            ...     async with POTAClient() as client:
+            ...         spots = await client.get_spots_async()
+            ...         print(f"Got {len(spots)} spots")
+            >>> asyncio.run(main())
+        """
+        if not ASYNC_AVAILABLE:
+            logger.warning("Async support not available (aiohttp not installed), falling back to sync")
+            return self.get_spots()
+
+        max_retries = 4
+        retry_delays = [2, 4, 8, 16]
+        spots = []
+
+        async with aiohttp.ClientSession() as session:
+            for attempt in range(max_retries):
+                try:
+                    url = f"{self.BASE_URL}{self.SPOTS_ENDPOINT}"
+                    headers = {'User-Agent': 'W4GNS-General-Logger/1.0'}
+
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=30), headers=headers) as response:
+                        response.raise_for_status()
+                        spots = await response.json()
+                        break  # Success
+
+                except asyncio.TimeoutError:
+                    if attempt < max_retries - 1:
+                        delay = retry_delays[attempt]
+                        logger.warning(f"POTA API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        logger.error(f"POTA API timeout after {max_retries} attempts")
+                        return []
+
+                except aiohttp.ClientError as e:
+                    if attempt < max_retries - 1:
+                        delay = retry_delays[attempt]
+                        logger.warning(f"Connection error to POTA API (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        logger.error(f"Cannot connect to POTA API after {max_retries} attempts: {e}")
+                        return []
+
+                except Exception as e:
+                    logger.error(f"Unexpected error fetching POTA spots: {e}")
+                    return []
+
+        # Process spots (same as sync version)
+        try:
+            processed_spots = []
+            for spot in spots:
+                freq_khz = float(spot.get('frequency', '0'))
+                freq_mhz = freq_khz / 1000.0
+                band = self._frequency_to_band(freq_mhz)
+
+                processed_spot = {
+                    'spot_id': spot.get('spotId'),
+                    'activator': spot.get('activator', '').upper(),
+                    'frequency': f"{freq_mhz:.3f}",
+                    'frequency_khz': freq_khz,
+                    'mode': spot.get('mode', ''),
+                    'park_ref': spot.get('reference', ''),
+                    'park_name': spot.get('name', ''),
+                    'location': spot.get('locationDesc', ''),
+                    'spot_time': spot.get('spotTime', ''),
+                    'spotter': spot.get('spotter', ''),
+                    'comments': spot.get('comments', ''),
+                    'grid': spot.get('grid6') or spot.get('grid4', ''),
+                    'latitude': spot.get('latitude'),
+                    'longitude': spot.get('longitude'),
+                    'qso_count': spot.get('count', 0),
+                    'expire_seconds': spot.get('expire', 0),
+                    'band': band,
+                    'source': spot.get('source', 'POTA')
+                }
+                processed_spots.append(processed_spot)
+
+            logger.info(f"Retrieved {len(processed_spots)} POTA spots (async)")
+            return processed_spots
+
+        except Exception as e:
+            logger.error(f"Error processing POTA spots: {e}")
+            return []
+
+    async def __aenter__(self):
+        """Async context manager entry"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        if self.session:
+            self.session.close()
+        return False
