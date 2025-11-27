@@ -8,13 +8,63 @@ from datetime import datetime
 
 
 class ADIFParser:
-    """Parse ADIF files and extract contact records"""
+    """Parse ADIF files and extract contact records with lazy parsing for performance"""
 
-    def __init__(self):
-        self.records = []
+    def __init__(self, filename=None, lazy=True):
+        """
+        Initialize ADIF parser
+
+        Args:
+            filename: Optional ADIF file to parse
+            lazy: If True, parse records on-demand; if False, parse all upfront
+        """
+        self.filename = filename
+        self.lazy = lazy
+        self._records = None  # Cached parsed records
+        self._raw_content = None  # Raw file content for lazy parsing
+        self._record_strings = None  # Split records for lazy parsing
+
+        if filename:
+            if lazy:
+                self._load_raw_content()
+            else:
+                self._records = self.parse_file(filename)
+
+    def _load_raw_content(self):
+        """Load raw file content for lazy parsing"""
+        if not self.filename:
+            return
+
+        with open(self.filename, 'r', encoding='utf-8', errors='replace') as f:
+            content = f.read()
+
+        # Find the end of header marker
+        eoh_match = re.search(r'<eoh>|<EOH>', content, re.IGNORECASE)
+        if eoh_match:
+            content = content[eoh_match.end():]
+
+        # Split into record strings (but don't parse yet)
+        self._record_strings = [
+            rec.strip() for rec in re.split(r'<eor>|<EOR>', content, flags=re.IGNORECASE)
+            if rec.strip()
+        ]
+
+    @property
+    def records(self):
+        """Lazy property that parses records on first access"""
+        if self._records is None:
+            if self._record_strings is not None:
+                # Lazy parse from cached record strings
+                self._records = [
+                    self._parse_record(rec) for rec in self._record_strings
+                    if self._parse_record(rec)
+                ]
+            else:
+                self._records = []
+        return self._records
 
     def parse_file(self, filename):
-        """Parse an ADIF file and return list of contact records"""
+        """Parse an ADIF file and return list of contact records (non-lazy)"""
         with open(filename, 'r', encoding='utf-8', errors='replace') as f:
             content = f.read()
 
@@ -33,7 +83,49 @@ class ADIFParser:
                 if contact:
                     contacts.append(contact)
 
+        # Store records for iteration (update internal cache)
+        if filename == self.filename:
+            self._records = contacts
+
         return contacts
+
+    def iter_records(self):
+        """
+        Memory-efficient generator for iterating over records without loading all into memory
+
+        Yields:
+            dict: Parsed contact record
+
+        Example:
+            >>> parser = ADIFParser('huge_logbook.adi')
+            >>> for contact in parser.iter_records():
+            ...     print(contact['callsign'])
+        """
+        if self._record_strings:
+            # Lazy parsing from cached strings
+            for rec_str in self._record_strings:
+                contact = self._parse_record(rec_str)
+                if contact:
+                    yield contact
+        elif self._records:
+            # Already parsed, just iterate
+            yield from self._records
+        elif self.filename:
+            # Parse on-the-fly without caching
+            with open(self.filename, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+
+            eoh_match = re.search(r'<eoh>|<EOH>', content, re.IGNORECASE)
+            if eoh_match:
+                content = content[eoh_match.end():]
+
+            records = re.split(r'<eor>|<EOR>', content, flags=re.IGNORECASE)
+
+            for record in records:
+                if record.strip():
+                    contact = self._parse_record(record)
+                    if contact:
+                        yield contact
 
     def _parse_record(self, record):
         """Parse a single ADIF record"""
@@ -141,6 +233,36 @@ class ADIFParser:
         }
 
         return code_map.get(code.upper().strip(), code)
+
+    # Python data model methods for iterator protocol
+    def __iter__(self):
+        """Enable iteration: for contact in parser: (uses lazy parsing if available)"""
+        if self.lazy and (self._record_strings is not None or self.filename):
+            return self.iter_records()
+        return iter(self.records)
+
+    def __len__(self):
+        """Enable len(): len(parser) (forces parsing if lazy)"""
+        if self._record_strings and self._records is None:
+            # Return count without full parsing
+            return len(self._record_strings)
+        return len(self.records)
+
+    def __repr__(self):
+        """Developer-friendly representation"""
+        mode = "lazy" if self.lazy else "eager"
+        if self._records is not None:
+            count = len(self._records)
+            status = f"parsed={count}"
+        elif self._record_strings is not None:
+            count = len(self._record_strings)
+            status = f"unparsed={count}"
+        else:
+            status = "empty"
+
+        if self.filename:
+            return f"<ADIFParser(file={self.filename!r}, {status}, mode={mode})>"
+        return f"<ADIFParser({status}, mode={mode})>"
 
 
 class ADIFGenerator:

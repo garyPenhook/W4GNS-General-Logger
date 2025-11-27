@@ -205,3 +205,21 @@ class SKCCAwardBase(ABC):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}(id={self.program_id}, name={self.name})>"
+
+    # Python data model methods for rich comparison protocol
+    def __eq__(self, other) -> bool:
+        """Enable equality comparison: award1 == award2"""
+        if not isinstance(other, SKCCAwardBase):
+            return NotImplemented
+        return self.program_id == other.program_id
+
+    def __lt__(self, other) -> bool:
+        """Enable less-than comparison for sorting: sorted(awards)"""
+        if not isinstance(other, SKCCAwardBase):
+            return NotImplemented
+        # Sort alphabetically by name
+        return self.name < other.name
+
+    def __hash__(self) -> int:
+        """Enable use in sets and as dict keys: {award1, award2}"""
+        return hash(self.program_id)

@@ -1,5 +1,5 @@
 """
-DX Cluster Telnet Client
+DX Cluster Telnet Client with async support for better performance
 Handles connections to DX cluster servers
 """
 
@@ -8,6 +8,13 @@ import threading
 import queue
 import time
 import re
+
+# Optional async support
+try:
+    import asyncio
+    ASYNC_AVAILABLE = True
+except ImportError:
+    ASYNC_AVAILABLE = False
 
 
 class DXClusterClient:
@@ -141,3 +148,130 @@ class DXClusterClient:
     def is_connected(self):
         """Check if connected"""
         return self.connected
+
+    # Python data model methods for context manager protocol
+    def __enter__(self):
+        """Enable context manager: with DXClusterClient(...) as client:"""
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Automatic cleanup when exiting context"""
+        self.disconnect()
+        return False  # Don't suppress exceptions
+
+    def __bool__(self):
+        """Enable truthiness testing: if client:"""
+        return self.connected
+
+    def __repr__(self):
+        """Developer-friendly representation"""
+        status = "connected" if self.connected else "disconnected"
+        async_status = " [async available]" if ASYNC_AVAILABLE else ""
+        return f"<DXClusterClient({self.hostname}:{self.port}, {status}{async_status})>"
+
+    # Async I/O methods for improved performance
+    async def connect_async(self):
+        """
+        Async version of connect() for non-blocking connection
+
+        Returns:
+            bool: True if connected successfully
+
+        Note: This creates an async connection that can be used with read_async()
+        """
+        if not ASYNC_AVAILABLE:
+            return self.connect()
+
+        try:
+            # Open async connection
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(self.hostname, self.port),
+                timeout=10
+            )
+
+            self._async_reader = reader
+            self._async_writer = writer
+            self.connected = True
+            self.running = True
+
+            # Send callsign
+            await asyncio.sleep(1)
+            await self.send_command_async(self.callsign)
+
+            return True
+
+        except asyncio.TimeoutError:
+            self.message_queue.put(f"Connection timeout to {self.hostname}:{self.port}")
+            self.connected = False
+            return False
+        except Exception as e:
+            self.message_queue.put(f"Connection error: {str(e)}")
+            self.connected = False
+            return False
+
+    async def send_command_async(self, command):
+        """Async version of send_command()"""
+        if not ASYNC_AVAILABLE or not hasattr(self, '_async_writer'):
+            self.send_command(command)
+            return
+
+        if self.connected and self._async_writer:
+            try:
+                self._async_writer.write(f"{command}\r\n".encode('ascii'))
+                await self._async_writer.drain()
+            except Exception as e:
+                self.message_queue.put(f"Send error: {str(e)}")
+                self.connected = False
+
+    async def read_async(self, timeout=1.0):
+        """
+        Read data from cluster asynchronously
+
+        Args:
+            timeout: Read timeout in seconds
+
+        Returns:
+            list: Lines received from the cluster
+        """
+        if not ASYNC_AVAILABLE or not hasattr(self, '_async_reader'):
+            return []
+
+        lines = []
+        try:
+            while True:
+                try:
+                    data = await asyncio.wait_for(
+                        self._async_reader.readline(),
+                        timeout=timeout
+                    )
+                    if not data:
+                        break
+
+                    line = data.decode('ascii', errors='ignore').strip()
+                    if line:
+                        lines.append(line)
+                        self._parse_spot(line)
+
+                except asyncio.TimeoutError:
+                    break  # No more data available
+
+        except Exception as e:
+            self.message_queue.put(f"Read error: {str(e)}")
+
+        return lines
+
+    async def disconnect_async(self):
+        """Async version of disconnect()"""
+        self.running = False
+        self.connected = False
+
+        if hasattr(self, '_async_writer') and self._async_writer:
+            try:
+                self._async_writer.close()
+                await self._async_writer.wait_closed()
+            except Exception as e:
+                print(f"Error closing async connection: {e}")
+
+        self._async_reader = None
+        self._async_writer = None

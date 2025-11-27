@@ -119,6 +119,12 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_band_mode ON contacts(band, mode)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_date_callsign ON contacts(date, callsign)')
 
+        # Performance indexes for SKCC award calculations
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_skcc_number ON contacts(skcc_number)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_mode ON contacts(mode)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_key_type ON contacts(key_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_contacts_mode_skcc ON contacts(mode, skcc_number, date)')
+
         self.conn.commit()
 
         # Validate database schema after creation/upgrade
@@ -892,6 +898,184 @@ class Database:
         except Exception as e:
             print(f"ERROR: Unexpected error in delete_contact: {type(e).__name__}: {e}")
             raise
+
+    # Performance-optimized queries for award calculations
+    def get_unique_skcc_contacts(self, mode='CW', key_types=None, min_date=None, max_date=None):
+        """
+        Get unique SKCC contacts efficiently using SQL (for award calculations)
+
+        Args:
+            mode: Operating mode (default 'CW')
+            key_types: List of acceptable key types (e.g., ['STRAIGHT', 'BUG', 'SIDESWIPER'])
+            min_date: Minimum date in YYYYMMDD or YYYY-MM-DD format
+            max_date: Maximum date in YYYYMMDD or YYYY-MM-DD format
+
+        Returns:
+            list: Unique SKCC numbers with first contact details
+        """
+        try:
+            cursor = self.conn.cursor()
+
+            # Build SQL query with WHERE conditions
+            conditions = ["mode = ? AND skcc_number IS NOT NULL AND skcc_number != ''"]
+            params = [mode.upper()]
+
+            if key_types:
+                placeholders = ','.join('?' * len(key_types))
+                conditions.append(f"key_type IN ({placeholders})")
+                params.extend([kt.upper() for kt in key_types])
+
+            if min_date:
+                min_date = min_date.replace('-', '')  # Normalize to YYYYMMDD
+                conditions.append("REPLACE(date, '-', '') >= ?")
+                params.append(min_date)
+
+            if max_date:
+                max_date = max_date.replace('-', '')  # Normalize to YYYYMMDD
+                conditions.append("REPLACE(date, '-', '') <= ?")
+                params.append(max_date)
+
+            where_clause = ' AND '.join(conditions)
+
+            # Use GROUP BY to get unique SKCC numbers with their first contact
+            query = f'''
+                SELECT skcc_number, callsign, date, band, state, name
+                FROM contacts
+                WHERE {where_clause}
+                GROUP BY skcc_number
+                ORDER BY date ASC, time_on ASC
+            '''
+
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database query failed in get_unique_skcc_contacts: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in get_unique_skcc_contacts: {type(e).__name__}: {e}")
+            return []
+
+    def count_unique_skcc_contacts(self, mode='CW', key_types=None, min_date=None, max_date=None):
+        """
+        Count unique SKCC contacts efficiently using SQL (for award progress)
+
+        Args:
+            mode: Operating mode (default 'CW')
+            key_types: List of acceptable key types
+            min_date: Minimum date in YYYYMMDD or YYYY-MM-DD format
+            max_date: Maximum date in YYYYMMDD or YYYY-MM-DD format
+
+        Returns:
+            int: Count of unique SKCC numbers
+        """
+        try:
+            cursor = self.conn.cursor()
+
+            # Build SQL query with WHERE conditions
+            conditions = ["mode = ? AND skcc_number IS NOT NULL AND skcc_number != ''"]
+            params = [mode.upper()]
+
+            if key_types:
+                placeholders = ','.join('?' * len(key_types))
+                conditions.append(f"key_type IN ({placeholders})")
+                params.extend([kt.upper() for kt in key_types])
+
+            if min_date:
+                min_date = min_date.replace('-', '')
+                conditions.append("REPLACE(date, '-', '') >= ?")
+                params.append(min_date)
+
+            if max_date:
+                max_date = max_date.replace('-', '')
+                conditions.append("REPLACE(date, '-', '') <= ?")
+                params.append(max_date)
+
+            where_clause = ' AND '.join(conditions)
+
+            # Use COUNT(DISTINCT) for optimal performance
+            query = f'''
+                SELECT COUNT(DISTINCT skcc_number) as count
+                FROM contacts
+                WHERE {where_clause}
+            '''
+
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            return result['count'] if result else 0
+
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database query failed in count_unique_skcc_contacts: {e}")
+            return 0
+        except Exception as e:
+            print(f"ERROR: Unexpected error in count_unique_skcc_contacts: {type(e).__name__}: {e}")
+            return 0
+
+    def get_filtered_contacts(self, mode=None, key_types=None, min_date=None, max_date=None,
+                              has_skcc_number=False, limit=None):
+        """
+        Get contacts with flexible filtering using SQL WHERE clauses
+
+        Args:
+            mode: Operating mode filter
+            key_types: List of acceptable key types
+            min_date: Minimum date
+            max_date: Maximum date
+            has_skcc_number: If True, only return contacts with SKCC numbers
+            limit: Maximum number of results
+
+        Returns:
+            list: Filtered contact records
+        """
+        try:
+            cursor = self.conn.cursor()
+
+            conditions = []
+            params = []
+
+            if mode:
+                conditions.append("mode = ?")
+                params.append(mode.upper())
+
+            if key_types:
+                placeholders = ','.join('?' * len(key_types))
+                conditions.append(f"key_type IN ({placeholders})")
+                params.extend([kt.upper() for kt in key_types])
+
+            if has_skcc_number:
+                conditions.append("skcc_number IS NOT NULL AND skcc_number != ''")
+
+            if min_date:
+                min_date = min_date.replace('-', '')
+                conditions.append("REPLACE(date, '-', '') >= ?")
+                params.append(min_date)
+
+            if max_date:
+                max_date = max_date.replace('-', '')
+                conditions.append("REPLACE(date, '-', '') <= ?")
+                params.append(max_date)
+
+            where_clause = ' AND '.join(conditions) if conditions else '1=1'
+
+            query = f'''
+                SELECT * FROM contacts
+                WHERE {where_clause}
+                ORDER BY date DESC, time_on DESC
+            '''
+
+            if limit:
+                query += ' LIMIT ?'
+                params.append(limit)
+
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+
+        except sqlite3.DatabaseError as e:
+            print(f"ERROR: Database query failed in get_filtered_contacts: {e}")
+            return []
+        except Exception as e:
+            print(f"ERROR: Unexpected error in get_filtered_contacts: {type(e).__name__}: {e}")
+            return []
 
     def close(self):
         """Close database connection"""

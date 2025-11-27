@@ -343,6 +343,34 @@ class TextAwardExporter:
 
         raise NotImplementedError("Database does not support contact retrieval")
 
+    # Python data model methods for callable protocol
+    def __call__(
+        self,
+        award_instance,
+        output_directory: str = "exports",
+        callsign: Optional[str] = None,
+        applicant_name: Optional[str] = None,
+        applicant_address: Optional[str] = None,
+        user_skcc_number: Optional[str] = None
+    ) -> str:
+        """
+        Enable callable protocol: exporter(award, ...)
+
+        This is a shorthand for export_award_application_as_text()
+        """
+        return self.export_award_application_as_text(
+            award_instance,
+            output_directory,
+            callsign,
+            applicant_name,
+            applicant_address,
+            user_skcc_number
+        )
+
+    def __repr__(self):
+        """Developer-friendly representation"""
+        return f"<TextAwardExporter(database={self.database!r})>"
+
 
 def export_award_application_as_text(
     award_instance,
