@@ -4,15 +4,19 @@ Text-Based Award Application Export
 Generates formatted text award applications matching the SKCC award manager format.
 This is the format expected by the awards manager (text-based application, not ADIF).
 
-Format based on example: "W4GNS ALL-Band x2 Tribune App - 2025-11-09.txt"
+Format based on SKCCLogger examples for proper awards manager acceptance.
 """
 
 import os
+import platform
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# Application version for "Created by" line
+APP_VERSION = "1.0.0"
 
 
 class TextAwardExporter:
@@ -34,7 +38,8 @@ class TextAwardExporter:
         callsign: Optional[str] = None,
         applicant_name: Optional[str] = None,
         applicant_address: Optional[str] = None,
-        user_skcc_number: Optional[str] = None
+        user_skcc_number: Optional[str] = None,
+        user_dxcc_entity: Optional[int] = None
     ) -> str:
         """
         Export an award application as formatted text.
@@ -46,6 +51,7 @@ class TextAwardExporter:
             applicant_name: Applicant's full name
             applicant_address: Applicant's address (city, state format)
             user_skcc_number: Applicant's SKCC number
+            user_dxcc_entity: User's DXCC entity code (for DX awards)
 
         Returns:
             str: Path to exported text file
@@ -104,7 +110,8 @@ class TextAwardExporter:
                 callsign=callsign,
                 applicant_name=applicant_name,
                 applicant_address=applicant_address,
-                user_skcc_number=user_skcc_number
+                user_skcc_number=user_skcc_number,
+                user_dxcc_entity=user_dxcc_entity
             )
 
             with open(filepath, 'w', encoding='utf-8') as f:
@@ -128,10 +135,11 @@ class TextAwardExporter:
         callsign: str,
         applicant_name: Optional[str] = None,
         applicant_address: Optional[str] = None,
-        user_skcc_number: Optional[str] = None
+        user_skcc_number: Optional[str] = None,
+        user_dxcc_entity: Optional[int] = None
     ) -> str:
         """
-        Build the formatted award application text.
+        Build the formatted award application text matching SKCCLogger format.
 
         Args:
             award_instance: SKCC award instance
@@ -140,63 +148,78 @@ class TextAwardExporter:
             applicant_name: Applicant's name
             applicant_address: Applicant's address
             user_skcc_number: Applicant's SKCC number
+            user_dxcc_entity: User's DXCC entity code (for DX awards)
 
         Returns:
             str: Formatted application text
         """
         lines = []
 
+        # Check if this is a DX award (DXQ or DXC)
+        award_name = award_instance.name
+        is_dx_award = award_name in ("SKCC DXQ", "SKCC DXC")
+
         # Get award title from the award instance
         award_title = self._get_award_title(award_instance, len(contacts))
 
-        # Header - must start with exactly 10 spaces
-        lines.append(f"          {award_title}")
+        # Header - must start with exactly 14 spaces to center properly
+        lines.append(f"              {award_title}")
 
-        # Created by line
-        app_version = "W4GNS General Logger"
-        build_date = datetime.now().strftime("%Y-%m-%d at %H:%M:%S")
-        lines.append(f"Created by {app_version} {build_date}")
+        # Created by line - match SKCCLogger format exactly
+        lines.append(self._get_created_by_line())
         lines.append("")
 
-        # Applicant info line - starts with 1 space
-        name_part = f"   Name: {applicant_name}" if applicant_name else ""
-        skcc_part = f"   SKCC#: {user_skcc_number}" if user_skcc_number else ""
+        # Applicant info line - format depends on award type
+        name_part = f"   Name: {applicant_name}" if applicant_name else "   Name: "
+        skcc_part = f"   SKCC#: {user_skcc_number}" if user_skcc_number else "   SKCC#: "
 
-        # Try to get Centurion date from config
-        centurion_date = ""
-        if hasattr(self.database, 'config'):
-            cent_date = self.database.config.get('skcc.centurion_date', '')
-            if cent_date:
-                # Format YYYYMMDD to YYYY-MM-DD if needed
-                if len(cent_date) == 8:
-                    centurion_date = f"{cent_date[:4]}-{cent_date[4:6]}-{cent_date[6:]}"
-                else:
-                    centurion_date = cent_date
+        if is_dx_award:
+            # For DX awards, use My DXCC instead of Cent-Date
+            dxcc_part = f"   My DXCC: {user_dxcc_entity}" if user_dxcc_entity else "   My DXCC: 291"
+            lines.append(f" Call: {callsign}{name_part}{skcc_part}{dxcc_part}")
+        else:
+            # For regular awards, use Cent-Date
+            centurion_date = ""
+            if hasattr(self.database, 'config'):
+                cent_date = self.database.config.get('skcc.centurion_date', '')
+                if cent_date:
+                    # Format YYYYMMDD to YYYY-MM-DD if needed
+                    if len(cent_date) == 8:
+                        centurion_date = f"{cent_date[:4]}-{cent_date[4:6]}-{cent_date[6:]}"
+                    else:
+                        centurion_date = cent_date
 
-        cent_part = f"   Cent-Date: {centurion_date}" if centurion_date else ""
+            cent_part = f"   Cent-Date: {centurion_date}" if centurion_date else ""
+            lines.append(f" Call: {callsign}{name_part}{skcc_part}{cent_part}")
 
-        lines.append(f" Call: {callsign}{name_part}{skcc_part}{cent_part}")
-
-        # Address and submission date line - starts with 1 space
-        # Format: " Address: <address>" padded to position 43 with spaces, then "Submission Date: <date>"
+        # Address and submission date line
         submission_date = datetime.now().strftime("%Y-%m-%d")
         if applicant_address:
             address_line = f" Address: {applicant_address}"
         else:
             address_line = " Address:"
 
-        # Pad address line to 43 characters, then add submission date
-        address_padded = address_line.ljust(43)
+        # Pad address line to position 44, then add submission date
+        address_padded = address_line.ljust(44)
         lines.append(f"{address_padded}Submission Date: {submission_date}")
         lines.append("")
 
-        # Column headers - exact format from example
-        lines.append("QSO#   QSO Date     Callsign      SKCC#    Name         State        Band")
-        lines.append("-" * 78)
+        # Column headers - different for DX awards vs regular awards
+        if is_dx_award:
+            # DX awards use Country column instead of State
+            lines.append("QSO   QSO Date    Callsign    Country         SKCC#   Name            Band")
+            lines.append("-" * 74)
+        else:
+            # Regular awards use State column
+            lines.append("QSO   QSO Date    Callsign    SKCC#   Name            State       Band")
+            lines.append("-" * 74)
 
         # Contact records
         for idx, contact in enumerate(contacts, 1):
-            qso_line = self._format_qso_line(idx, contact)
+            if is_dx_award:
+                qso_line = self._format_dx_qso_line(idx, contact)
+            else:
+                qso_line = self._format_qso_line(idx, contact)
             lines.append(qso_line)
 
         # Certification statement
@@ -208,6 +231,43 @@ class TextAwardExporter:
         lines.append("")
 
         return "\n".join(lines)
+
+    def _get_created_by_line(self) -> str:
+        """
+        Generate the "Created by" line matching SKCCLogger format.
+
+        Returns:
+            Created by line with app info
+        """
+        # Get platform info
+        system = platform.system()
+        arch = platform.machine()
+
+        if system == "Linux":
+            platform_str = f"64-bit Linux" if "64" in arch else "32-bit Linux"
+        elif system == "Darwin":
+            platform_str = "64-bit macOS" if "64" in arch else "macOS"
+        elif system == "Windows":
+            platform_str = "64-bit Windows" if "64" in arch else "32-bit Windows"
+        else:
+            platform_str = system
+
+        # Get current timestamp
+        now = datetime.now()
+        timestamp = now.strftime("%Y-%m-%d at %H:%M:%S")
+
+        # Determine timezone abbreviation
+        # Try to get local timezone, default to ET
+        try:
+            import time
+            if time.daylight:
+                tz_abbr = time.tzname[time.localtime().tm_isdst]
+            else:
+                tz_abbr = time.tzname[0]
+        except Exception:
+            tz_abbr = "ET"
+
+        return f"Created by W4GNS-General-Logger v{APP_VERSION} {platform_str} Build {timestamp} {tz_abbr}"
 
     def _get_award_title(self, award_instance, contact_count: int) -> str:
         """
@@ -249,11 +309,23 @@ class TextAwardExporter:
                     current_level = endorsement_map[threshold]
                     break
 
-            title = f"SKCC {current_level} Award/Endorsement Application"
+            title = f"SKCC ALL-Band {current_level} Award/Endorsement Application"
         elif award_name == "Centurion":
             title = "SKCC Centurion Award/Endorsement Application"
         elif award_name == "Senator":
-            title = "SKCC Senator Award/Endorsement Application"
+            title = "SKCC Senator ALL-Band Award/Endorsement Application"
+        elif award_name == "SKCC DXQ":
+            title = "SKCC DXQ ALL-Band Award/Endorsement Application"
+        elif award_name == "SKCC DXC":
+            title = "SKCC DXC ALL-Band Award/Endorsement Application"
+        elif award_name == "SKCC WAS":
+            title = "SKCC WAS Award/Endorsement Application"
+        elif award_name == "SKCC WAS-T":
+            title = "SKCC WAS-T Award/Endorsement Application"
+        elif award_name == "SKCC WAS-S":
+            title = "SKCC WAS-S Award/Endorsement Application"
+        elif award_name == "SKCC WAC":
+            title = "SKCC WAC Award/Endorsement Application"
         else:
             title = f"SKCC {award_name} Award/Endorsement Application"
 
@@ -261,23 +333,18 @@ class TextAwardExporter:
 
     def _format_qso_line(self, qso_number: int, contact: Dict[str, Any]) -> str:
         """
-        Format a single QSO line for the application table.
+        Format a single QSO line for regular awards (Centurion, Tribune, Senator, etc.)
 
-        Column positions (must be exact):
-        - QSO#: 0-6 (7 chars, right-aligned)
-        - QSO Date: 7-19 (13 chars)
-        - Callsign: 20-33 (14 chars)
-        - SKCC#: 34-42 (9 chars)
-        - Name: 43-55 (13 chars)
-        - State: 56-68 (13 chars)
-        - Band: 69+ (variable)
+        SKCCLogger format:
+        QSO   QSO Date    Callsign    SKCC#   Name            State       Band
+        1     2025-09-10  VA3ACW/VE1  2813    Stan            ON          40M
 
         Args:
             qso_number: QSO sequence number (1-based)
             contact: Contact record dictionary
 
         Returns:
-            str: Formatted QSO line with exact column positions
+            str: Formatted QSO line matching SKCCLogger format
         """
         # Extract and format fields
         date = contact.get('date', '')
@@ -288,31 +355,72 @@ class TextAwardExporter:
 
         callsign = (contact.get('callsign', '') or '').upper().strip()
         skcc_number = (contact.get('skcc_number', '') or '').strip()
+
+        # Get name - truncate to 15 chars for display
         name = (contact.get('name', '') or '').strip()
+        if len(name) > 15:
+            name = name[:15]
+
         state = (contact.get('state', '') or '').strip()
-        band = (contact.get('band', '') or '').strip()
 
-        # Build line with exact column positions
-        # Start with QSO# right-aligned in first 7 chars
-        line = f"{qso_number:<7}"  # positions 0-6
+        # Format band - ensure it has 'M' suffix (e.g., 40M, 20M)
+        band = (contact.get('band', '') or '').strip().upper()
+        if band and not band.endswith('M'):
+            band = band + 'M'
 
-        # QSO Date in positions 7-19 (13 chars)
-        line += f"{date:<13}"
+        # Build line with SKCCLogger column widths
+        # Format: QSO   QSO Date    Callsign    SKCC#   Name            State       Band
+        line = f"{qso_number:<6}{date:<12}{callsign:<12}{skcc_number:<8}{name:<16}{state:<12}{band}"
 
-        # Callsign in positions 20-33 (14 chars)
-        line += f"{callsign:<14}"
+        return line
 
-        # SKCC# in positions 34-42 (9 chars)
-        line += f"{skcc_number:<9}"
+    def _format_dx_qso_line(self, qso_number: int, contact: Dict[str, Any]) -> str:
+        """
+        Format a single QSO line for DX awards (DXQ, DXC)
 
-        # Name in positions 43-55 (13 chars)
-        line += f"{name:<13}"
+        SKCCLogger format:
+        QSO   QSO Date    Callsign    Country         SKCC#   Name            Band
+        1     2025-09-10  VA3ACW/VE1  Unavailable     2813    Stan            40M
 
-        # State in positions 56-68 (13 chars)
-        line += f"{state:<13}"
+        Args:
+            qso_number: QSO sequence number (1-based)
+            contact: Contact record dictionary
 
-        # Band starting at position 69
-        line += band
+        Returns:
+            str: Formatted QSO line matching SKCCLogger DX format
+        """
+        # Extract and format fields
+        date = contact.get('date', '')
+        if date and len(date) == 10 and date[4] == '-':  # YYYY-MM-DD format
+            date = date  # Keep as-is
+        elif date and len(date) == 8:  # YYYYMMDD format
+            date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+
+        callsign = (contact.get('callsign', '') or '').upper().strip()
+
+        # Get country - use "Unavailable" if not set (matching SKCCLogger behavior)
+        country = (contact.get('country', '') or '').strip()
+        if not country:
+            country = "Unavailable"
+        # Truncate country to 15 chars for display
+        if len(country) > 15:
+            country = country[:15]
+
+        skcc_number = (contact.get('skcc_number', '') or '').strip()
+
+        # Get name - truncate to 15 chars for display
+        name = (contact.get('name', '') or '').strip()
+        if len(name) > 15:
+            name = name[:15]
+
+        # Format band - ensure it has 'M' suffix (e.g., 40M, 20M)
+        band = (contact.get('band', '') or '').strip().upper()
+        if band and not band.endswith('M'):
+            band = band + 'M'
+
+        # Build line with SKCCLogger DX column widths
+        # Format: QSO   QSO Date    Callsign    Country         SKCC#   Name            Band
+        line = f"{qso_number:<6}{date:<12}{callsign:<12}{country:<16}{skcc_number:<8}{name:<16}{band}"
 
         return line
 
@@ -351,7 +459,8 @@ class TextAwardExporter:
         callsign: Optional[str] = None,
         applicant_name: Optional[str] = None,
         applicant_address: Optional[str] = None,
-        user_skcc_number: Optional[str] = None
+        user_skcc_number: Optional[str] = None,
+        user_dxcc_entity: Optional[int] = None
     ) -> str:
         """
         Enable callable protocol: exporter(award, ...)
@@ -364,7 +473,8 @@ class TextAwardExporter:
             callsign,
             applicant_name,
             applicant_address,
-            user_skcc_number
+            user_skcc_number,
+            user_dxcc_entity
         )
 
     def __repr__(self):
@@ -379,7 +489,8 @@ def export_award_application_as_text(
     callsign: Optional[str] = None,
     applicant_name: Optional[str] = None,
     applicant_address: Optional[str] = None,
-    user_skcc_number: Optional[str] = None
+    user_skcc_number: Optional[str] = None,
+    user_dxcc_entity: Optional[int] = None
 ) -> str:
     """
     Convenience function to export a single award application as text.
@@ -392,6 +503,7 @@ def export_award_application_as_text(
         applicant_name: Applicant's full name
         applicant_address: Applicant's address
         user_skcc_number: Applicant's SKCC number
+        user_dxcc_entity: User's DXCC entity code (for DX awards)
 
     Returns:
         str: Path to exported text file
@@ -415,5 +527,6 @@ def export_award_application_as_text(
         callsign=callsign,
         applicant_name=applicant_name,
         applicant_address=applicant_address,
-        user_skcc_number=user_skcc_number
+        user_skcc_number=user_skcc_number,
+        user_dxcc_entity=user_dxcc_entity
     )
