@@ -1008,10 +1008,7 @@ class ContestTab:
                 f.write("-" * 94 + "\n")
 
                 for qso in self.contest_qsos:
-                    # Handle legacy QSOs that may not have time_on/time_off fields
-                    time_on = qso.get('time_on', qso.get('time', '00:00'))
-                    time_off = qso.get('time_off', qso.get('time', '00:00'))
-                    f.write(f"{qso['date']:<12} {time_on:<8} {time_off:<8} {qso['callsign']:<12} "
+                    f.write(f"{qso['date']:<12} {qso['time_on']:<8} {qso['time_off']:<8} {qso['callsign']:<12} "
                            f"{qso['rst_sent']}/{qso['rst_rcvd']:<4} {qso['name']:<12} "
                            f"{qso['qth']:<8} {qso['skcc']:<12} {qso['band']:<6}\n")
 
