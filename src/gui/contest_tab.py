@@ -253,6 +253,27 @@ class ContestTab:
         band_combo['values'] = ('160m', '80m', '40m', '20m', '15m', '10m')
         band_combo.pack(side='left', padx=5)
 
+        # Row 6: Time On and Time Off (UTC)
+        row6 = ttk.Frame(entry_frame)
+        row6.pack(fill='x', pady=2)
+
+        ttk.Label(row6, text="Time On:", width=10).pack(side='left')
+        self.time_on_var = tk.StringVar()
+        self.time_on_entry = ttk.Entry(row6, textvariable=self.time_on_var, width=8)
+        self.time_on_entry.pack(side='left', padx=5)
+
+        ttk.Label(row6, text="UTC", width=4).pack(side='left')
+
+        ttk.Label(row6, text="Time Off:", width=10).pack(side='left', padx=(20, 0))
+        self.time_off_var = tk.StringVar()
+        self.time_off_entry = ttk.Entry(row6, textvariable=self.time_off_var, width=8)
+        self.time_off_entry.pack(side='left', padx=5)
+
+        ttk.Label(row6, text="UTC", width=4).pack(side='left')
+
+        # Now button to set current UTC time
+        ttk.Button(row6, text="Now", command=self.set_time_now, width=5).pack(side='left', padx=10)
+
         # Log button
         btn_frame = ttk.Frame(entry_frame)
         btn_frame.pack(fill='x', pady=10)
@@ -490,10 +511,20 @@ class ContestTab:
         # Reset score display
         self.update_score_display()
 
+    def set_time_now(self):
+        """Set Time Off to current UTC time"""
+        now = datetime.now(timezone.utc)
+        self.time_off_var.set(now.strftime("%H:%M"))
+
     def on_callsign_change(self, event=None):
         """Handle callsign entry changes"""
         callsign = self.callsign_var.get().strip().upper()
         band = self.band_var.get()
+
+        # Auto-set Time On when callsign is first entered
+        if callsign and not self.time_on_var.get():
+            now = datetime.now(timezone.utc)
+            self.time_on_var.set(now.strftime("%H:%M"))
 
         # Check for duplicate
         if callsign in self.worked_stations:
@@ -524,9 +555,10 @@ class ContestTab:
                     f"{callsign} already worked on {band}.\nLog anyway?"):
                 return
 
-        # Get current UTC time
+        # Get current UTC time for time_off if not set
         now = datetime.now(timezone.utc)
-        time_str = now.strftime("%H:%M")
+        time_on = self.time_on_var.get().strip() or now.strftime("%H:%M")
+        time_off = self.time_off_var.get().strip() or now.strftime("%H:%M")
         date_str = now.strftime("%Y-%m-%d")
 
         # Get exchange data
@@ -589,7 +621,8 @@ class ContestTab:
         qso_data = {
             'callsign': callsign,
             'date': date_str,
-            'time': time_str,
+            'time_on': time_on,
+            'time_off': time_off,
             'rst_sent': rst_sent,
             'rst_rcvd': rst_rcvd,
             'name': name,
@@ -603,9 +636,9 @@ class ContestTab:
         }
         self.contest_qsos.append(qso_data)
 
-        # Add to log display
+        # Add to log display (show time_off as the QSO end time)
         self.log_tree.insert('', 0, values=(
-            time_str, callsign, rst_sent, rst_rcvd, name, qth, skcc, band,
+            time_off, callsign, rst_sent, rst_rcvd, name, qth, skcc, band,
             qso_pts + bonus_pts, mult_new
         ))
 
@@ -625,8 +658,8 @@ class ContestTab:
             contact = {
                 'callsign': qso_data['callsign'],
                 'date': qso_data['date'],
-                'time_on': qso_data['time'].replace(':', ''),
-                'time_off': qso_data['time'].replace(':', ''),
+                'time_on': qso_data['time_on'].replace(':', ''),
+                'time_off': qso_data['time_off'].replace(':', ''),
                 'frequency': qso_data['frequency'],
                 'band': qso_data['band'],
                 'mode': 'CW',
@@ -727,7 +760,7 @@ class ContestTab:
 
         recent_qsos = 0
         for qso in self.contest_qsos:
-            qso_time = datetime.strptime(f"{qso['date']} {qso['time']}", "%Y-%m-%d %H:%M")
+            qso_time = datetime.strptime(f"{qso['date']} {qso['time_on']}", "%Y-%m-%d %H:%M")
             qso_time = qso_time.replace(tzinfo=timezone.utc)
             if qso_time.timestamp() > one_hour_ago:
                 recent_qsos += 1
@@ -746,6 +779,8 @@ class ContestTab:
         self.skcc_var.set('')
         self.rst_sent_var.set('599')
         self.rst_rcvd_var.set('599')
+        self.time_on_var.set('')
+        self.time_off_var.set('')
         self.dupe_label.config(text='')
         self.skcc_status.config(text='')
 
@@ -947,11 +982,11 @@ class ContestTab:
 
                 # QSO Log
                 f.write("QSO LOG\n")
-                f.write(f"{'Date':<12} {'Time':<6} {'Call':<12} {'RST':<8} {'Name':<12} {'QTH':<8} {'SKCC':<12} {'Band':<6}\n")
-                f.write("-" * 80 + "\n")
+                f.write(f"{'Date':<12} {'Time On':<8} {'Time Off':<8} {'Call':<12} {'RST':<8} {'Name':<12} {'QTH':<8} {'SKCC':<12} {'Band':<6}\n")
+                f.write("-" * 90 + "\n")
 
                 for qso in self.contest_qsos:
-                    f.write(f"{qso['date']:<12} {qso['time']:<6} {qso['callsign']:<12} "
+                    f.write(f"{qso['date']:<12} {qso['time_on']:<8} {qso['time_off']:<8} {qso['callsign']:<12} "
                            f"{qso['rst_sent']}/{qso['rst_rcvd']:<4} {qso['name']:<12} "
                            f"{qso['qth']:<8} {qso['skcc']:<12} {qso['band']:<6}\n")
 
