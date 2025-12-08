@@ -175,7 +175,7 @@ class TextAwardExporter:
 
         if is_dx_award:
             # For DX awards, use My DXCC instead of Cent-Date
-            dxcc_part = f"   My DXCC: {user_dxcc_entity}" if user_dxcc_entity else "   My DXCC: 291"
+            dxcc_part = f"   My DXCC: {user_dxcc_entity}" if user_dxcc_entity else "   My DXCC: "
             lines.append(f" Call: {callsign}{name_part}{skcc_part}{dxcc_part}")
         else:
             # For regular awards, use Cent-Date
@@ -257,13 +257,11 @@ class TextAwardExporter:
         timestamp = now.strftime("%Y-%m-%d at %H:%M:%S")
 
         # Determine timezone abbreviation
-        # Try to get local timezone, default to ET
+        # Use tm_isdst > 0 to select DST abbreviation, else standard
         try:
             import time
-            if time.daylight:
-                tz_abbr = time.tzname[time.localtime().tm_isdst]
-            else:
-                tz_abbr = time.tzname[0]
+            tz_index = 1 if time.localtime().tm_isdst > 0 else 0
+            tz_abbr = time.tzname[tz_index]
         except Exception:
             tz_abbr = "ET"
 
@@ -346,11 +344,9 @@ class TextAwardExporter:
         Returns:
             str: Formatted QSO line matching SKCCLogger format
         """
-        # Extract and format fields
+        # Extract and format fields - convert YYYYMMDD to YYYY-MM-DD if needed
         date = contact.get('date', '')
-        if date and len(date) == 10 and date[4] == '-':  # YYYY-MM-DD format
-            date = date  # Keep as-is
-        elif date and len(date) == 8:  # YYYYMMDD format
+        if date and len(date) == 8 and '-' not in date:  # YYYYMMDD format
             date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
 
         callsign = (contact.get('callsign', '') or '').upper().strip()
@@ -389,11 +385,9 @@ class TextAwardExporter:
         Returns:
             str: Formatted QSO line matching SKCCLogger DX format
         """
-        # Extract and format fields
+        # Extract and format fields - convert YYYYMMDD to YYYY-MM-DD if needed
         date = contact.get('date', '')
-        if date and len(date) == 10 and date[4] == '-':  # YYYY-MM-DD format
-            date = date  # Keep as-is
-        elif date and len(date) == 8:  # YYYYMMDD format
+        if date and len(date) == 8 and '-' not in date:  # YYYYMMDD format
             date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
 
         callsign = (contact.get('callsign', '') or '').upper().strip()

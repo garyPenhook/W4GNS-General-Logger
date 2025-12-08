@@ -301,7 +301,7 @@ class AwardApplicationGenerator:
         name = self.config.get('operator_name', '')
         skcc_number = self.config.get('skcc.my_number', '')
         address = self.config.get('address', '')
-        my_dxcc = self.config.get('dxcc_entity', 291)  # Default USA
+        my_dxcc = self.config.get('dxcc_entity', '')
 
         submission_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -429,12 +429,11 @@ class AwardApplicationGenerator:
         timestamp = now.strftime("%Y-%m-%d at %H:%M:%S")
 
         # Determine timezone abbreviation
+        # Use tm_isdst > 0 to select DST abbreviation, else standard
         try:
             import time
-            if time.daylight:
-                tz_abbr = time.tzname[time.localtime().tm_isdst]
-            else:
-                tz_abbr = time.tzname[0]
+            tz_index = 1 if time.localtime().tm_isdst > 0 else 0
+            tz_abbr = time.tzname[tz_index]
         except Exception:
             tz_abbr = "ET"
 
