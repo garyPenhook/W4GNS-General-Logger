@@ -1013,7 +1013,14 @@ class SKCCAwardsTab:
         qualifying_contacts = deduplicated_contacts
 
         # Generate the report based on award type
-        report = self._get_report_for_award(award_type, qualifying_contacts)
+        try:
+            report = self._get_report_for_award(award_type, qualifying_contacts)
+        except ValueError as e:
+            messagebox.showerror(
+                "Unknown Award Type",
+                f"Failed to generate report: {e}"
+            )
+            return
 
         # Ask user where to save
         callsign = self.config.get('callsign', 'UNKNOWN')
