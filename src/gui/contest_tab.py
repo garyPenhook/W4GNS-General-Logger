@@ -6,11 +6,21 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timezone
 import threading
+import re
 
 from src.theme_colors import get_muted_color, get_info_color
 from src.qrz import QRZSession
 from src.dxcc import lookup_dxcc
 from src.skcc_roster import SKCCRosterManager
+
+
+def validate_time_format(time_str):
+    """Validate HH:MM format (00:00 to 23:59)"""
+    if not time_str:
+        return True  # Empty is OK, will use default
+    if not re.match(r'^([0-1][0-9]|2[0-3]):[0-5][0-9]$', time_str):
+        return False
+    return True
 
 
 class ContestTab:
@@ -271,8 +281,8 @@ class ContestTab:
 
         ttk.Label(row6, text="UTC", width=4).pack(side='left')
 
-        # Now button to set current UTC time
-        ttk.Button(row6, text="Now", command=self.set_time_now, width=5).pack(side='left', padx=10)
+        # Now button to set current UTC time for Time Off
+        ttk.Button(row6, text="Set Time Off", command=self.set_time_now, width=10).pack(side='left', padx=10)
 
         # Log button
         btn_frame = ttk.Frame(entry_frame)
@@ -376,7 +386,7 @@ class ContestTab:
         self.log_tree = ttk.Treeview(log_frame, columns=columns, show='headings', height=8)
 
         # Configure columns
-        self.log_tree.heading('Time', text='Time')
+        self.log_tree.heading('Time', text='Time Off')
         self.log_tree.heading('Callsign', text='Callsign')
         self.log_tree.heading('RST S', text='RST S')
         self.log_tree.heading('RST R', text='RST R')
@@ -555,7 +565,15 @@ class ContestTab:
                     f"{callsign} already worked on {band}.\nLog anyway?"):
                 return
 
-        # Get current UTC time for time_off if not set
+        # Validate time formats
+        if self.time_on_var.get().strip() and not validate_time_format(self.time_on_var.get().strip()):
+            messagebox.showwarning("Invalid Time", "Time On must be in HH:MM format (00:00 to 23:59)")
+            return
+        if self.time_off_var.get().strip() and not validate_time_format(self.time_off_var.get().strip()):
+            messagebox.showwarning("Invalid Time", "Time Off must be in HH:MM format (00:00 to 23:59)")
+            return
+
+        # Get current UTC time as fallback for time_on and time_off if not set
         now = datetime.now(timezone.utc)
         time_on = self.time_on_var.get().strip() or now.strftime("%H:%M")
         time_off = self.time_off_var.get().strip() or now.strftime("%H:%M")
@@ -760,10 +778,14 @@ class ContestTab:
 
         recent_qsos = 0
         for qso in self.contest_qsos:
-            qso_time = datetime.strptime(f"{qso['date']} {qso['time_on']}", "%Y-%m-%d %H:%M")
-            qso_time = qso_time.replace(tzinfo=timezone.utc)
-            if qso_time.timestamp() > one_hour_ago:
-                recent_qsos += 1
+            try:
+                qso_time = datetime.strptime(f"{qso['date']} {qso['time_on']}", "%Y-%m-%d %H:%M")
+                qso_time = qso_time.replace(tzinfo=timezone.utc)
+                if qso_time.timestamp() > one_hour_ago:
+                    recent_qsos += 1
+            except (ValueError, KeyError):
+                # Skip QSOs with invalid time format or missing keys
+                continue
 
         self.rate_var.set(str(recent_qsos))
 
@@ -983,10 +1005,13 @@ class ContestTab:
                 # QSO Log
                 f.write("QSO LOG\n")
                 f.write(f"{'Date':<12} {'Time On':<8} {'Time Off':<8} {'Call':<12} {'RST':<8} {'Name':<12} {'QTH':<8} {'SKCC':<12} {'Band':<6}\n")
-                f.write("-" * 90 + "\n")
+                f.write("-" * 94 + "\n")
 
                 for qso in self.contest_qsos:
-                    f.write(f"{qso['date']:<12} {qso['time_on']:<8} {qso['time_off']:<8} {qso['callsign']:<12} "
+                    # Handle legacy QSOs that may not have time_on/time_off fields
+                    time_on = qso.get('time_on', qso.get('time', '00:00'))
+                    time_off = qso.get('time_off', qso.get('time', '00:00'))
+                    f.write(f"{qso['date']:<12} {time_on:<8} {time_off:<8} {qso['callsign']:<12} "
                            f"{qso['rst_sent']}/{qso['rst_rcvd']:<4} {qso['name']:<12} "
                            f"{qso['qth']:<8} {qso['skcc']:<12} {qso['band']:<6}\n")
 
