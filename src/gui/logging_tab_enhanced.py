@@ -1046,9 +1046,10 @@ class EnhancedLoggingTab:
         try:
             contact_id = self.database.add_contact(contact_data)
 
-            # Clear analyzer cache since we just logged a contact
+            # Clear analyzer cache and refresh displayed spots
             # This ensures spots won't show as "needed" if we just worked them
             self.analyzer.clear_cache()
+            self.refresh_dx_spots_display()
 
             # Refresh contacts tab to show the new contact
             if self.contacts_tab:
@@ -1222,6 +1223,50 @@ class EnhancedLoggingTab:
         children = self.dx_spots_tree.get_children()
         if len(children) > 100:
             self.dx_spots_tree.delete(children[-1])
+
+    def refresh_dx_spots_display(self):
+        """Re-analyze all displayed DX spots and update their tags.
+        Call this after logging a contact to update the 'needed' status."""
+        for item_id in self.dx_spots_tree.get_children():
+            item = self.dx_spots_tree.item(item_id)
+            values = item['values']
+
+            if len(values) >= 6:
+                callsign = values[0] if values[0] else ""
+                country = values[1] if values[1] else ""
+                mode = values[2] if values[2] else ""
+                band = values[3] if values[3] else ""
+                frequency = values[4] if values[4] else ""
+
+                # Check if station is SKCC member
+                skcc_number = None
+                if callsign and self.skcc_roster:
+                    skcc_number = self.skcc_roster.get_skcc_number(callsign)
+
+                # Re-analyze the spot with fresh data (cache was cleared)
+                analysis = self.analyzer.analyze_spot(
+                    callsign=callsign,
+                    band=band,
+                    mode=mode,
+                    frequency=frequency,
+                    skcc_number=skcc_number,
+                    country=country
+                )
+
+                # Determine new tags
+                tags = ()
+                if analysis.is_needed:
+                    if analysis.highest_priority == 1:
+                        tags = ('high_priority',)
+                    elif analysis.highest_priority == 2:
+                        tags = ('medium_priority',)
+                    else:
+                        tags = ('low_priority',)
+                elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
+                    tags = ('skcc_cts',)
+
+                # Update the item's tags
+                self.dx_spots_tree.item(item_id, tags=tags)
 
     def on_dx_spot_double_click(self, event):
         """Handle double-click on DX spot - populate entry form"""
