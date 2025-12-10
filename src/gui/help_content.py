@@ -33,7 +33,6 @@ class HelpContent:
             'cluster_commands': HelpContent.cluster_commands,
             'cluster_spots': HelpContent.cluster_spots,
             'skcc_highlighting': HelpContent.skcc_highlighting,
-            'arrl_awards': HelpContent.arrl_awards,
             'skcc_awards': HelpContent.skcc_awards,
             'adif_export': HelpContent.adif_export,
             'adif_date_range': HelpContent.adif_date_range,
@@ -1597,62 +1596,6 @@ class HelpContent:
             ("• ", ()), ("Reading Spots", 'link', 'link_cluster_spots'), ("\n", ()),
             ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ()),
             ("• ", ()), ("Contests", 'link', 'link_contest_overview'), ("\n", ())
-        ]
-
-    @staticmethod
-    def arrl_awards():
-        return [
-            ("ARRL Awards Tracking\n", 'title'),
-            ("\nTrack your progress toward ARRL (American Radio Relay League) awards including WAS, DXCC, and WAC.\n\n", ()),
-
-            ("Location: ARRL Awards tab\n\n", 'italic'),
-
-            ("Supported ARRL Awards:\n", 'heading'),
-
-            ("WAS - Worked All States:\n", 'subheading'),
-            ("• Contact all 50 US states\n", 'bullet'),
-            ("• Can be achieved on any band/mode\n", 'bullet'),
-            ("• App tracks which states you've worked\n", 'bullet'),
-            ("• Progress bar shows completion percentage\n", 'bullet'),
-            ("• List shows confirmed states\n\n", 'bullet'),
-
-            ("DXCC - DX Century Club:\n", 'subheading'),
-            ("• Contact 100+ DXCC entities (countries/territories)\n", 'bullet'),
-            ("• Prestigious international award\n", 'bullet'),
-            ("• App tracks unique DXCC entities\n", 'bullet'),
-            ("• Automatic entity detection from callsign\n", 'bullet'),
-            ("• Shows progress toward 100\n\n", 'bullet'),
-
-            ("WAC - Worked All Continents:\n", 'subheading'),
-            ("• Contact all 6 continents\n", 'bullet'),
-            ("• NA, SA, EU, AF, AS, OC\n", 'bullet'),
-            ("• Simple but satisfying award\n", 'bullet'),
-            ("• Great starter award\n\n", 'bullet'),
-
-            ("Features:\n", 'heading'),
-            ("• Real-time progress tracking\n", 'bullet'),
-            ("• Visual progress bars\n", 'bullet'),
-            ("• Lists of worked/needed entities\n", 'bullet'),
-            ("• Automatic updates as you log QSOs\n", 'bullet'),
-            ("• Export lists for ARRL applications\n\n", 'bullet'),
-
-            ("Using the Tab:\n", 'heading'),
-            ("1. Navigate to ARRL Awards tab\n", 'numbered'),
-            ("2. Select award from dropdown\n", 'numbered'),
-            ("3. View your progress\n", 'numbered'),
-            ("4. See what you still need\n", 'numbered'),
-            ("5. Export for award application\n\n", 'numbered'),
-
-            ("Award Applications:\n", 'heading'),
-            ("To apply for ARRL awards:\n", ()),
-            ("• Visit arrl.org/awards\n", 'bullet'),
-            ("• Most require QSL card confirmation\n", 'bullet'),
-            ("• LOTW (Logbook of the World) accepted\n", 'bullet'),
-            ("• Fees apply for most awards\n\n", 'bullet'),
-
-            ("Related Topics:\n", 'heading'),
-            ("• ", ()), ("SKCC Awards", 'link', 'link_skcc_awards'), ("\n", ()),
-            ("• ", ()), ("Contact Logging", 'link', 'link_log_qso'), ("\n", ())
         ]
 
     @staticmethod

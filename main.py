@@ -20,7 +20,6 @@ from src.theme import ThemeManager
 from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.contacts_tab import ContactsTab
 from src.gui.dx_cluster_tab import DXClusterTab
-from src.gui.awards_tab import AwardsTab
 from src.gui.skcc_awards_tab import SKCCAwardsTab
 from src.gui.space_weather_tab import SpaceWeatherTab
 from src.gui.weather_tab import WeatherTab
@@ -119,7 +118,6 @@ class W4GNSLogger:
         self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
         self.contacts_tab = ContactsTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
-        self.awards_tab = AwardsTab(self.notebook, self.database, self.config)
         self.skcc_awards_tab = SKCCAwardsTab(self.notebook, self.database, self.config)
         self.weather_tab = WeatherTab(self.notebook, self.config)
         self.space_weather_tab = SpaceWeatherTab(self.notebook, self.database, self.config)
@@ -136,7 +134,6 @@ class W4GNSLogger:
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
-        self.notebook.add(self.awards_tab.get_frame(), text="  ARRL Awards  ")
         self.notebook.add(self.skcc_awards_tab.get_frame(), text="  SKCC Awards  ")
         self.notebook.add(self.contest_tab.get_frame(), text="  Contest  ")
         self.notebook.add(self.weather_tab.get_frame(), text="  Weather  ")
@@ -583,8 +580,7 @@ class W4GNSLogger:
             # Refresh the contacts log display
             self.contacts_tab.refresh_log()
 
-            # Refresh awards calculations
-            self.awards_tab.refresh_awards()
+            # Refresh SKCC awards calculations
             self.skcc_awards_tab.refresh_awards()
 
             # Show results
