@@ -1165,6 +1165,10 @@ class EnhancedLoggingTab:
         Returns:
             Tuple of tag strings for treeview display
         """
+        # Never highlight already-worked stations
+        if analysis.already_worked:
+            return ()
+
         if analysis.is_needed:
             if analysis.highest_priority == 1:
                 return ('high_priority',)
