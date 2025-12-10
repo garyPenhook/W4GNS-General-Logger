@@ -35,6 +35,9 @@ class EnhancedLoggingTab:
         # Smart log processing - needed contacts analyzer
         self.analyzer = NeededContactsAnalyzer(database)
 
+        # Store full spot data for refresh (keyed by tree item id)
+        self._spot_data_cache = {}
+
         # Notification system
         self.notifier = get_notifier()
         self._load_notification_preferences()
@@ -1165,6 +1168,28 @@ class EnhancedLoggingTab:
         self.notifier.update_preferences(prefs)
 
     # DX SPOTS METHODS
+    def _get_spot_tags(self, analysis, skcc_number):
+        """Determine display tags for a spot based on analysis and SKCC status.
+
+        Args:
+            analysis: SpotAnalysis result from analyzer
+            skcc_number: SKCC member number if known
+
+        Returns:
+            Tuple of tag strings for treeview display
+        """
+        if analysis.is_needed:
+            if analysis.highest_priority == 1:
+                return ('high_priority',)
+            elif analysis.highest_priority == 2:
+                return ('medium_priority',)
+            else:
+                return ('low_priority',)
+        elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
+            # Keep existing SKCC C/T/S highlighting for non-needed stations
+            return ('skcc_cts',)
+        return ()
+
     def add_dx_spot(self, spot_data):
         """Add a DX spot to the display (called from DX cluster tab) with smart filtering"""
         callsign = spot_data.get('callsign', '')
@@ -1198,19 +1223,9 @@ class EnhancedLoggingTab:
             self.notifier.notify_needed_contact(callsign, analysis.highest_priority, reason)
 
         # Determine tags for color coding
-        tags = ()
-        if analysis.is_needed:
-            if analysis.highest_priority == 1:
-                tags = ('high_priority',)
-            elif analysis.highest_priority == 2:
-                tags = ('medium_priority',)
-            else:
-                tags = ('low_priority',)
-        elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
-            # Keep existing SKCC C/T/S highlighting for non-needed stations
-            tags = ('skcc_cts',)
+        tags = self._get_spot_tags(analysis, skcc_number)
 
-        self.dx_spots_tree.insert('', 0, values=(
+        item_id = self.dx_spots_tree.insert('', 0, values=(
             callsign,
             country,
             mode,
@@ -1219,53 +1234,55 @@ class EnhancedLoggingTab:
             comment
         ), tags=tags)
 
+        # Store full spot data for refresh (includes state, continent, gridsquare)
+        self._spot_data_cache[item_id] = {
+            'callsign': callsign,
+            'country': country,
+            'mode': mode,
+            'band': band,
+            'frequency': frequency,
+            'skcc_number': skcc_number,
+            'state': spot_data.get('state'),
+            'continent': spot_data.get('continent'),
+            'gridsquare': spot_data.get('gridsquare')
+        }
+
         # Keep only the most recent 100 spots
         children = self.dx_spots_tree.get_children()
         if len(children) > 100:
-            self.dx_spots_tree.delete(children[-1])
+            old_item = children[-1]
+            # Clean up cached data for removed item
+            self._spot_data_cache.pop(old_item, None)
+            self.dx_spots_tree.delete(old_item)
 
     def refresh_dx_spots_display(self):
-        """Re-analyze all displayed DX spots and update their tags.
-        Call this after logging a contact to update the 'needed' status."""
+        """
+        Re-analyze all displayed DX spots and update their tags.
+        Call this after logging a contact to update the 'needed' status.
+
+        Uses cached spot data (including state, continent, gridsquare) to ensure
+        full award analysis for WAS, WAC, DXCC, VUCC, WPX, and SKCC awards.
+        """
         for item_id in self.dx_spots_tree.get_children():
-            item = self.dx_spots_tree.item(item_id)
-            values = item['values']
+            # Get full spot data from cache
+            spot_data = self._spot_data_cache.get(item_id)
 
-            if len(values) >= 6:
-                callsign = values[0] if values[0] else ""
-                country = values[1] if values[1] else ""
-                mode = values[2] if values[2] else ""
-                band = values[3] if values[3] else ""
-                frequency = values[4] if values[4] else ""
-
-                # Check if station is SKCC member
-                skcc_number = None
-                if callsign and self.skcc_roster:
-                    skcc_number = self.skcc_roster.get_skcc_number(callsign)
-
-                # Re-analyze the spot with fresh data (cache was cleared)
+            if spot_data:
+                # Re-analyze the spot with full data (analyzer cache was cleared)
                 analysis = self.analyzer.analyze_spot(
-                    callsign=callsign,
-                    band=band,
-                    mode=mode,
-                    frequency=frequency,
-                    skcc_number=skcc_number,
-                    country=country
+                    callsign=spot_data['callsign'],
+                    band=spot_data['band'],
+                    mode=spot_data['mode'],
+                    frequency=spot_data['frequency'],
+                    skcc_number=spot_data['skcc_number'],
+                    state=spot_data.get('state'),
+                    country=spot_data['country'],
+                    continent=spot_data.get('continent'),
+                    gridsquare=spot_data.get('gridsquare')
                 )
 
-                # Determine new tags
-                tags = ()
-                if analysis.is_needed:
-                    if analysis.highest_priority == 1:
-                        tags = ('high_priority',)
-                    elif analysis.highest_priority == 2:
-                        tags = ('medium_priority',)
-                    else:
-                        tags = ('low_priority',)
-                elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
-                    tags = ('skcc_cts',)
-
-                # Update the item's tags
+                # Update the item's tags using helper method
+                tags = self._get_spot_tags(analysis, spot_data['skcc_number'])
                 self.dx_spots_tree.item(item_id, tags=tags)
 
     def on_dx_spot_double_click(self, event):
