@@ -65,7 +65,6 @@ Similar to SKCC Skimmer, the logger now intelligently analyzes DX spots and high
 - **SKCC WAS**: Missing states with SKCC members
 
 **Smart Notifications:**
-- **Audio alerts**: Optional sound notifications for high-priority contacts
 - **Desktop notifications**: System notifications showing why you need the station (Linux/Mac/Windows)
 - **Configurable priority threshold**: Choose which priority levels trigger notifications
 - **Automatic de-duplication**: Won't spam you with repeated alerts for the same station
