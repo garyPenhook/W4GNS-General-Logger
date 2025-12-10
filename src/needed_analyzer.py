@@ -144,7 +144,7 @@ class NeededContactsAnalyzer:
     def _already_worked(self, callsign: str, band: str, mode: str) -> bool:
         """Check if callsign already worked on this band/mode"""
         try:
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
             cursor.execute("""
                 SELECT COUNT(*) FROM contacts
                 WHERE LOWER(callsign) = LOWER(?)
@@ -171,7 +171,7 @@ class NeededContactsAnalyzer:
 
         try:
             # Check Centurion - need unique SKCC members
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
             cursor.execute("""
                 SELECT COUNT(DISTINCT skcc_number) FROM contacts
                 WHERE skcc_number IS NOT NULL AND skcc_number != ''
@@ -243,7 +243,7 @@ class NeededContactsAnalyzer:
             return reasons
 
         try:
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
 
             # Check overall WAS
             cursor.execute("""
@@ -309,7 +309,7 @@ class NeededContactsAnalyzer:
             return reasons
 
         try:
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
 
             # Check overall DXCC
             cursor.execute("""
@@ -348,7 +348,7 @@ class NeededContactsAnalyzer:
             return reasons
 
         try:
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
 
             # Check overall WAC
             cursor.execute("""
@@ -392,7 +392,7 @@ class NeededContactsAnalyzer:
             return reasons
 
         try:
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
             grid_4char = gridsquare[:4].upper()
 
             # Check grids worked on VHF/UHF
@@ -436,7 +436,7 @@ class NeededContactsAnalyzer:
             if not prefix:
                 return reasons
 
-            cursor = self.db.cursor()
+            cursor = self.db.conn.cursor()
 
             # Get all worked callsigns and extract their prefixes
             cursor.execute("SELECT DISTINCT callsign FROM contacts")
