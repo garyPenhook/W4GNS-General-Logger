@@ -15,6 +15,8 @@ from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
 from src.skcc_roster import SKCCRosterManager
+from src.needed_analyzer import NeededContactsAnalyzer
+from src.notifier import get_notifier, NotificationPreferences
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color, get_spot_highlight_color
 
 
@@ -29,6 +31,13 @@ class EnhancedLoggingTab:
 
         # SKCC roster manager for member lookup
         self.skcc_roster = SKCCRosterManager()
+
+        # Smart log processing - needed contacts analyzer
+        self.analyzer = NeededContactsAnalyzer(database)
+
+        # Notification system
+        self.notifier = get_notifier()
+        self._load_notification_preferences()
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -338,8 +347,13 @@ class EnhancedLoggingTab:
         self.dx_spots_tree.column('Frequency', width=80)
         self.dx_spots_tree.column('Comment', width=200)
 
-        # Configure tag for SKCC members with C, T, or S suffix
+        # Configure tags for color coding
+        # SKCC members with C, T, or S suffix (legacy highlighting)
         self.dx_spots_tree.tag_configure('skcc_cts', background=get_spot_highlight_color(self.config))
+        # Smart filtering priority colors
+        self.dx_spots_tree.tag_configure('high_priority', foreground='#00C853', font=('TkDefaultFont', 10, 'bold'))  # Bright green
+        self.dx_spots_tree.tag_configure('medium_priority', foreground='#FFB300', font=('TkDefaultFont', 10, 'bold'))  # Amber
+        self.dx_spots_tree.tag_configure('low_priority', foreground='#808080')  # Gray
 
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
@@ -1032,6 +1046,10 @@ class EnhancedLoggingTab:
         try:
             contact_id = self.database.add_contact(contact_data)
 
+            # Clear analyzer cache since we just logged a contact
+            # This ensures spots won't show as "needed" if we just worked them
+            self.analyzer.clear_cache()
+
             # Refresh contacts tab to show the new contact
             if self.contacts_tab:
                 self.contacts_tab.refresh_log()
@@ -1134,27 +1152,70 @@ class EnhancedLoggingTab:
         if hasattr(self, 'qrz_upload_btn'):
             self.qrz_upload_btn.config(state='disabled')
 
+    def _load_notification_preferences(self):
+        """Load notification preferences from config"""
+        prefs = NotificationPreferences(
+            enabled=self.config.get('notifications.enabled', True),
+            sound_enabled=self.config.get('notifications.sound', True),
+            desktop_notification_enabled=self.config.get('notifications.desktop', False),
+            min_priority=self.config.get('notifications.min_priority', 2),
+            sound_command=self.config.get('notifications.sound_command', None)
+        )
+        self.notifier.update_preferences(prefs)
+
     # DX SPOTS METHODS
     def add_dx_spot(self, spot_data):
-        """Add a DX spot to the display (called from DX cluster tab)"""
+        """Add a DX spot to the display (called from DX cluster tab) with smart filtering"""
         callsign = spot_data.get('callsign', '')
+        country = spot_data.get('country', '')
+        mode = spot_data.get('mode', '')
+        band = spot_data.get('band', '')
+        frequency = spot_data.get('frequency', '')
+        comment = spot_data.get('comment', '')
 
-        # Check if station is SKCC member with C, T, or S suffix
-        tags = ()
+        # Check if station is SKCC member
+        skcc_number = None
         if callsign and self.skcc_roster:
             skcc_number = self.skcc_roster.get_skcc_number(callsign)
-            if skcc_number:
-                # Check if SKCC number ends with C, T, or S
-                if skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
-                    tags = ('skcc_cts',)
+
+        # Analyze if this spot is needed for any awards
+        analysis = self.analyzer.analyze_spot(
+            callsign=callsign,
+            band=band,
+            mode=mode,
+            frequency=frequency,
+            skcc_number=skcc_number,
+            state=spot_data.get('state'),
+            country=country,
+            continent=spot_data.get('continent'),
+            gridsquare=spot_data.get('gridsquare')
+        )
+
+        # Send notification if needed and high priority
+        if analysis.is_needed and analysis.highest_priority <= 2:
+            reason = analysis.get_reason_summary()
+            self.notifier.notify_needed_contact(callsign, analysis.highest_priority, reason)
+
+        # Determine tags for color coding
+        tags = ()
+        if analysis.is_needed:
+            if analysis.highest_priority == 1:
+                tags = ('high_priority',)
+            elif analysis.highest_priority == 2:
+                tags = ('medium_priority',)
+            else:
+                tags = ('low_priority',)
+        elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
+            # Keep existing SKCC C/T/S highlighting for non-needed stations
+            tags = ('skcc_cts',)
 
         self.dx_spots_tree.insert('', 0, values=(
             callsign,
-            spot_data.get('country', ''),
-            spot_data.get('mode', ''),
-            spot_data.get('band', ''),
-            spot_data.get('frequency', ''),
-            spot_data.get('comment', '')
+            country,
+            mode,
+            band,
+            frequency,
+            comment
         ), tags=tags)
 
         # Keep only the most recent 100 spots

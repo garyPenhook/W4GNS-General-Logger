@@ -49,6 +49,46 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Cache spots in local database
 - **SKCC member highlighting**: Spots for SKCC members with **Centurion (C)**, **Tribune (T)**, or **Senator (S)** suffixes are highlighted in **cyan** on the Logging tab
 
+### 🎯 **Smart Log Processing** (NEW!)
+Similar to SKCC Skimmer, the logger now intelligently analyzes DX spots and highlights contacts you **need** for award progress:
+
+**Intelligent Spot Analysis:**
+- **Real-time award analysis**: Every DX spot is automatically checked against your log to determine if you need it for awards
+- **Priority-based highlighting**:
+  - **HIGH (Green/Bold)**: Critical contacts for awards you're close to achieving (Senators, rare states, needed continents)
+  - **MEDIUM (Amber/Bold)**: Important contacts that advance your progress (Tribunes, new states, new countries)
+  - **LOW (Gray)**: Useful but lower priority contacts (new prefixes, incremental progress)
+- **Multi-award tracking**: One spot can show needs for multiple awards simultaneously
+
+**Awards Tracked:**
+- **SKCC Awards**: Centurion levels, Tribune, Senator requirements
+- **WAS** (Worked All States): Missing US states
+- **SKCC WAS**: Missing states with SKCC members
+- **DXCC**: Missing countries
+- **WAC**: Missing continents
+- **VUCC**: Missing grid squares on VHF/UHF
+- **WPX**: New callsign prefixes
+
+**Smart Notifications:**
+- **Audio alerts**: Optional sound notifications for high-priority contacts
+- **Desktop notifications**: System notifications showing why you need the station (Linux/Mac/Windows)
+- **Configurable priority threshold**: Choose which priority levels trigger notifications
+- **Automatic de-duplication**: Won't spam you with repeated alerts for the same station
+
+**How It Works:**
+1. DX spot appears → Logger analyzes it against your log and award progress
+2. If needed → Spot is highlighted in priority color with reason displayed
+3. If high priority → Optional audio/desktop notification
+4. Double-click spot → Logging form pre-populated with "NEEDED: [reason]" in notes
+5. Log the contact → Cache cleared, spot analysis updates in real-time
+
+**Example Reasons Displayed:**
+- "SKCC Centurion: New member for Centurion x5 (487/500)"
+- "WAS: New state: AK (47/50)"
+- "SKCC Senator: Senator member (highest level)"
+- "WAC: New continent: AF (5/6)"
+- "DXCC: New country: Iceland (95/100)"
+
 ### ☀️ **Space Weather Integration**
 - **Real-time solar and geomagnetic conditions** affecting HF propagation
 - **NASA DONKI integration** for space weather event alerts:

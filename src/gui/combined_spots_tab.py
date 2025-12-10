@@ -8,6 +8,8 @@ from datetime import datetime
 import threading
 from src.pota_client import POTAClient
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color
+from src.needed_analyzer import NeededContactsAnalyzer
+from src.notifier import get_notifier, NotificationPreferences
 
 
 class CombinedSpotsTab:
@@ -18,6 +20,17 @@ class CombinedSpotsTab:
         self.frame = ttk.Frame(parent)
         self.logging_tab = None  # Reference to logging tab for QSO population
         self.notebook = None  # Reference to notebook for tab switching
+
+        # Smart log processing - needed contacts analyzer
+        self.analyzer = NeededContactsAnalyzer(database)
+
+        # Notification system
+        self.notifier = get_notifier()
+        self._load_notification_preferences()
+
+        # DX spots filter state
+        self.show_needed_only = tk.BooleanVar(value=self.config.get('dx_filter.needed_only', False))
+        self.show_priority_colors = tk.BooleanVar(value=self.config.get('dx_filter.priority_colors', True))
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -44,7 +57,7 @@ class CombinedSpotsTab:
         dx_panel = ttk.Frame(paned)
         paned.add(dx_panel, weight=1)
 
-        # DX Spots header
+        # DX Spots header with smart filtering controls
         dx_header = ttk.LabelFrame(dx_panel, text="DX Cluster Spots", padding=5)
         dx_header.pack(fill='x', padx=5, pady=5)
 
@@ -53,24 +66,70 @@ class CombinedSpotsTab:
                            foreground=get_info_color(self.config))
         dx_info.pack()
 
+        # Smart filtering controls
+        dx_filter_frame = ttk.Frame(dx_header)
+        dx_filter_frame.pack(fill='x', pady=5)
+
+        ttk.Label(dx_filter_frame, text="Smart Filter:", font=('TkDefaultFont', 9, 'bold')).pack(side='left', padx=2)
+
+        ttk.Checkbutton(dx_filter_frame, text="Show Needed Only",
+                       variable=self.show_needed_only,
+                       command=self.save_dx_filters).pack(side='left', padx=5)
+
+        ttk.Checkbutton(dx_filter_frame, text="Priority Colors",
+                       variable=self.show_priority_colors,
+                       command=self.save_dx_filters).pack(side='left', padx=5)
+
+        # Notification controls
+        dx_notify_frame = ttk.Frame(dx_header)
+        dx_notify_frame.pack(fill='x', pady=2)
+
+        ttk.Label(dx_notify_frame, text="Alerts:", font=('TkDefaultFont', 9, 'bold')).pack(side='left', padx=2)
+
+        self.notify_sound_var = tk.BooleanVar(value=self.config.get('notifications.sound', True))
+        ttk.Checkbutton(dx_notify_frame, text="Sound Alert",
+                       variable=self.notify_sound_var,
+                       command=self.save_notification_prefs).pack(side='left', padx=5)
+
+        self.notify_desktop_var = tk.BooleanVar(value=self.config.get('notifications.desktop', False))
+        ttk.Checkbutton(dx_notify_frame, text="Desktop Notification",
+                       variable=self.notify_desktop_var,
+                       command=self.save_notification_prefs).pack(side='left', padx=5)
+
+        # Legend
+        legend_frame = ttk.Frame(dx_header)
+        legend_frame.pack(fill='x', pady=2)
+        ttk.Label(legend_frame, text="Priority:", font=('TkDefaultFont', 8)).pack(side='left', padx=2)
+        ttk.Label(legend_frame, text="HIGH", foreground='#00C853', font=('TkDefaultFont', 8, 'bold')).pack(side='left', padx=5)
+        ttk.Label(legend_frame, text="MEDIUM", foreground='#FFB300', font=('TkDefaultFont', 8, 'bold')).pack(side='left', padx=5)
+        ttk.Label(legend_frame, text="LOW", foreground='#808080', font=('TkDefaultFont', 8)).pack(side='left', padx=5)
+
         # DX Spots display
         dx_spots_frame = ttk.Frame(dx_panel)
         dx_spots_frame.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # Create treeview for DX spots
-        dx_columns = ('Callsign', 'Country', 'Mode', 'Band', 'Frequency', 'Comment')
+        # Create treeview for DX spots with Needed column
+        dx_columns = ('Priority', 'Callsign', 'Country', 'Mode', 'Band', 'Frequency', 'Needed For', 'Comment')
         self.dx_spots_tree = ttk.Treeview(dx_spots_frame, columns=dx_columns,
                                          show='headings', height=25)
 
         for col in dx_columns:
             self.dx_spots_tree.heading(col, text=col)
 
+        self.dx_spots_tree.column('Priority', width=50)
         self.dx_spots_tree.column('Callsign', width=90)
         self.dx_spots_tree.column('Country', width=130)
         self.dx_spots_tree.column('Mode', width=50)
         self.dx_spots_tree.column('Band', width=50)
         self.dx_spots_tree.column('Frequency', width=80)
-        self.dx_spots_tree.column('Comment', width=250)
+        self.dx_spots_tree.column('Needed For', width=200)
+        self.dx_spots_tree.column('Comment', width=200)
+
+        # Configure color tags for priority levels
+        self.dx_spots_tree.tag_configure('high_priority', foreground='#00C853')  # Bright green
+        self.dx_spots_tree.tag_configure('medium_priority', foreground='#FFB300')  # Amber
+        self.dx_spots_tree.tag_configure('low_priority', foreground='#808080')  # Gray
+        self.dx_spots_tree.tag_configure('not_needed', foreground='#404040')  # Dark gray
 
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
@@ -200,22 +259,96 @@ class CombinedSpotsTab:
         # Double-click to show details
         self.pota_spots_tree.bind('<Double-1>', self.on_pota_spot_double_click)
 
+    def _load_notification_preferences(self):
+        """Load notification preferences from config"""
+        prefs = NotificationPreferences(
+            enabled=self.config.get('notifications.enabled', True),
+            sound_enabled=self.config.get('notifications.sound', True),
+            desktop_notification_enabled=self.config.get('notifications.desktop', False),
+            min_priority=self.config.get('notifications.min_priority', 2),
+            sound_command=self.config.get('notifications.sound_command', None)
+        )
+        self.notifier.update_preferences(prefs)
+
     # DX SPOTS METHODS
     def add_dx_spot(self, spot_data):
         """Add a DX spot to the display (called from DX cluster tab)"""
+        callsign = spot_data.get('callsign', '')
+        country = spot_data.get('country', '')
+        mode = spot_data.get('mode', '')
+        band = spot_data.get('band', '')
+        frequency = spot_data.get('frequency', '')
+        comment = spot_data.get('comment', '')
+
+        # Analyze if this spot is needed for any awards
+        analysis = self.analyzer.analyze_spot(
+            callsign=callsign,
+            band=band,
+            mode=mode,
+            frequency=frequency,
+            skcc_number=spot_data.get('skcc_number'),
+            state=spot_data.get('state'),
+            country=country,
+            continent=spot_data.get('continent'),
+            gridsquare=spot_data.get('gridsquare')
+        )
+
+        # Send notification if needed and high priority
+        if analysis.is_needed and analysis.highest_priority <= 2:
+            reason = analysis.get_reason_summary()
+            self.notifier.notify_needed_contact(callsign, analysis.highest_priority, reason)
+
+        # Filter out if "needed only" is enabled and spot is not needed
+        if self.show_needed_only.get() and not analysis.is_needed:
+            return
+
+        # Determine priority display and tag
+        priority_text = analysis.priority_label
+        if analysis.is_needed:
+            needed_for = analysis.get_reason_summary()
+        else:
+            needed_for = ""
+
+        # Determine color tag
+        if not self.show_priority_colors.get():
+            tag = ''
+        elif analysis.highest_priority == 1:
+            tag = 'high_priority'
+        elif analysis.highest_priority == 2:
+            tag = 'medium_priority'
+        elif analysis.highest_priority == 3:
+            tag = 'low_priority'
+        else:
+            tag = 'not_needed'
+
+        # Insert spot with priority and needed info
         self.dx_spots_tree.insert('', 0, values=(
-            spot_data.get('callsign', ''),
-            spot_data.get('country', ''),
-            spot_data.get('mode', ''),
-            spot_data.get('band', ''),
-            spot_data.get('frequency', ''),
-            spot_data.get('comment', '')
-        ))
+            priority_text,
+            callsign,
+            country,
+            mode,
+            band,
+            frequency,
+            needed_for,
+            comment
+        ), tags=(tag,))
 
         # Keep only the most recent 100 spots
         children = self.dx_spots_tree.get_children()
         if len(children) > 100:
             self.dx_spots_tree.delete(children[-1])
+
+    def save_dx_filters(self):
+        """Save DX filter preferences"""
+        self.config.set('dx_filter.needed_only', self.show_needed_only.get())
+        self.config.set('dx_filter.priority_colors', self.show_priority_colors.get())
+
+    def save_notification_prefs(self):
+        """Save notification preferences"""
+        self.config.set('notifications.sound', self.notify_sound_var.get())
+        self.config.set('notifications.desktop', self.notify_desktop_var.get())
+        # Reload preferences into notifier
+        self._load_notification_preferences()
 
     def on_dx_spot_double_click(self, event):
         """Handle double-click on DX spot - populate entry form in logging tab"""
@@ -230,12 +363,14 @@ class CombinedSpotsTab:
         item = self.dx_spots_tree.item(selection[0])
         values = item['values']
 
-        if len(values) >= 6:
-            callsign = values[0]
-            mode = values[2]
-            band = values[3]
-            frequency = values[4]
-            comment = values[5]
+        if len(values) >= 8:
+            # Updated for new column layout: Priority, Callsign, Country, Mode, Band, Frequency, Needed For, Comment
+            callsign = values[1]
+            mode = values[3]
+            band = values[4]
+            frequency = values[5]
+            needed_for = values[6]
+            comment = values[7]
 
             # Switch to Log Contacts tab
             if self.notebook:
@@ -251,13 +386,20 @@ class CombinedSpotsTab:
             self.logging_tab.mode_var.set(mode)
             self.logging_tab.band_var.set(band)
 
-            # Add comment to notes if present
+            # Add comment and needed info to notes if present
+            notes_parts = []
+            if needed_for:
+                notes_parts.append(f"NEEDED: {needed_for}")
             if comment:
+                notes_parts.append(f"DX: {comment}")
+
+            if notes_parts:
                 current_notes = self.logging_tab.notes_var.get()
+                new_note = " | ".join(notes_parts)
                 if current_notes:
-                    self.logging_tab.notes_var.set(f"{current_notes} | DX: {comment}")
+                    self.logging_tab.notes_var.set(f"{current_notes} | {new_note}")
                 else:
-                    self.logging_tab.notes_var.set(f"DX: {comment}")
+                    self.logging_tab.notes_var.set(new_note)
 
             # Trigger callsign lookup (QRZ)
             self.logging_tab.on_callsign_changed()
