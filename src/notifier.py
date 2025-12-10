@@ -10,6 +10,8 @@ from dataclasses import dataclass
 import subprocess
 import sys
 import platform
+import threading
+import shlex
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +83,13 @@ class ContactNotifier:
         """Play audio alert based on priority"""
         try:
             if self.prefs.sound_command:
-                # Custom sound command
-                subprocess.run(self.prefs.sound_command, shell=True,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Custom sound command - use shlex.split for safety instead of shell=True
+                try:
+                    cmd_parts = shlex.split(self.prefs.sound_command)
+                    subprocess.run(cmd_parts, shell=False,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except ValueError as e:
+                    logger.warning(f"Invalid sound command format: {e}")
             else:
                 # System beep (platform-specific)
                 self._system_beep(priority)
@@ -122,7 +128,7 @@ class ContactNotifier:
             # Ultimate fallback
             try:
                 print('\a', end='', flush=True)
-            except:
+            except Exception:
                 pass
 
     def _show_desktop_notification(self, callsign: str, priority: int, reason: str):
@@ -181,19 +187,24 @@ class ContactNotifier:
         self._last_notification.clear()
 
 
-# Singleton instance for easy access
+# Singleton instance for easy access with thread safety
 _default_notifier: Optional[ContactNotifier] = None
+_notifier_lock = threading.Lock()
 
 
 def get_notifier() -> ContactNotifier:
-    """Get the default notifier instance"""
+    """Get the default notifier instance (thread-safe)"""
     global _default_notifier
     if _default_notifier is None:
-        _default_notifier = ContactNotifier()
+        with _notifier_lock:
+            # Double-check locking pattern
+            if _default_notifier is None:
+                _default_notifier = ContactNotifier()
     return _default_notifier
 
 
 def set_notifier(notifier: ContactNotifier):
-    """Set the default notifier instance"""
+    """Set the default notifier instance (thread-safe)"""
     global _default_notifier
-    _default_notifier = notifier
+    with _notifier_lock:
+        _default_notifier = notifier
