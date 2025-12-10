@@ -103,7 +103,7 @@ class NeededContactsAnalyzer:
         cache_key = f"{callsign}_{band}_{mode}"
         if cache_key in self._cache:
             cached_analysis, timestamp = self._cache[cache_key]
-            if (datetime.now() - timestamp).seconds < self.cache_timeout:
+            if (datetime.now() - timestamp).total_seconds() < self.cache_timeout:
                 return cached_analysis
 
         reasons: List[NeededReason] = []
@@ -438,17 +438,21 @@ class NeededContactsAnalyzer:
 
             cursor = self.db.cursor()
 
-            # Check if this prefix already worked
-            cursor.execute("""
-                SELECT COUNT(*) FROM contacts
-                WHERE callsign LIKE ?
-            """, (f"{prefix}%",))
-            prefix_worked = cursor.fetchone()[0] > 0
+            # Get all worked callsigns and extract their prefixes
+            cursor.execute("SELECT DISTINCT callsign FROM contacts")
+            worked_prefixes = set()
+            for row in cursor.fetchall():
+                db_callsign = row[0]
+                if db_callsign:
+                    db_prefix = self._extract_prefix(db_callsign)
+                    if db_prefix:
+                        worked_prefixes.add(db_prefix.upper())
+
+            prefix_worked = prefix.upper() in worked_prefixes
 
             if not prefix_worked:
-                # Count total prefixes worked
-                cursor.execute("SELECT COUNT(DISTINCT callsign) FROM contacts")
-                total_worked = cursor.fetchone()[0]
+                # Count total unique prefixes worked
+                total_worked = len(worked_prefixes)
 
                 reasons.append(NeededReason(
                     award_name="WPX",
@@ -464,15 +468,70 @@ class NeededContactsAnalyzer:
         return reasons
 
     def _extract_prefix(self, callsign: str) -> Optional[str]:
-        """Extract prefix from callsign"""
-        # Simplified prefix extraction
-        # Remove /P, /M, /MM, /QRP, etc.
-        call = callsign.split('/')[0]
+        """
+        Extract WPX prefix from callsign according to WPX rules.
 
-        # Find where numbers start
-        for i, char in enumerate(call):
+        WPX prefix rules for compound callsigns:
+        - W1AW/2: Operating from call area 2, prefix is "W2"
+        - KH6/W4GNS: Operating from Hawaii, prefix is "KH6"
+        - W4GNS/KH6: Operating from Hawaii, prefix is "KH6"
+        - VP9/K1ABC: Operating from Bermuda, prefix is "VP9"
+        - W4GNS/P: Portable, prefix is "W4" (ignore /P, /M, /MM, /QRP)
+
+        The key is to identify which part indicates the operating location.
+        """
+        if not callsign:
+            return None
+
+        # Split on '/' to handle portable callsigns
+        parts = callsign.split('/')
+
+        if len(parts) == 1:
+            # No slash, simple callsign
+            base = parts[0]
+        elif len(parts) == 2:
+            prefix_part = parts[0]
+            suffix_part = parts[1]
+
+            # Check for common non-location suffixes
+            non_location_suffixes = {'P', 'M', 'MM', 'QRP', 'A', 'B', 'AM'}
+            if suffix_part.upper() in non_location_suffixes:
+                base = prefix_part
+            # If suffix is a single digit, it indicates call area change
+            elif len(suffix_part) == 1 and suffix_part.isdigit():
+                # For W1AW/2, the prefix becomes based on the digit
+                # Extract letters from prefix_part and combine with new digit
+                letters = ''.join(c for c in prefix_part if c.isalpha())
+                if letters:
+                    # Use the country prefix letters + new digit
+                    for i, c in enumerate(prefix_part):
+                        if c.isdigit():
+                            return prefix_part[:i] + suffix_part
+                return suffix_part
+            # If suffix is short (2-4 chars) and has a digit, it's likely a DXCC prefix
+            elif len(suffix_part) <= 4 and any(c.isdigit() for c in suffix_part):
+                base = suffix_part
+            # If prefix is short (2-4 chars) and has a digit, it's likely a DXCC prefix
+            elif len(prefix_part) <= 4 and any(c.isdigit() for c in prefix_part):
+                base = prefix_part
+            # If suffix looks like a full callsign (has letter+digit+letters pattern)
+            elif len(suffix_part) > 4:
+                base = prefix_part
+            else:
+                # Default to suffix if it contains a digit
+                base = suffix_part if any(c.isdigit() for c in suffix_part) else prefix_part
+        else:
+            # Multiple slashes - use first part
+            base = parts[0]
+
+        # Find where the first digit occurs
+        for i, char in enumerate(base):
             if char.isdigit():
-                return call[:i+1]
+                return base[:i+1]
+
+        # If no digit found, return the whole base (special event callsigns)
+        if base:
+            return base
 
         return None
 

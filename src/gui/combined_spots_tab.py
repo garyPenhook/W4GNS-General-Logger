@@ -365,12 +365,13 @@ class CombinedSpotsTab:
 
         if len(values) >= 8:
             # Updated for new column layout: Priority, Callsign, Country, Mode, Band, Frequency, Needed For, Comment
-            callsign = values[1]
-            mode = values[3]
-            band = values[4]
-            frequency = values[5]
-            needed_for = values[6]
-            comment = values[7]
+            # Use safe access with defaults to handle potential None or empty values
+            callsign = values[1] if values[1] else ""
+            mode = values[3] if values[3] else ""
+            band = values[4] if values[4] else ""
+            frequency = values[5] if values[5] else ""
+            needed_for = values[6] if values[6] else ""
+            comment = values[7] if values[7] else ""
 
             # Switch to Log Contacts tab
             if self.notebook:
