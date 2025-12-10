@@ -1,17 +1,15 @@
 """
 Notification System for Needed Contacts
 
-Provides audio and visual notifications when high-priority contacts appear.
+Provides visual notifications when high-priority contacts appear.
 """
 
 import logging
 from typing import Optional
 from dataclasses import dataclass
 import subprocess
-import sys
 import platform
 import threading
-import shlex
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +18,8 @@ logger = logging.getLogger(__name__)
 class NotificationPreferences:
     """User preferences for notifications"""
     enabled: bool = True
-    sound_enabled: bool = True
     desktop_notification_enabled: bool = False
     min_priority: int = 2  # Notify for priority 1 (high) and 2 (medium)
-    sound_command: Optional[str] = None
 
 
 class ContactNotifier:
@@ -31,7 +27,6 @@ class ContactNotifier:
     Handles notifications for needed contacts.
 
     Supports:
-    - Audio alerts (system beep or custom command)
     - Desktop notifications (Linux/macOS/Windows)
     - Priority-based filtering
     """
@@ -72,64 +67,9 @@ class ContactNotifier:
 
         self._last_notification[key] = current_time
 
-        # Send notifications
-        if self.prefs.sound_enabled:
-            self._play_sound(priority)
-
+        # Send desktop notifications
         if self.prefs.desktop_notification_enabled:
             self._show_desktop_notification(callsign, priority, reason)
-
-    def _play_sound(self, priority: int):
-        """Play audio alert based on priority"""
-        try:
-            if self.prefs.sound_command:
-                # Custom sound command - use shlex.split for safety instead of shell=True
-                try:
-                    cmd_parts = shlex.split(self.prefs.sound_command)
-                    subprocess.run(cmd_parts, shell=False,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                except ValueError as e:
-                    logger.warning(f"Invalid sound command format: {e}")
-            else:
-                # System beep (platform-specific)
-                self._system_beep(priority)
-        except Exception as e:
-            logger.debug(f"Could not play sound: {e}")
-
-    def _system_beep(self, priority: int):
-        """Generate system beep"""
-        try:
-            os_name = platform.system()
-
-            if os_name == 'Linux':
-                # Use paplay with beep if available, otherwise try beep command
-                beep_count = 3 if priority == 1 else 2
-                for _ in range(beep_count):
-                    subprocess.run(['paplay', '/usr/share/sounds/freedesktop/stereo/bell.oga'],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif os_name == 'Darwin':  # macOS
-                beep_count = 3 if priority == 1 else 2
-                for _ in range(beep_count):
-                    subprocess.run(['afplay', '/System/Library/Sounds/Glass.aiff'],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif os_name == 'Windows':
-                import winsound
-                frequency = 1000 if priority == 1 else 800
-                duration = 200  # milliseconds
-                beep_count = 3 if priority == 1 else 2
-                for _ in range(beep_count):
-                    winsound.Beep(frequency, duration)
-            else:
-                # Fallback: print bell character
-                print('\a', end='', flush=True)
-
-        except Exception as e:
-            logger.debug(f"System beep failed: {e}")
-            # Ultimate fallback
-            try:
-                print('\a', end='', flush=True)
-            except Exception:
-                pass
 
     def _show_desktop_notification(self, callsign: str, priority: int, reason: str):
         """Show desktop notification"""

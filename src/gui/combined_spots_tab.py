@@ -263,10 +263,8 @@ class CombinedSpotsTab:
         """Load notification preferences from config"""
         prefs = NotificationPreferences(
             enabled=self.config.get('notifications.enabled', True),
-            sound_enabled=self.config.get('notifications.sound', True),
             desktop_notification_enabled=self.config.get('notifications.desktop', False),
-            min_priority=self.config.get('notifications.min_priority', 2),
-            sound_command=self.config.get('notifications.sound_command', None)
+            min_priority=self.config.get('notifications.min_priority', 2)
         )
         self.notifier.update_preferences(prefs)
 

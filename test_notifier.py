@@ -4,7 +4,7 @@ Test ContactNotifier for completeness and correctness
 
 Tests cover:
 - Notification de-duplication logic (60-second window)
-- Platform-specific sound/notification code paths
+- Platform-specific notification code paths
 - Preference updates and priority filtering
 - Thread-safe singleton pattern
 - Edge cases
@@ -41,12 +41,6 @@ else:
     print(f"  \u2717 Default enabled should be True")
     issues.append('default_enabled')
 
-if prefs.sound_enabled == True:
-    print(f"  \u2713 Default sound_enabled: True")
-else:
-    print(f"  \u2717 Default sound_enabled should be True")
-    issues.append('default_sound')
-
 if prefs.desktop_notification_enabled == False:
     print(f"  \u2713 Default desktop_notification_enabled: False")
 else:
@@ -59,12 +53,6 @@ else:
     print(f"  \u2717 Default min_priority should be 2")
     issues.append('default_priority')
 
-if prefs.sound_command is None:
-    print(f"  \u2713 Default sound_command: None")
-else:
-    print(f"  \u2717 Default sound_command should be None")
-    issues.append('default_sound_cmd')
-
 print()
 
 
@@ -73,7 +61,7 @@ print("2. NOTIFICATION DE-DUPLICATION TEST")
 print("-" * 70)
 
 # Create notifier with notifications disabled for testing
-prefs = NotificationPreferences(enabled=True, sound_enabled=False, desktop_notification_enabled=False)
+prefs = NotificationPreferences(enabled=True, desktop_notification_enabled=False)
 notifier = ContactNotifier(prefs)
 
 # First notification should go through
@@ -122,7 +110,7 @@ print("3. PRIORITY FILTERING TEST")
 print("-" * 70)
 
 # Create notifier with min_priority=2 (notify for priority 1 and 2 only)
-prefs = NotificationPreferences(enabled=True, sound_enabled=False,
+prefs = NotificationPreferences(enabled=True,
                                 desktop_notification_enabled=False, min_priority=2)
 notifier = ContactNotifier(prefs)
 
@@ -194,7 +182,7 @@ print()
 print("6. CACHE CLEARING TEST")
 print("-" * 70)
 
-prefs = NotificationPreferences(enabled=True, sound_enabled=False,
+prefs = NotificationPreferences(enabled=True,
                                 desktop_notification_enabled=False)
 notifier = ContactNotifier(prefs)
 
@@ -279,43 +267,6 @@ if get_notifier() is custom_notifier:
 else:
     print(f"  \u2717 set_notifier should update singleton")
     issues.append('set_notifier')
-
-print()
-
-
-# Test 8: Sound Command Parsing (shlex safety)
-print("8. SOUND COMMAND PARSING TEST")
-print("-" * 70)
-
-import shlex
-
-# Test valid commands
-valid_commands = [
-    'paplay /usr/share/sounds/bell.oga',
-    'afplay /System/Library/Sounds/Glass.aiff',
-    '/usr/bin/play -q sound.wav',
-]
-
-for cmd in valid_commands:
-    try:
-        parts = shlex.split(cmd)
-        print(f"  \u2713 Valid command parsed: {parts[0]}")
-    except ValueError as e:
-        print(f"  \u2717 Valid command failed: {cmd}")
-        issues.append(f'shlex_valid_{cmd}')
-
-# Test that shlex catches malformed commands
-malformed_commands = [
-    'echo "unclosed quote',
-]
-
-for cmd in malformed_commands:
-    try:
-        parts = shlex.split(cmd)
-        print(f"  \u2717 Malformed command should fail: {cmd}")
-        issues.append(f'shlex_malformed_{cmd}')
-    except ValueError:
-        print(f"  \u2713 Malformed command correctly rejected: {cmd[:30]}...")
 
 print()
 
