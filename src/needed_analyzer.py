@@ -33,6 +33,7 @@ class SpotAnalysis:
     is_needed: bool
     reasons: List[NeededReason]
     highest_priority: int  # Lowest number = highest priority
+    already_worked: bool = False  # Track if station already worked on band/mode
 
     @property
     def priority_label(self) -> str:
@@ -114,7 +115,8 @@ class NeededContactsAnalyzer:
                 callsign=callsign,
                 is_needed=False,
                 reasons=[],
-                highest_priority=99
+                highest_priority=99,
+                already_worked=True
             )
             self._cache[cache_key] = (analysis, datetime.now())
             return analysis
