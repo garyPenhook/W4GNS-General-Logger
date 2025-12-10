@@ -62,12 +62,7 @@ Similar to SKCC Skimmer, the logger now intelligently analyzes DX spots and high
 
 **Awards Tracked:**
 - **SKCC Awards**: Centurion levels, Tribune, Senator requirements
-- **WAS** (Worked All States): Missing US states
 - **SKCC WAS**: Missing states with SKCC members
-- **DXCC**: Missing countries
-- **WAC**: Missing continents
-- **VUCC**: Missing grid squares on VHF/UHF
-- **WPX**: New callsign prefixes
 
 **Smart Notifications:**
 - **Audio alerts**: Optional sound notifications for high-priority contacts
@@ -84,10 +79,8 @@ Similar to SKCC Skimmer, the logger now intelligently analyzes DX spots and high
 
 **Example Reasons Displayed:**
 - "SKCC Centurion: New member for Centurion x5 (487/500)"
-- "WAS: New state: AK (47/50)"
+- "SKCC WAS: New state: AK (47/50)"
 - "SKCC Senator: Senator member (highest level)"
-- "WAC: New continent: AF (5/6)"
-- "DXCC: New country: Iceland (95/100)"
 
 ### ☀️ **Space Weather Integration**
 - **Real-time solar and geomagnetic conditions** affecting HF propagation
@@ -527,7 +520,6 @@ W4GNS-General-Logger/
         ├── contacts_tab.py          # Contact log viewer
         ├── contest_tab.py           # Contest logging (WES/SKS/K3Y)
         ├── dx_cluster_tab.py        # DX cluster interface
-        ├── awards_tab.py            # ARRL awards tracking
         ├── skcc_awards_tab.py       # SKCC awards tracking
         ├── settings_tab.py          # Settings interface
         ├── date_range_dialog.py     # Date/time range selection dialog
@@ -623,7 +615,6 @@ Completed features:
 - [x] Duplicate contact detection ✅
 - [x] Log4OM-style interface ✅
 - [x] SKCC awards tracking (all 11 awards) ✅
-- [x] ARRL awards tracking ✅
 - [x] Space weather integration with NASA DONKI ✅
 - [x] Google Drive automatic backups ✅
 - [x] Dark/Light themes ✅

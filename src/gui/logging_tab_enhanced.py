@@ -11,7 +11,6 @@ import json
 import socket
 import struct
 import time
-from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
 from src.skcc_roster import SKCCRosterManager
@@ -765,10 +764,7 @@ class EnhancedLoggingTab:
     def _lookup_callsign_background(self, callsign, auto, original_button_text):
         """Background thread for callsign lookup"""
         try:
-            # First try DXCC lookup (always available, fast)
-            dxcc_info = lookup_dxcc(callsign)
-
-            # Then try QRZ lookup if enabled and configured
+            # Try QRZ lookup if enabled and configured
             qrz_data = None
             qrz_error = None
 
@@ -801,7 +797,7 @@ class EnhancedLoggingTab:
 
             # Schedule UI update on main thread (main loop is guaranteed to be running)
             self.parent.after(0, lambda: self._update_lookup_results(
-                callsign, auto, original_button_text, dxcc_info,
+                callsign, auto, original_button_text,
                 qrz_data, qrz_error, skcc_number, source
             ))
 
@@ -812,15 +808,8 @@ class EnhancedLoggingTab:
             ))
 
     def _update_lookup_results(self, callsign, auto, original_button_text,
-                                dxcc_info, qrz_data, qrz_error, skcc_number, skcc_source):
+                                qrz_data, qrz_error, skcc_number, skcc_source):
         """Update UI with lookup results (runs on main thread)"""
-        # Populate DXCC data
-        if dxcc_info:
-            self.country_var.set(dxcc_info['country'])
-            self.continent_var.set(dxcc_info['continent'])
-            self.cq_zone_var.set(str(dxcc_info['cq_zone']))
-            self.itu_zone_var.set(str(dxcc_info['itu_zone']))
-
         # Populate QRZ data
         if qrz_data:
             if 'name' in qrz_data and qrz_data['name']:
