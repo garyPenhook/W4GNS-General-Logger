@@ -212,7 +212,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row5, text="Continent:", width=12, anchor='e').pack(side='left')
         self.continent_var = tk.StringVar()
-        ttk.Entry(row5, textvariable=self.continent_var, width=8, state='readonly').pack(side='left', padx=5)
+        ttk.Entry(row5, textvariable=self.continent_var, width=8).pack(side='left', padx=5)
 
         ttk.Label(row5, text="CQ Zone:", width=10, anchor='e').pack(side='left', padx=(20, 0))
         self.cq_zone_var = tk.StringVar()
@@ -1299,7 +1299,7 @@ class EnhancedLoggingTab:
         Call this after logging a contact to update the 'needed' status.
 
         Uses cached spot data (including state, continent, gridsquare) to ensure
-        full award analysis for WAS, WAC, DXCC, VUCC, WPX, and SKCC awards.
+        full SKCC award analysis.
         """
         for item_id in self.dx_spots_tree.get_children():
             # Get full spot data from cache

@@ -415,9 +415,9 @@ class Database:
                     (callsign, date, time_on, time_off, frequency, band, mode,
                      rst_sent, rst_rcvd, power, name, first_name, qth, gridsquare, county, state,
                      country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
-                     my_gridsquare, comment, notes,
+                     my_gridsquare, comment, notes, email,
                      skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, distance_nm, dxcc_entity)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     contact_data.get('callsign', ''),
                     contact_data.get('date', ''),
@@ -446,6 +446,7 @@ class Database:
                     contact_data.get('my_gridsquare', ''),
                     contact_data.get('comment', ''),
                     contact_data.get('notes', ''),
+                    contact_data.get('email', ''),
                     # SKCC fields
                     contact_data.get('skcc_number', ''),
                     contact_data.get('my_skcc_number', ''),
