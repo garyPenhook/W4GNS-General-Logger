@@ -11,10 +11,11 @@ import json
 import socket
 import struct
 import time
-from src.dxcc import lookup_dxcc
 from src.qrz import QRZSession, upload_to_qrz_logbook
 from src.pota_client import POTAClient
 from src.skcc_roster import SKCCRosterManager
+from src.needed_analyzer import NeededContactsAnalyzer
+from src.notifier import get_notifier, NotificationPreferences
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color, get_spot_highlight_color
 
 
@@ -29,6 +30,16 @@ class EnhancedLoggingTab:
 
         # SKCC roster manager for member lookup
         self.skcc_roster = SKCCRosterManager()
+
+        # Smart log processing - needed contacts analyzer
+        self.analyzer = NeededContactsAnalyzer(database)
+
+        # Store full spot data for refresh (keyed by tree item id)
+        self._spot_data_cache = {}
+
+        # Notification system
+        self.notifier = get_notifier()
+        self._load_notification_preferences()
 
         # POTA client and state
         self.pota_client = POTAClient()
@@ -184,7 +195,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row4, text="Country:", width=12, anchor='e').pack(side='left')
         self.country_var = tk.StringVar()
-        self.country_entry = ttk.Entry(row4, textvariable=self.country_var, width=20, state='readonly')
+        self.country_entry = ttk.Entry(row4, textvariable=self.country_var, width=20)
         self.country_entry.pack(side='left', padx=5)
 
         ttk.Label(row4, text="State:", width=10, anchor='e').pack(side='left', padx=(20, 0))
@@ -249,6 +260,29 @@ class EnhancedLoggingTab:
         self.duration_var = tk.StringVar()
         ttk.Entry(skcc_row, textvariable=self.duration_var, width=8).pack(side='left', padx=5)
         ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
+        # Row 5.75: QRZ License Info (Email, License Date, Expiry, Class)
+        qrz_info_frame = ttk.LabelFrame(entry_frame, text="QRZ License Info", padding=5)
+        qrz_info_frame.pack(fill='x', pady=2)
+
+        qrz_row = ttk.Frame(qrz_info_frame)
+        qrz_row.pack(fill='x')
+
+        ttk.Label(qrz_row, text="Email:", width=12, anchor='e').pack(side='left')
+        self.email_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.email_var, width=25).pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="License Date:", width=14, anchor='e').pack(side='left', padx=(20, 0))
+        self.license_date_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_date_var, width=12, state='readonly').pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="Expiry:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.license_expiry_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_expiry_var, width=12, state='readonly').pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="Class:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.license_class_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_class_var, width=8, state='readonly').pack(side='left', padx=5)
 
         # Row 6: Notes/Comments
         row6 = ttk.Frame(entry_frame)
@@ -338,8 +372,13 @@ class EnhancedLoggingTab:
         self.dx_spots_tree.column('Frequency', width=80)
         self.dx_spots_tree.column('Comment', width=200)
 
-        # Configure tag for SKCC members with C, T, or S suffix
+        # Configure tags for color coding
+        # SKCC members with C, T, or S suffix (legacy highlighting)
         self.dx_spots_tree.tag_configure('skcc_cts', background=get_spot_highlight_color(self.config))
+        # Smart filtering priority colors
+        self.dx_spots_tree.tag_configure('high_priority', foreground='#00C853', font=('TkDefaultFont', 10, 'bold'))  # Bright green
+        self.dx_spots_tree.tag_configure('medium_priority', foreground='#FFB300', font=('TkDefaultFont', 10, 'bold'))  # Amber
+        self.dx_spots_tree.tag_configure('low_priority', foreground='#808080')  # Gray
 
         # DX Scrollbars
         dx_vsb = ttk.Scrollbar(dx_spots_frame, orient='vertical',
@@ -748,10 +787,7 @@ class EnhancedLoggingTab:
     def _lookup_callsign_background(self, callsign, auto, original_button_text):
         """Background thread for callsign lookup"""
         try:
-            # First try DXCC lookup (always available, fast)
-            dxcc_info = lookup_dxcc(callsign)
-
-            # Then try QRZ lookup if enabled and configured
+            # Try QRZ lookup if enabled and configured
             qrz_data = None
             qrz_error = None
 
@@ -784,7 +820,7 @@ class EnhancedLoggingTab:
 
             # Schedule UI update on main thread (main loop is guaranteed to be running)
             self.parent.after(0, lambda: self._update_lookup_results(
-                callsign, auto, original_button_text, dxcc_info,
+                callsign, auto, original_button_text,
                 qrz_data, qrz_error, skcc_number, source
             ))
 
@@ -795,15 +831,8 @@ class EnhancedLoggingTab:
             ))
 
     def _update_lookup_results(self, callsign, auto, original_button_text,
-                                dxcc_info, qrz_data, qrz_error, skcc_number, skcc_source):
+                                qrz_data, qrz_error, skcc_number, skcc_source):
         """Update UI with lookup results (runs on main thread)"""
-        # Populate DXCC data
-        if dxcc_info:
-            self.country_var.set(dxcc_info['country'])
-            self.continent_var.set(dxcc_info['continent'])
-            self.cq_zone_var.set(str(dxcc_info['cq_zone']))
-            self.itu_zone_var.set(str(dxcc_info['itu_zone']))
-
         # Populate QRZ data
         if qrz_data:
             if 'name' in qrz_data and qrz_data['name']:
@@ -834,6 +863,24 @@ class EnhancedLoggingTab:
 
             if 'itu_zone' in qrz_data:
                 self.itu_zone_var.set(qrz_data['itu_zone'])
+
+            # Populate country field from QRZ
+            if 'country' in qrz_data and qrz_data['country']:
+                self.country_var.set(qrz_data['country'])
+
+            # Populate email field from QRZ
+            if 'email' in qrz_data and qrz_data['email']:
+                self.email_var.set(qrz_data['email'])
+
+            # Populate license info fields from QRZ (read-only for reference)
+            if 'license_date' in qrz_data and qrz_data['license_date']:
+                self.license_date_var.set(qrz_data['license_date'])
+
+            if 'license_expiry' in qrz_data and qrz_data['license_expiry']:
+                self.license_expiry_var.set(qrz_data['license_expiry'])
+
+            if 'license_class' in qrz_data and qrz_data['license_class']:
+                self.license_class_var.set(qrz_data['license_class'])
 
             if not auto:
                 messagebox.showinfo("Lookup Successful", f"Found {callsign} on QRZ")
@@ -1021,6 +1068,7 @@ class EnhancedLoggingTab:
             'pota': self.pota_var.get(),
             'my_gridsquare': self.config.get('gridsquare', ''),
             'notes': self.notes_var.get(),
+            'email': self.email_var.get(),
             # SKCC fields
             'skcc_number': self.skcc_number_var.get(),
             'my_skcc_number': self.my_skcc_number_var.get(),
@@ -1031,6 +1079,11 @@ class EnhancedLoggingTab:
 
         try:
             contact_id = self.database.add_contact(contact_data)
+
+            # Clear analyzer cache and refresh displayed spots
+            # This ensures spots won't show as "needed" if we just worked them
+            self.analyzer.clear_cache()
+            self.refresh_dx_spots_display()
 
             # Refresh contacts tab to show the new contact
             if self.contacts_tab:
@@ -1120,6 +1173,11 @@ class EnhancedLoggingTab:
         self.iota_var.set('')
         self.sota_var.set('')
         self.pota_var.set('')
+        # Clear QRZ license info fields
+        self.email_var.set('')
+        self.license_date_var.set('')
+        self.license_expiry_var.set('')
+        self.license_class_var.set('')
         # Clear SKCC fields
         self.skcc_number_var.set('')
         # Restore last used key type (remember for next QSO)
@@ -1134,33 +1192,136 @@ class EnhancedLoggingTab:
         if hasattr(self, 'qrz_upload_btn'):
             self.qrz_upload_btn.config(state='disabled')
 
-    # DX SPOTS METHODS
-    def add_dx_spot(self, spot_data):
-        """Add a DX spot to the display (called from DX cluster tab)"""
-        callsign = spot_data.get('callsign', '')
+    def _load_notification_preferences(self):
+        """Load notification preferences from config"""
+        prefs = NotificationPreferences(
+            enabled=self.config.get('notifications.enabled', True),
+            desktop_notification_enabled=self.config.get('notifications.desktop', False),
+            min_priority=self.config.get('notifications.min_priority', 2)
+        )
+        self.notifier.update_preferences(prefs)
 
-        # Check if station is SKCC member with C, T, or S suffix
-        tags = ()
+    # DX SPOTS METHODS
+    def _get_spot_tags(self, analysis, skcc_number):
+        """Determine display tags for a spot based on analysis and SKCC status.
+
+        Args:
+            analysis: SpotAnalysis result from analyzer
+            skcc_number: SKCC member number if known
+
+        Returns:
+            Tuple of tag strings for treeview display
+        """
+        # Never highlight already-worked stations
+        if analysis.already_worked:
+            return ()
+
+        if analysis.is_needed:
+            if analysis.highest_priority == 1:
+                return ('high_priority',)
+            elif analysis.highest_priority == 2:
+                return ('medium_priority',)
+            else:
+                return ('low_priority',)
+        elif skcc_number and skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
+            # Keep existing SKCC C/T/S highlighting for non-needed stations
+            return ('skcc_cts',)
+        return ()
+
+    def add_dx_spot(self, spot_data):
+        """Add a DX spot to the display (called from DX cluster tab) with smart filtering"""
+        callsign = spot_data.get('callsign', '')
+        country = spot_data.get('country', '')
+        mode = spot_data.get('mode', '')
+        band = spot_data.get('band', '')
+        frequency = spot_data.get('frequency', '')
+        comment = spot_data.get('comment', '')
+
+        # Check if station is SKCC member
+        skcc_number = None
         if callsign and self.skcc_roster:
             skcc_number = self.skcc_roster.get_skcc_number(callsign)
-            if skcc_number:
-                # Check if SKCC number ends with C, T, or S
-                if skcc_number.rstrip().upper().endswith(('C', 'T', 'S')):
-                    tags = ('skcc_cts',)
 
-        self.dx_spots_tree.insert('', 0, values=(
+        # Analyze if this spot is needed for any awards
+        analysis = self.analyzer.analyze_spot(
+            callsign=callsign,
+            band=band,
+            mode=mode,
+            frequency=frequency,
+            skcc_number=skcc_number,
+            state=spot_data.get('state'),
+            country=country,
+            continent=spot_data.get('continent'),
+            gridsquare=spot_data.get('gridsquare')
+        )
+
+        # Send notification if needed and high priority
+        if analysis.is_needed and analysis.highest_priority <= 2:
+            reason = analysis.get_reason_summary()
+            self.notifier.notify_needed_contact(callsign, analysis.highest_priority, reason)
+
+        # Determine tags for color coding
+        tags = self._get_spot_tags(analysis, skcc_number)
+
+        item_id = self.dx_spots_tree.insert('', 0, values=(
             callsign,
-            spot_data.get('country', ''),
-            spot_data.get('mode', ''),
-            spot_data.get('band', ''),
-            spot_data.get('frequency', ''),
-            spot_data.get('comment', '')
+            country,
+            mode,
+            band,
+            frequency,
+            comment
         ), tags=tags)
+
+        # Store full spot data for refresh (includes state, continent, gridsquare)
+        self._spot_data_cache[item_id] = {
+            'callsign': callsign,
+            'country': country,
+            'mode': mode,
+            'band': band,
+            'frequency': frequency,
+            'skcc_number': skcc_number,
+            'state': spot_data.get('state'),
+            'continent': spot_data.get('continent'),
+            'gridsquare': spot_data.get('gridsquare')
+        }
 
         # Keep only the most recent 100 spots
         children = self.dx_spots_tree.get_children()
         if len(children) > 100:
-            self.dx_spots_tree.delete(children[-1])
+            old_item = children[-1]
+            # Clean up cached data for removed item
+            self._spot_data_cache.pop(old_item, None)
+            self.dx_spots_tree.delete(old_item)
+
+    def refresh_dx_spots_display(self):
+        """
+        Re-analyze all displayed DX spots and update their tags.
+        Call this after logging a contact to update the 'needed' status.
+
+        Uses cached spot data (including state, continent, gridsquare) to ensure
+        full award analysis for WAS, WAC, DXCC, VUCC, WPX, and SKCC awards.
+        """
+        for item_id in self.dx_spots_tree.get_children():
+            # Get full spot data from cache
+            spot_data = self._spot_data_cache.get(item_id)
+
+            if spot_data:
+                # Re-analyze the spot with full data (analyzer cache was cleared)
+                analysis = self.analyzer.analyze_spot(
+                    callsign=spot_data['callsign'],
+                    band=spot_data['band'],
+                    mode=spot_data['mode'],
+                    frequency=spot_data['frequency'],
+                    skcc_number=spot_data['skcc_number'],
+                    state=spot_data.get('state'),
+                    country=spot_data['country'],
+                    continent=spot_data.get('continent'),
+                    gridsquare=spot_data.get('gridsquare')
+                )
+
+                # Update the item's tags using helper method
+                tags = self._get_spot_tags(analysis, spot_data['skcc_number'])
+                self.dx_spots_tree.item(item_id, tags=tags)
 
     def on_dx_spot_double_click(self, event):
         """Handle double-click on DX spot - populate entry form"""
