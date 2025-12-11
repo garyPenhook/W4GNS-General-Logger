@@ -98,9 +98,9 @@ class ContactNotifier:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif os_name == 'Windows':
                 # Use PowerShell for Windows toast notification
-                # Escape XML special characters and PowerShell variable expansion
-                escaped_title = html.escape(title).replace('$', '`$')
-                escaped_message = html.escape(message).replace('$', '`$')
+                # Escape XML special characters (here-string treats content literally)
+                escaped_title = html.escape(title)
+                escaped_message = html.escape(message)
                 ps_script = f'''
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
