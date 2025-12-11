@@ -195,7 +195,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row4, text="Country:", width=12, anchor='e').pack(side='left')
         self.country_var = tk.StringVar()
-        self.country_entry = ttk.Entry(row4, textvariable=self.country_var, width=20, state='readonly')
+        self.country_entry = ttk.Entry(row4, textvariable=self.country_var, width=20)
         self.country_entry.pack(side='left', padx=5)
 
         ttk.Label(row4, text="State:", width=10, anchor='e').pack(side='left', padx=(20, 0))
@@ -260,6 +260,29 @@ class EnhancedLoggingTab:
         self.duration_var = tk.StringVar()
         ttk.Entry(skcc_row, textvariable=self.duration_var, width=8).pack(side='left', padx=5)
         ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
+        # Row 5.75: QRZ License Info (Email, License Date, Expiry, Class)
+        qrz_info_frame = ttk.LabelFrame(entry_frame, text="QRZ License Info", padding=5)
+        qrz_info_frame.pack(fill='x', pady=2)
+
+        qrz_row = ttk.Frame(qrz_info_frame)
+        qrz_row.pack(fill='x')
+
+        ttk.Label(qrz_row, text="Email:", width=12, anchor='e').pack(side='left')
+        self.email_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.email_var, width=25).pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="License Date:", width=14, anchor='e').pack(side='left', padx=(20, 0))
+        self.license_date_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_date_var, width=12, state='readonly').pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="Expiry:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.license_expiry_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_expiry_var, width=12, state='readonly').pack(side='left', padx=5)
+
+        ttk.Label(qrz_row, text="Class:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.license_class_var = tk.StringVar()
+        ttk.Entry(qrz_row, textvariable=self.license_class_var, width=8, state='readonly').pack(side='left', padx=5)
 
         # Row 6: Notes/Comments
         row6 = ttk.Frame(entry_frame)
@@ -841,6 +864,24 @@ class EnhancedLoggingTab:
             if 'itu_zone' in qrz_data:
                 self.itu_zone_var.set(qrz_data['itu_zone'])
 
+            # Populate country field from QRZ
+            if 'country' in qrz_data and qrz_data['country']:
+                self.country_var.set(qrz_data['country'])
+
+            # Populate email field from QRZ
+            if 'email' in qrz_data and qrz_data['email']:
+                self.email_var.set(qrz_data['email'])
+
+            # Populate license info fields from QRZ (read-only for reference)
+            if 'license_date' in qrz_data and qrz_data['license_date']:
+                self.license_date_var.set(qrz_data['license_date'])
+
+            if 'license_expiry' in qrz_data and qrz_data['license_expiry']:
+                self.license_expiry_var.set(qrz_data['license_expiry'])
+
+            if 'license_class' in qrz_data and qrz_data['license_class']:
+                self.license_class_var.set(qrz_data['license_class'])
+
             if not auto:
                 messagebox.showinfo("Lookup Successful", f"Found {callsign} on QRZ")
         elif qrz_error and not auto:
@@ -1027,6 +1068,7 @@ class EnhancedLoggingTab:
             'pota': self.pota_var.get(),
             'my_gridsquare': self.config.get('gridsquare', ''),
             'notes': self.notes_var.get(),
+            'email': self.email_var.get(),
             # SKCC fields
             'skcc_number': self.skcc_number_var.get(),
             'my_skcc_number': self.my_skcc_number_var.get(),
@@ -1131,6 +1173,11 @@ class EnhancedLoggingTab:
         self.iota_var.set('')
         self.sota_var.set('')
         self.pota_var.set('')
+        # Clear QRZ license info fields
+        self.email_var.set('')
+        self.license_date_var.set('')
+        self.license_expiry_var.set('')
+        self.license_class_var.set('')
         # Clear SKCC fields
         self.skcc_number_var.set('')
         # Restore last used key type (remember for next QSO)

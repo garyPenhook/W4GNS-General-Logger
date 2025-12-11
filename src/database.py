@@ -171,6 +171,7 @@ class Database:
             'pota': 'TEXT',
             'my_gridsquare': 'TEXT',
             'comment': 'TEXT',
+            'email': 'TEXT',                 # Email from QRZ lookup
             'first_name': 'TEXT',            # First name for SKCC comment format
             # SKCC-specific fields
             'skcc_number': 'TEXT',           # Remote station's SKCC number (e.g., "12345T")
