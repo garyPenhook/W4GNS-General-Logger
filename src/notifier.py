@@ -88,8 +88,8 @@ class ContactNotifier:
             elif os_name == 'Darwin':  # macOS
                 # Use osascript for macOS notifications
                 # Replace newlines with spaces to avoid breaking AppleScript command
-                sanitized_title = title.replace('\r\n', ' ').replace('\n', ' ')
-                sanitized_message = message.replace('\r\n', ' ').replace('\n', ' ')
+                sanitized_title = title.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+                sanitized_message = message.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
                 # Escape backslashes and double quotes
                 escaped_title = sanitized_title.replace('\\', '\\\\').replace('"', '\\"')
                 escaped_message = sanitized_message.replace('\\', '\\\\').replace('"', '\\"')
@@ -99,8 +99,8 @@ class ContactNotifier:
             elif os_name == 'Windows':
                 # Use PowerShell for Windows toast notification
                 # Escape XML special characters and PowerShell variable expansion
-                escaped_title = html.escape(title).replace('$', '$$')
-                escaped_message = html.escape(message).replace('$', '$$')
+                escaped_title = html.escape(title).replace('$', '`$')
+                escaped_message = html.escape(message).replace('$', '`$')
                 ps_script = f'''
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
