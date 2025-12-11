@@ -8,7 +8,7 @@ Uses the actual award calculator classes (Centurion, Tribune, Senator) to determ
 the user's current goals and validate spotted stations.
 """
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import logging
