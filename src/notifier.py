@@ -87,17 +87,20 @@ class ContactNotifier:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif os_name == 'Darwin':  # macOS
                 # Use osascript for macOS notifications
-                # Escape backslashes and double quotes in title and message
-                escaped_title = title.replace('\\', '\\\\').replace('"', '\\"')
-                escaped_message = message.replace('\\', '\\\\').replace('"', '\\"')
+                # Replace newlines with spaces to avoid breaking AppleScript command
+                sanitized_title = title.replace('\r\n', ' ').replace('\n', ' ')
+                sanitized_message = message.replace('\r\n', ' ').replace('\n', ' ')
+                # Escape backslashes and double quotes
+                escaped_title = sanitized_title.replace('\\', '\\\\').replace('"', '\\"')
+                escaped_message = sanitized_message.replace('\\', '\\\\').replace('"', '\\"')
                 apple_script = f'display notification "{escaped_message}" with title "{escaped_title}"'
                 subprocess.run(['osascript', '-e', apple_script],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif os_name == 'Windows':
                 # Use PowerShell for Windows toast notification
-                # Escape XML special characters in title and message
-                escaped_title = html.escape(title)
-                escaped_message = html.escape(message)
+                # Escape XML special characters and PowerShell variable expansion
+                escaped_title = html.escape(title).replace('$', '$$')
+                escaped_message = html.escape(message).replace('$', '$$')
                 ps_script = f'''
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
