@@ -5,6 +5,8 @@ Provides visual notifications when high-priority contacts appear.
 """
 
 import logging
+import time
+import html
 from typing import Optional
 from dataclasses import dataclass
 import subprocess
@@ -58,7 +60,6 @@ class ContactNotifier:
             return
 
         # Prevent duplicate notifications (within 60 seconds)
-        import time
         current_time = time.time()
         key = f"{callsign}_{priority}"
         if key in self._last_notification:
@@ -86,11 +87,17 @@ class ContactNotifier:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif os_name == 'Darwin':  # macOS
                 # Use osascript for macOS notifications
-                apple_script = f'display notification "{message}" with title "{title}"'
+                # Escape backslashes and double quotes in title and message
+                escaped_title = title.replace('\\', '\\\\').replace('"', '\\"')
+                escaped_message = message.replace('\\', '\\\\').replace('"', '\\"')
+                apple_script = f'display notification "{escaped_message}" with title "{escaped_title}"'
                 subprocess.run(['osascript', '-e', apple_script],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif os_name == 'Windows':
                 # Use PowerShell for Windows toast notification
+                # Escape XML special characters in title and message
+                escaped_title = html.escape(title)
+                escaped_message = html.escape(message)
                 ps_script = f'''
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
@@ -100,8 +107,8 @@ class ContactNotifier:
                 <toast>
                     <visual>
                         <binding template="ToastText02">
-                            <text id="1">{title}</text>
-                            <text id="2">{message}</text>
+                            <text id="1">{escaped_title}</text>
+                            <text id="2">{escaped_message}</text>
                         </binding>
                     </visual>
                 </toast>
