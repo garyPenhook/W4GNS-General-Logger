@@ -593,6 +593,22 @@ class ContestTab:
         time_off = self.time_off_var.get().strip() or now.strftime("%H:%M")
         date_str = now.strftime("%Y-%m-%d")
 
+        # Validate Time Off >= Time On (for same-day QSOs)
+        if self.time_on_var.get().strip() and self.time_off_var.get().strip():
+            try:
+                time_on_dt = datetime.strptime(f"{date_str} {time_on}", "%Y-%m-%d %H:%M")
+                time_off_dt = datetime.strptime(f"{date_str} {time_off}", "%Y-%m-%d %H:%M")
+                if time_off_dt < time_on_dt:
+                    messagebox.showwarning("Invalid Time",
+                        "Time Off cannot be before Time On.\n\n"
+                        "Note: For QSOs that span midnight UTC, log the QSO "
+                        "with Time On and Time Off on the same date.")
+                    return
+            except ValueError:
+                # Should not happen due to previous format validation
+                messagebox.showwarning("Invalid Time", "Error parsing Time On/Off fields.")
+                return
+
         # Get exchange data
         rst_sent = self.rst_sent_var.get().strip() or '599'
         rst_rcvd = self.rst_rcvd_var.get().strip() or '599'

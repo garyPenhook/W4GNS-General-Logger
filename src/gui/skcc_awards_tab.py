@@ -16,6 +16,7 @@ from src.skcc_roster import get_roster_manager
 from src.skcc_award_rosters import get_award_roster_manager
 from src.skcc_awards.award_application import AwardApplicationGenerator
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
+from src.utils.gridsquare import gridsquare_distance_nm
 
 
 class SKCCAwardsTab:
@@ -113,11 +114,27 @@ class SKCCAwardsTab:
         specialty_canvas.pack(side="left", fill="both", expand=True)
         specialty_scrollbar.pack(side="right", fill="y")
 
-        # Enable mousewheel scrolling for specialty awards
+        # Enable mousewheel scrolling for specialty awards (cross-platform)
         def _on_specialty_mousewheel(event):
-            specialty_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        specialty_canvas.bind("<Enter>", lambda e: specialty_canvas.bind_all("<MouseWheel>", _on_specialty_mousewheel))
-        specialty_canvas.bind("<Leave>", lambda e: specialty_canvas.unbind_all("<MouseWheel>"))
+            # Cross-platform mousewheel handling
+            if hasattr(event, 'delta'):
+                # Windows and macOS: delta is typically ±120 on Windows, smaller on macOS
+                delta = event.delta
+                if delta > 0:
+                    specialty_canvas.yview_scroll(-1, "units")
+                elif delta < 0:
+                    specialty_canvas.yview_scroll(1, "units")
+            elif hasattr(event, 'num'):
+                # Linux: Button-4 (scroll up) and Button-5 (scroll down)
+                if event.num == 4:
+                    specialty_canvas.yview_scroll(-1, "units")
+                elif event.num == 5:
+                    specialty_canvas.yview_scroll(1, "units")
+
+        # Bind mousewheel to canvas directly (not bind_all to avoid conflicts)
+        specialty_canvas.bind("<MouseWheel>", _on_specialty_mousewheel)
+        specialty_canvas.bind("<Button-4>", _on_specialty_mousewheel)  # Linux scroll up
+        specialty_canvas.bind("<Button-5>", _on_specialty_mousewheel)  # Linux scroll down
 
         # Initialize displays
         self.create_core_awards_display()
@@ -423,6 +440,20 @@ class SKCCAwardsTab:
         # Get all contacts for calculations
         contacts = self.database.get_all_contacts(limit=999999)
         contacts_list = [dict(c) for c in contacts]
+
+        # Calculate distance from gridsquares if not already set
+        for contact in contacts_list:
+            if contact.get('distance_nm') is None:
+                my_grid = contact.get('my_gridsquare', '').strip()
+                their_grid = contact.get('gridsquare', '').strip()
+
+                if my_grid and their_grid and len(my_grid) >= 4 and len(their_grid) >= 4:
+                    try:
+                        distance_nm = gridsquare_distance_nm(my_grid, their_grid)
+                        if distance_nm is not None:
+                            contact['distance_nm'] = distance_nm
+                    except Exception:
+                        pass  # Skip if calculation fails
 
         # Centurion
         centurion_progress = self.awards['centurion'].calculate_progress(contacts_list)
