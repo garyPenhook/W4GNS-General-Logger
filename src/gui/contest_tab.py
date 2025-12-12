@@ -187,6 +187,21 @@ class ContestTab:
         )
         theme_combo.pack(side='left', padx=2)
 
+        # Button to manage December special stations
+        self.manage_dec_btn = ttk.Button(bonus_row2, text="Manage Stations",
+                                          command=self.manage_december_stations, width=15)
+        self.manage_dec_btn.pack(side='left', padx=(5, 0))
+
+        # Enable/disable manage button based on theme selection
+        def on_theme_change(event=None):
+            if self.monthly_theme_var.get() == 'Dec - Reindeer':
+                self.manage_dec_btn.config(state='normal')
+            else:
+                self.manage_dec_btn.config(state='disabled')
+
+        theme_combo.bind('<<ComboboxSelected>>', on_theme_change)
+        on_theme_change()  # Set initial state
+
         ttk.Label(bonus_frame, text="Check skccgroup.com/operating_activities/weekend_sprintathon for current values",
                   font=('', 8), foreground=get_muted_color(self.config)).pack(pady=2)
 
@@ -980,6 +995,179 @@ class ContestTab:
         messagebox.showerror("Lookup Error", f"Error: {error_msg}")
         self.lookup_btn.config(text=original_button_text, state='normal')
         self.is_looking_up = False
+
+    def manage_december_stations(self):
+        """Dialog to manage December WES special station callsigns"""
+        dialog = tk.Toplevel(self.parent)
+        dialog.title("Manage December WES Special Stations")
+        dialog.geometry("600x700")
+        dialog.resizable(False, False)
+
+        # Make dialog modal
+        dialog.transient(self.parent)
+        dialog.grab_set()
+
+        # Main frame with scrollbar
+        main_frame = ttk.Frame(dialog, padding=10)
+        main_frame.pack(fill='both', expand=True)
+
+        # Title and instructions
+        title_label = ttk.Label(main_frame, text="December WES Special Stations",
+                               font=('', 12, 'bold'))
+        title_label.pack(pady=(0, 5))
+
+        info_label = ttk.Label(main_frame,
+                              text="Edit callsigns for December special stations. Changes apply immediately.",
+                              font=('', 9))
+        info_label.pack(pady=(0, 10))
+
+        # Reference link
+        ref_label = ttk.Label(main_frame,
+                             text="Reference: skccgroup.com/operating_activities/weekend_sprintathon/Dec_wes.php",
+                             font=('', 8), foreground='blue')
+        ref_label.pack(pady=(0, 10))
+
+        # Scrollable frame
+        canvas = tk.Canvas(main_frame, height=500)
+        scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Store entry widgets for later retrieval
+        entry_vars = {}
+
+        # REINDEER SECTION (10 stations)
+        reindeer_frame = ttk.LabelFrame(scrollable_frame, text="🦌 Reindeer (10 stations)", padding=10)
+        reindeer_frame.pack(fill='x', pady=5, padx=5)
+
+        reindeer_list = sorted(list(self.dec_reindeer_stations))
+        for i, callsign in enumerate(reindeer_list):
+            row = ttk.Frame(reindeer_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"Reindeer {i+1}:", width=12).pack(side='left')
+            var = tk.StringVar(value=callsign)
+            entry = ttk.Entry(row, textvariable=var, width=15, font=('', 10))
+            entry.pack(side='left', padx=5)
+            entry_vars[f'reindeer_{i}'] = var
+
+        # SANTA SECTION (1 station)
+        santa_frame = ttk.LabelFrame(scrollable_frame, text="🎅 Santa (1 station)", padding=10)
+        santa_frame.pack(fill='x', pady=5, padx=5)
+
+        santa_row = ttk.Frame(santa_frame)
+        santa_row.pack(fill='x', pady=2)
+        ttk.Label(santa_row, text="Santa:", width=12).pack(side='left')
+        santa_var = tk.StringVar(value=self.dec_santa_station)
+        santa_entry = ttk.Entry(santa_row, textvariable=santa_var, width=15, font=('', 10))
+        santa_entry.pack(side='left', padx=5)
+        entry_vars['santa'] = santa_var
+
+        # SCROOGE SECTION (1 station)
+        scrooge_frame = ttk.LabelFrame(scrollable_frame, text="👺 Scrooge (1 station)", padding=10)
+        scrooge_frame.pack(fill='x', pady=5, padx=5)
+
+        scrooge_row = ttk.Frame(scrooge_frame)
+        scrooge_row.pack(fill='x', pady=2)
+        ttk.Label(scrooge_row, text="Scrooge:", width=12).pack(side='left')
+        scrooge_var = tk.StringVar(value=self.dec_scrooge_station)
+        scrooge_entry = ttk.Entry(scrooge_row, textvariable=scrooge_var, width=15, font=('', 10))
+        scrooge_entry.pack(side='left', padx=5)
+        entry_vars['scrooge'] = scrooge_var
+
+        # ELF SECTION (10 stations)
+        elf_frame = ttk.LabelFrame(scrollable_frame, text="🧝 Elves (10 stations)", padding=10)
+        elf_frame.pack(fill='x', pady=5, padx=5)
+
+        elf_list = sorted(list(self.dec_elf_stations))
+        for i, callsign in enumerate(elf_list):
+            row = ttk.Frame(elf_frame)
+            row.pack(fill='x', pady=2)
+            ttk.Label(row, text=f"Elf {i+1}:", width=12).pack(side='left')
+            var = tk.StringVar(value=callsign)
+            entry = ttk.Entry(row, textvariable=var, width=15, font=('', 10))
+            entry.pack(side='left', padx=5)
+            entry_vars[f'elf_{i}'] = var
+
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=10)
+
+        def save_changes():
+            """Save the edited callsigns"""
+            try:
+                # Update Reindeer stations
+                new_reindeer = set()
+                for i in range(10):
+                    call = entry_vars[f'reindeer_{i}'].get().strip().upper()
+                    if call:
+                        new_reindeer.add(call)
+
+                # Update Santa
+                new_santa = entry_vars['santa'].get().strip().upper()
+
+                # Update Scrooge
+                new_scrooge = entry_vars['scrooge'].get().strip().upper()
+
+                # Update Elves stations
+                new_elves = set()
+                for i in range(10):
+                    call = entry_vars[f'elf_{i}'].get().strip().upper()
+                    if call:
+                        new_elves.add(call)
+
+                # Validate we have the right counts
+                if len(new_reindeer) != 10:
+                    messagebox.showwarning("Validation Error",
+                                         f"Must have exactly 10 Reindeer stations (found {len(new_reindeer)})")
+                    return
+
+                if not new_santa:
+                    messagebox.showwarning("Validation Error", "Santa station cannot be empty")
+                    return
+
+                if not new_scrooge:
+                    messagebox.showwarning("Validation Error", "Scrooge station cannot be empty")
+                    return
+
+                if len(new_elves) != 10:
+                    messagebox.showwarning("Validation Error",
+                                         f"Must have exactly 10 Elf stations (found {len(new_elves)})")
+                    return
+
+                # Apply changes
+                self.dec_reindeer_stations = new_reindeer
+                self.dec_santa_station = new_santa
+                self.dec_scrooge_station = new_scrooge
+                self.dec_elf_stations = new_elves
+
+                messagebox.showinfo("Success", "December special stations updated successfully!")
+                dialog.destroy()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save changes: {e}")
+
+        def cancel():
+            """Close dialog without saving"""
+            dialog.destroy()
+
+        ttk.Button(button_frame, text="Save Changes", command=save_changes, width=15).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=cancel, width=15).pack(side='left', padx=5)
+
+        # Center the dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+        y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
 
     def export_for_skcc(self):
         """Export contest log for SKCC submission"""
