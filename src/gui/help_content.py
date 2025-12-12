@@ -687,7 +687,7 @@ class HelpContent:
             ("• September - Club Calls\n", 'bullet'),
             ("• October - TKA (Triple Key Award holders)\n", 'bullet'),
             ("• November - Veterans\n", 'bullet'),
-            ("• December - Reindeer\n\n", 'bullet'),
+            ("• December - Reindeer (special stations: 10 Reindeer, Santa, Scrooge, 10 Elves)\n\n", 'bullet'),
 
             ("Bonus Points:\n", 'heading'),
             ("Values change monthly - check skccgroup.com:\n", ()),

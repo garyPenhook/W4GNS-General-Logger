@@ -129,7 +129,7 @@ Comprehensive support for SKCC (Straight Key Century Club) contests with automat
   - September: Club Calls
   - October: TKA (Triple Key Award)
   - November: Veterans
-  - December: Reindeer
+  - December: Reindeer (automatically tracks 22 special stations: 10 Reindeer, Santa, Scrooge, 10 Elves - 5 pts per station per band)
 
 **Configurable Bonus Values:**
 - All bonus point values are configurable (update monthly per SKCC rules)

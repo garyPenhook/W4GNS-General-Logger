@@ -90,12 +90,34 @@ class SKCCAwardsTab:
 
         # Create tabs for each award category
         self.core_frame = ttk.Frame(self.notebook)
-        self.specialty_frame = ttk.Frame(self.notebook)
+        specialty_container = ttk.Frame(self.notebook)
         self.geography_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.core_frame, text="  Core Awards  ")
-        self.notebook.add(self.specialty_frame, text="  Specialty Awards  ")
+        self.notebook.add(specialty_container, text="  Specialty Awards  ")
         self.notebook.add(self.geography_frame, text="  Geography Awards  ")
+
+        # Create scrollable specialty frame (has many awards that go off screen)
+        specialty_canvas = tk.Canvas(specialty_container, highlightthickness=0)
+        specialty_scrollbar = ttk.Scrollbar(specialty_container, orient="vertical", command=specialty_canvas.yview)
+        self.specialty_frame = ttk.Frame(specialty_canvas)
+
+        self.specialty_frame.bind(
+            "<Configure>",
+            lambda e: specialty_canvas.configure(scrollregion=specialty_canvas.bbox("all"))
+        )
+
+        specialty_canvas.create_window((0, 0), window=self.specialty_frame, anchor="nw")
+        specialty_canvas.configure(yscrollcommand=specialty_scrollbar.set)
+
+        specialty_canvas.pack(side="left", fill="both", expand=True)
+        specialty_scrollbar.pack(side="right", fill="y")
+
+        # Enable mousewheel scrolling for specialty awards
+        def _on_specialty_mousewheel(event):
+            specialty_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        specialty_canvas.bind("<Enter>", lambda e: specialty_canvas.bind_all("<MouseWheel>", _on_specialty_mousewheel))
+        specialty_canvas.bind("<Leave>", lambda e: specialty_canvas.unbind_all("<MouseWheel>"))
 
         # Initialize displays
         self.create_core_awards_display()

@@ -49,6 +49,18 @@ class ContestTab:
         self.monthly_theme = config.get('contest.monthly_theme', 'None')
         self.bonus_theme = config.get('contest.bonus_theme', 5)
 
+        # December WES Special Stations
+        self.dec_reindeer_stations = {
+            'AI5BE', 'WM4Q', 'W2EB', 'W0EJ', 'NX1K',
+            'AB4PP', 'NQ8T', 'KA3BPN', 'W7AMI', 'W7VC'
+        }
+        self.dec_santa_station = 'K4KYN'
+        self.dec_scrooge_station = 'W4CMG'
+        self.dec_elf_stations = {
+            'G0RDO', 'W0NZZ', 'KD2YMM', 'W9KMK', 'K2MZ',
+            'NQ3K', 'W4LRB', 'KM4JEG', 'K4TNE', 'F6EJN'
+        }
+
         # Scoring data
         self.qso_points = 0
         self.multipliers = set()  # States/provinces/countries
@@ -58,6 +70,7 @@ class ContestTab:
         self.ks1kcc_bands = set()  # Bands worked KS1KCC
         self.designated_bands = set()  # Bands worked designated member (SKS)
         self.monthly_theme_qsos = []  # QSOs earning monthly theme bonus (WES)
+        self.dec_special_stations = set()  # (callsign, band) tuples for December special stations
         self.worked_stations = {}  # {callsign: set of bands}
         self.contest_qsos = []  # List of QSOs in current contest
 
@@ -511,6 +524,7 @@ class ContestTab:
         self.ks1kcc_bands = set()
         self.designated_bands = set()
         self.monthly_theme_qsos = []
+        self.dec_special_stations = set()
         self.worked_stations = {}
         self.contest_qsos = []
 
@@ -727,6 +741,28 @@ class ContestTab:
             if band in ('10m', '15m', '20m'):
                 theme_bonus = self.bonus_theme
                 self.monthly_theme_qsos.append(callsign)
+
+        # December - Reindeer Stations (special callsigns, 5 pts each, once per band)
+        elif theme == 'Dec - Reindeer':
+            special_key = (callsign, band)
+            # Check if this is a special station and hasn't been worked on this band yet
+            if special_key not in self.dec_special_stations:
+                is_special = False
+
+                # Check all December special station categories
+                if callsign in self.dec_reindeer_stations:
+                    is_special = True
+                elif callsign == self.dec_santa_station:
+                    is_special = True
+                elif callsign == self.dec_scrooge_station:
+                    is_special = True
+                elif callsign in self.dec_elf_stations:
+                    is_special = True
+
+                if is_special:
+                    self.dec_special_stations.add(special_key)
+                    theme_bonus = self.bonus_theme  # 5 points per special station per band
+                    self.monthly_theme_qsos.append(f"{callsign}/{band}")
 
         # Other themes require special callsigns or external data
         # These will need to be tracked manually or with additional UI elements
@@ -993,6 +1029,9 @@ class ContestTab:
                     f.write(f"Designated Member Bands: {len(self.designated_bands)} (×{self.bonus_designated} = {designated_bonus})\n")
                 if theme_bonus > 0:
                     f.write(f"Monthly Theme QSOs: {len(self.monthly_theme_qsos)} (×{self.bonus_theme} = {theme_bonus})\n")
+                    # If December theme, show special stations detail
+                    if self.monthly_theme == 'Dec - Reindeer' and self.dec_special_stations:
+                        f.write(f"  Special Stations Worked: {len(self.dec_special_stations)}\n")
                 f.write(f"\nTOTAL SCORE: {total}\n")
                 f.write(f"Formula: ({self.qso_points} × {mult_count}) + {total_bonuses}\n")
                 f.write(f"\n{'=' * 50}\n\n")
@@ -1001,6 +1040,33 @@ class ContestTab:
                 f.write("MULTIPLIERS\n")
                 f.write(', '.join(sorted(self.multipliers)) + "\n")
                 f.write(f"\n{'=' * 50}\n\n")
+
+                # December special stations detail (if applicable)
+                if self.monthly_theme == 'Dec - Reindeer' and self.dec_special_stations:
+                    f.write("DECEMBER SPECIAL STATIONS\n")
+                    # Group by callsign
+                    stations_by_call = {}
+                    for call, band in sorted(self.dec_special_stations):
+                        if call not in stations_by_call:
+                            stations_by_call[call] = []
+                        stations_by_call[call].append(band)
+
+                    # Determine station type and write
+                    for call, bands in sorted(stations_by_call.items()):
+                        station_type = ""
+                        if call in self.dec_reindeer_stations:
+                            station_type = "Reindeer"
+                        elif call == self.dec_santa_station:
+                            station_type = "Santa"
+                        elif call == self.dec_scrooge_station:
+                            station_type = "Scrooge"
+                        elif call in self.dec_elf_stations:
+                            station_type = "Elf"
+
+                        bands_str = ', '.join(sorted(bands))
+                        f.write(f"  {call:<12} ({station_type:<8}) - Bands: {bands_str}\n")
+
+                    f.write(f"\n{'=' * 50}\n\n")
 
                 # QSO Log
                 f.write("QSO LOG\n")
