@@ -26,12 +26,16 @@ def gridsquare_to_latlon(gridsquare: str) -> Tuple[float, float]:
     """
     gridsquare = gridsquare.strip().upper()
 
-    if len(gridsquare) < 4:
-        raise ValueError(f"Gridsquare too short: {gridsquare}")
+    # Validate length - must be exactly 4, 6, or 8 characters
+    if len(gridsquare) not in (4, 6, 8):
+        raise ValueError(f"Gridsquare must be 4, 6, or 8 characters, got {len(gridsquare)}: {gridsquare}")
 
-    # Field (first 2 characters, AA-RR)
+    # Field (first 2 characters, A-R only)
+    # Maidenhead divides world into 18x18 fields (A-R), not A-Z
     if not (gridsquare[0].isalpha() and gridsquare[1].isalpha()):
         raise ValueError(f"Invalid field characters: {gridsquare[:2]}")
+    if not ('A' <= gridsquare[0] <= 'R' and 'A' <= gridsquare[1] <= 'R'):
+        raise ValueError(f"Field characters must be A-R, got: {gridsquare[:2]}")
 
     lon = (ord(gridsquare[0]) - ord('A')) * 20 - 180
     lat = (ord(gridsquare[1]) - ord('A')) * 10 - 90
@@ -43,10 +47,13 @@ def gridsquare_to_latlon(gridsquare: str) -> Tuple[float, float]:
     lon += int(gridsquare[2]) * 2
     lat += int(gridsquare[3]) * 1
 
-    # Subsquare (characters 5-6, AA-XX) - optional
+    # Subsquare (characters 5-6, A-X only) - optional
+    # Each square is divided into 24x24 subsquares (A-X)
     if len(gridsquare) >= 6:
         if not (gridsquare[4].isalpha() and gridsquare[5].isalpha()):
             raise ValueError(f"Invalid subsquare characters: {gridsquare[4:6]}")
+        if not ('A' <= gridsquare[4] <= 'X' and 'A' <= gridsquare[5] <= 'X'):
+            raise ValueError(f"Subsquare characters must be A-X, got: {gridsquare[4:6]}")
 
         lon += (ord(gridsquare[4]) - ord('A')) * (2.0 / 24.0)
         lat += (ord(gridsquare[5]) - ord('A')) * (1.0 / 24.0)
@@ -100,9 +107,10 @@ def haversine_distance_nm(lat1: float, lon1: float, lat2: float, lon2: float) ->
     a = math.sin(dlat / 2) ** 2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2) ** 2
     c = 2 * math.asin(math.sqrt(a))
 
-    # Earth radius in nautical miles (1 NM = 1.852 km, Earth radius ≈ 6371 km)
-    # Earth radius in NM = 6371 / 1.852 ≈ 3440.065 NM
-    earth_radius_nm = 3440.065
+    # Earth radius in nautical miles using WGS84 mean radius
+    # WGS84 mean radius = 6371.0088 km, 1 NM = 1.852 km
+    # Earth radius in NM = 6371.0088 / 1.852 ≈ 3440.0691 NM
+    earth_radius_nm = 3440.0691
 
     return c * earth_radius_nm
 
