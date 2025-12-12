@@ -252,6 +252,7 @@ class QRPMPWAward(SKCCAwardBase):
                     continue
 
         # Determine current achievement level
+        # Per SKCC rules: "Additional endorsements continue in 500-mile increments with no upper limit"
         current_level = "Not Achieved"
         next_threshold = MPW_THRESHOLDS['base']
 
@@ -264,8 +265,16 @@ class QRPMPWAward(SKCCAwardBase):
             next_threshold = MPW_THRESHOLDS['level_3']
 
         if max_mpw >= MPW_THRESHOLDS['level_3']:
-            current_level = f"2,000 MPW (Max: {max_mpw:.0f})"
-            next_threshold = None  # No upper limit
+            # Calculate endorsement level beyond 2,000 MPW
+            # Endorsements continue at 500 MPW increments (2,500, 3,000, 3,500, etc.)
+            endorsement_level = int(max_mpw // 500) * 500
+
+            if endorsement_level > 2000:
+                current_level = f"{endorsement_level:,} MPW"
+                next_threshold = endorsement_level + 500
+            else:
+                current_level = "2,000 MPW"
+                next_threshold = 2500
 
         # Sort contacts by MPW (highest first)
         qualified_contacts.sort(key=lambda x: x['mpw'], reverse=True)
