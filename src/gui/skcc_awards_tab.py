@@ -114,11 +114,27 @@ class SKCCAwardsTab:
         specialty_canvas.pack(side="left", fill="both", expand=True)
         specialty_scrollbar.pack(side="right", fill="y")
 
-        # Enable mousewheel scrolling for specialty awards
+        # Enable mousewheel scrolling for specialty awards (cross-platform)
         def _on_specialty_mousewheel(event):
-            specialty_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        specialty_canvas.bind("<Enter>", lambda e: specialty_canvas.bind_all("<MouseWheel>", _on_specialty_mousewheel))
-        specialty_canvas.bind("<Leave>", lambda e: specialty_canvas.unbind_all("<MouseWheel>"))
+            # Cross-platform mousewheel handling
+            if hasattr(event, 'delta'):
+                # Windows and macOS: delta is typically ±120 on Windows, smaller on macOS
+                delta = event.delta
+                if delta > 0:
+                    specialty_canvas.yview_scroll(-1, "units")
+                elif delta < 0:
+                    specialty_canvas.yview_scroll(1, "units")
+            elif hasattr(event, 'num'):
+                # Linux: Button-4 (scroll up) and Button-5 (scroll down)
+                if event.num == 4:
+                    specialty_canvas.yview_scroll(-1, "units")
+                elif event.num == 5:
+                    specialty_canvas.yview_scroll(1, "units")
+
+        # Bind mousewheel to canvas directly (not bind_all to avoid conflicts)
+        specialty_canvas.bind("<MouseWheel>", _on_specialty_mousewheel)
+        specialty_canvas.bind("<Button-4>", _on_specialty_mousewheel)  # Linux scroll up
+        specialty_canvas.bind("<Button-5>", _on_specialty_mousewheel)  # Linux scroll down
 
         # Initialize displays
         self.create_core_awards_display()
