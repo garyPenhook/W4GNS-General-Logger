@@ -998,13 +998,13 @@ class ContestTab:
 
     def manage_december_stations(self):
         """Dialog to manage December WES special station callsigns"""
-        dialog = tk.Toplevel(self.parent)
+        dialog = tk.Toplevel(self.frame.winfo_toplevel())
         dialog.title("Manage December WES Special Stations")
         dialog.geometry("600x700")
         dialog.resizable(False, False)
 
         # Make dialog modal
-        dialog.transient(self.parent)
+        dialog.transient(self.frame.winfo_toplevel())
         dialog.grab_set()
 
         # Main frame with scrollbar
