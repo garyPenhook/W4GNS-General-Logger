@@ -90,12 +90,34 @@ class SKCCAwardsTab:
 
         # Create tabs for each award category
         self.core_frame = ttk.Frame(self.notebook)
-        self.specialty_frame = ttk.Frame(self.notebook)
+        specialty_container = ttk.Frame(self.notebook)
         self.geography_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.core_frame, text="  Core Awards  ")
-        self.notebook.add(self.specialty_frame, text="  Specialty Awards  ")
+        self.notebook.add(specialty_container, text="  Specialty Awards  ")
         self.notebook.add(self.geography_frame, text="  Geography Awards  ")
+
+        # Create scrollable specialty frame (has many awards that go off screen)
+        specialty_canvas = tk.Canvas(specialty_container, highlightthickness=0)
+        specialty_scrollbar = ttk.Scrollbar(specialty_container, orient="vertical", command=specialty_canvas.yview)
+        self.specialty_frame = ttk.Frame(specialty_canvas)
+
+        self.specialty_frame.bind(
+            "<Configure>",
+            lambda e: specialty_canvas.configure(scrollregion=specialty_canvas.bbox("all"))
+        )
+
+        specialty_canvas.create_window((0, 0), window=self.specialty_frame, anchor="nw")
+        specialty_canvas.configure(yscrollcommand=specialty_scrollbar.set)
+
+        specialty_canvas.pack(side="left", fill="both", expand=True)
+        specialty_scrollbar.pack(side="right", fill="y")
+
+        # Enable mousewheel scrolling for specialty awards
+        def _on_specialty_mousewheel(event):
+            specialty_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        specialty_canvas.bind("<Enter>", lambda e: specialty_canvas.bind_all("<MouseWheel>", _on_specialty_mousewheel))
+        specialty_canvas.bind("<Leave>", lambda e: specialty_canvas.unbind_all("<MouseWheel>"))
 
         # Initialize displays
         self.create_core_awards_display()
@@ -221,6 +243,9 @@ class SKCCAwardsTab:
         self.triple_key_details = ttk.Label(triple_key_frame, text="", font=('', 9))
         self.triple_key_details.pack(anchor='w')
 
+        ttk.Button(triple_key_frame, text="📄 Generate Award Application",
+                  command=self.generate_triple_key_application).pack(anchor='w', pady=(10, 0))
+
         # Rag Chew
         rag_chew_frame = ttk.LabelFrame(self.specialty_frame, text="Rag Chew Award", padding=10)
         rag_chew_frame.pack(fill='x', padx=10, pady=5)
@@ -233,6 +258,9 @@ class SKCCAwardsTab:
 
         self.rag_chew_bar = ttk.Progressbar(rag_chew_frame, length=400, mode='determinate')
         self.rag_chew_bar.pack(fill='x', pady=2)
+
+        ttk.Button(rag_chew_frame, text="📄 Generate Award Application",
+                  command=self.generate_rag_chew_application).pack(anchor='w', pady=(10, 0))
 
         # PFX
         pfx_frame = ttk.LabelFrame(self.specialty_frame, text="PFX Award", padding=10)
@@ -247,6 +275,9 @@ class SKCCAwardsTab:
         self.pfx_bar = ttk.Progressbar(pfx_frame, length=400, mode='determinate')
         self.pfx_bar.pack(fill='x', pady=2)
 
+        ttk.Button(pfx_frame, text="📄 Generate Award Application",
+                  command=self.generate_pfx_application).pack(anchor='w', pady=(10, 0))
+
         # Canadian Maple
         maple_frame = ttk.LabelFrame(self.specialty_frame, text="Canadian Maple Award", padding=10)
         maple_frame.pack(fill='x', padx=10, pady=5)
@@ -256,6 +287,9 @@ class SKCCAwardsTab:
 
         self.maple_progress = ttk.Label(maple_frame, text="", font=('', 11, 'bold'))
         self.maple_progress.pack(anchor='w', pady=2)
+
+        ttk.Button(maple_frame, text="📄 Generate Award Application",
+                  command=self.generate_canadian_maple_application).pack(anchor='w', pady=(10, 0))
 
         # Marathon
         marathon_frame = ttk.LabelFrame(self.specialty_frame, text="Marathon Award", padding=10)
@@ -273,6 +307,9 @@ class SKCCAwardsTab:
         self.marathon_details = ttk.Label(marathon_frame, text="", font=('', 9))
         self.marathon_details.pack(anchor='w')
 
+        ttk.Button(marathon_frame, text="📄 Generate Award Application",
+                  command=self.generate_marathon_application).pack(anchor='w', pady=(10, 0))
+
         # QRP/MPW
         qrp_mpw_frame = ttk.LabelFrame(self.specialty_frame, text="QRP Miles Per Watt Award", padding=10)
         qrp_mpw_frame.pack(fill='x', padx=10, pady=5)
@@ -285,6 +322,9 @@ class SKCCAwardsTab:
 
         self.qrp_mpw_details = ttk.Label(qrp_mpw_frame, text="", font=('', 9))
         self.qrp_mpw_details.pack(anchor='w')
+
+        ttk.Button(qrp_mpw_frame, text="📄 Generate Award Application",
+                  command=self.generate_qrp_mpw_application).pack(anchor='w', pady=(10, 0))
 
     def create_geography_awards_display(self):
         """Create display for geography awards (DXQ, DXC, WAS, WAC)"""
@@ -301,6 +341,9 @@ class SKCCAwardsTab:
         self.was_bar = ttk.Progressbar(was_frame, length=400, mode='determinate')
         self.was_bar.pack(fill='x', pady=2)
 
+        ttk.Button(was_frame, text="📄 Generate Award Application",
+                  command=self.generate_was_application).pack(anchor='w', pady=(10, 0))
+
         # SKCC WAS-T
         was_t_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAS-T (Tribune/Senator)", padding=10)
         was_t_frame.pack(fill='x', padx=10, pady=5)
@@ -313,6 +356,9 @@ class SKCCAwardsTab:
 
         self.was_t_bar = ttk.Progressbar(was_t_frame, length=400, mode='determinate')
         self.was_t_bar.pack(fill='x', pady=2)
+
+        ttk.Button(was_t_frame, text="📄 Generate Award Application",
+                  command=self.generate_was_t_application).pack(anchor='w', pady=(10, 0))
 
         # SKCC WAS-S
         was_s_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAS-S (Senator Only)", padding=10)
@@ -327,6 +373,9 @@ class SKCCAwardsTab:
         self.was_s_bar = ttk.Progressbar(was_s_frame, length=400, mode='determinate')
         self.was_s_bar.pack(fill='x', pady=2)
 
+        ttk.Button(was_s_frame, text="📄 Generate Award Application",
+                  command=self.generate_was_s_application).pack(anchor='w', pady=(10, 0))
+
         # SKCC WAC
         wac_frame = ttk.LabelFrame(self.geography_frame, text="SKCC WAC (Worked All Continents)", padding=10)
         wac_frame.pack(fill='x', padx=10, pady=5)
@@ -340,6 +389,9 @@ class SKCCAwardsTab:
         self.wac_bar = ttk.Progressbar(wac_frame, length=400, mode='determinate')
         self.wac_bar.pack(fill='x', pady=2)
 
+        ttk.Button(wac_frame, text="📄 Generate Award Application",
+                  command=self.generate_wac_application).pack(anchor='w', pady=(10, 0))
+
         # DXQ
         dxq_frame = ttk.LabelFrame(self.geography_frame, text="SKCC DXQ (QSO-based DX)", padding=10)
         dxq_frame.pack(fill='x', padx=10, pady=5)
@@ -350,6 +402,9 @@ class SKCCAwardsTab:
         self.dxq_progress = ttk.Label(dxq_frame, text="", font=('', 11, 'bold'))
         self.dxq_progress.pack(anchor='w', pady=2)
 
+        ttk.Button(dxq_frame, text="📄 Generate Award Application",
+                  command=self.generate_dxq_application).pack(anchor='w', pady=(10, 0))
+
         # DXC
         dxc_frame = ttk.LabelFrame(self.geography_frame, text="SKCC DXC (Country-based DX)", padding=10)
         dxc_frame.pack(fill='x', padx=10, pady=5)
@@ -359,6 +414,9 @@ class SKCCAwardsTab:
 
         self.dxc_progress = ttk.Label(dxc_frame, text="", font=('', 11, 'bold'))
         self.dxc_progress.pack(anchor='w', pady=2)
+
+        ttk.Button(dxc_frame, text="📄 Generate Award Application",
+                  command=self.generate_dxc_application).pack(anchor='w', pady=(10, 0))
 
     def refresh_awards(self):
         """Refresh all award progress displays"""
@@ -862,6 +920,7 @@ class SKCCAwardsTab:
             report += f"\nIf awards still don't show, click 'Refresh Awards'."
             messagebox.showinfo("SKCC Awards Diagnostic", report)
 
+    # Core Awards
     def generate_centurion_application(self):
         """Generate Centurion award application"""
         self._generate_award_application('centurion', 'Centurion')
@@ -874,12 +933,62 @@ class SKCCAwardsTab:
         """Generate Senator award application"""
         self._generate_award_application('senator', 'Senator')
 
+    # Specialty Awards
+    def generate_triple_key_application(self):
+        """Generate Triple Key award application"""
+        self._generate_award_application('triple_key', 'Triple_Key')
+
+    def generate_rag_chew_application(self):
+        """Generate Rag Chew award application"""
+        self._generate_award_application('rag_chew', 'Rag_Chew')
+
+    def generate_marathon_application(self):
+        """Generate Marathon award application"""
+        self._generate_award_application('marathon', 'Marathon')
+
+    def generate_pfx_application(self):
+        """Generate PFX award application"""
+        self._generate_award_application('pfx', 'PFX')
+
+    def generate_canadian_maple_application(self):
+        """Generate Canadian Maple award application"""
+        self._generate_award_application('canadian_maple', 'Canadian_Maple')
+
+    def generate_qrp_mpw_application(self):
+        """Generate QRP/MPW award application"""
+        self._generate_award_application('qrp_mpw', 'QRP_MPW')
+
+    # Geography Awards
+    def generate_dxq_application(self):
+        """Generate DXQ award application"""
+        self._generate_award_application('dxq', 'DXQ')
+
+    def generate_dxc_application(self):
+        """Generate DXC award application"""
+        self._generate_award_application('dxc', 'DXC')
+
+    def generate_was_application(self):
+        """Generate WAS award application"""
+        self._generate_award_application('was', 'WAS')
+
+    def generate_was_t_application(self):
+        """Generate WAS-T award application"""
+        self._generate_award_application('was_t', 'WAS-T')
+
+    def generate_was_s_application(self):
+        """Generate WAS-S award application"""
+        self._generate_award_application('was_s', 'WAS-S')
+
+    def generate_wac_application(self):
+        """Generate WAC award application"""
+        self._generate_award_application('wac', 'WAC')
+
     def _generate_award_application(self, award_type: str, award_name: str):
         """
         Generate award application report and save to file
 
         Args:
-            award_type: Type of award ('centurion', 'tribune', 'senator')
+            award_type: Type of award (centurion, tribune, senator, dxq, dxc, etc.)
             award_name: Display name of the award
         """
         # Get all contacts
@@ -925,13 +1034,15 @@ class SKCCAwardsTab:
 
         qualifying_contacts = deduplicated_contacts
 
-        # Generate the report
-        if award_type == 'centurion':
-            report = self.app_generator.generate_centurion_report(qualifying_contacts)
-        elif award_type == 'tribune':
-            report = self.app_generator.generate_tribune_report(qualifying_contacts)
-        elif award_type == 'senator':
-            report = self.app_generator.generate_senator_report(qualifying_contacts)
+        # Generate the report based on award type
+        try:
+            report = self._get_report_for_award(award_type, qualifying_contacts)
+        except ValueError as e:
+            messagebox.showerror(
+                "Unknown Award Type",
+                f"Failed to generate report: {e}"
+            )
+            return
 
         # Ask user where to save
         callsign = self.config.get('callsign', 'UNKNOWN')
@@ -961,6 +1072,41 @@ class SKCCAwardsTab:
                 "Error",
                 f"Failed to save award application to:\n{filename}"
             )
+
+    def _get_report_for_award(self, award_type: str, contacts):
+        """
+        Get the appropriate report generator for the award type
+
+        Args:
+            award_type: Type of award
+            contacts: List of qualifying contacts
+
+        Returns:
+            Generated report string
+        """
+        report_generators = {
+            'centurion': self.app_generator.generate_centurion_report,
+            'tribune': self.app_generator.generate_tribune_report,
+            'senator': self.app_generator.generate_senator_report,
+            'dxq': self.app_generator.generate_dxq_report,
+            'dxc': self.app_generator.generate_dxc_report,
+            'was': self.app_generator.generate_was_report,
+            'was_t': self.app_generator.generate_was_t_report,
+            'was_s': self.app_generator.generate_was_s_report,
+            'wac': self.app_generator.generate_wac_report,
+            'triple_key': self.app_generator.generate_triple_key_report,
+            'rag_chew': self.app_generator.generate_rag_chew_report,
+            'marathon': self.app_generator.generate_marathon_report,
+            'pfx': self.app_generator.generate_pfx_report,
+            'canadian_maple': self.app_generator.generate_canadian_maple_report,
+            'qrp_mpw': self.app_generator.generate_qrp_mpw_report,
+        }
+
+        generator = report_generators.get(award_type)
+        if generator:
+            return generator(contacts)
+        else:
+            raise ValueError(f"Unknown award type: {award_type}")
 
     def get_frame(self):
         """Return the main frame"""

@@ -6,11 +6,21 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timezone
 import threading
+import re
 
 from src.theme_colors import get_muted_color, get_info_color
 from src.qrz import QRZSession
 from src.dxcc import lookup_dxcc
 from src.skcc_roster import SKCCRosterManager
+
+
+def validate_time_format(time_str):
+    """Validate HH:MM format (00:00 to 23:59)"""
+    if not time_str:
+        return True  # Empty is OK, will use default
+    if not re.match(r'^([0-1][0-9]|2[0-3]):[0-5][0-9]$', time_str):
+        return False
+    return True
 
 
 class ContestTab:
@@ -39,6 +49,18 @@ class ContestTab:
         self.monthly_theme = config.get('contest.monthly_theme', 'None')
         self.bonus_theme = config.get('contest.bonus_theme', 5)
 
+        # December WES Special Stations
+        self.dec_reindeer_stations = {
+            'AI5BE', 'WM4Q', 'W2EB', 'W0EJ', 'NX1K',
+            'AB4PP', 'NQ8T', 'KA3BPN', 'W7AMI', 'W7VC'
+        }
+        self.dec_santa_station = 'K4KYN'
+        self.dec_scrooge_station = 'W4CMG'
+        self.dec_elf_stations = {
+            'G0RDO', 'W0NZZ', 'KD2YMM', 'W9KMK', 'K2MZ',
+            'NQ3K', 'W4LRB', 'KM4JEG', 'K4TNE', 'F6EJN'
+        }
+
         # Scoring data
         self.qso_points = 0
         self.multipliers = set()  # States/provinces/countries
@@ -48,6 +70,7 @@ class ContestTab:
         self.ks1kcc_bands = set()  # Bands worked KS1KCC
         self.designated_bands = set()  # Bands worked designated member (SKS)
         self.monthly_theme_qsos = []  # QSOs earning monthly theme bonus (WES)
+        self.dec_special_stations = set()  # (callsign, band) tuples for December special stations
         self.worked_stations = {}  # {callsign: set of bands}
         self.contest_qsos = []  # List of QSOs in current contest
 
@@ -253,6 +276,27 @@ class ContestTab:
         band_combo['values'] = ('160m', '80m', '40m', '20m', '15m', '10m')
         band_combo.pack(side='left', padx=5)
 
+        # Row 6: Time On and Time Off (UTC)
+        row6 = ttk.Frame(entry_frame)
+        row6.pack(fill='x', pady=2)
+
+        ttk.Label(row6, text="Time On:", width=10).pack(side='left')
+        self.time_on_var = tk.StringVar()
+        self.time_on_entry = ttk.Entry(row6, textvariable=self.time_on_var, width=8)
+        self.time_on_entry.pack(side='left', padx=5)
+
+        ttk.Label(row6, text="UTC", width=4).pack(side='left')
+
+        ttk.Label(row6, text="Time Off:", width=10).pack(side='left', padx=(20, 0))
+        self.time_off_var = tk.StringVar()
+        self.time_off_entry = ttk.Entry(row6, textvariable=self.time_off_var, width=8)
+        self.time_off_entry.pack(side='left', padx=5)
+
+        ttk.Label(row6, text="UTC", width=4).pack(side='left')
+
+        # Now button to set current UTC time for Time Off
+        ttk.Button(row6, text="Set Time Off", command=self.set_time_now, width=10).pack(side='left', padx=10)
+
         # Log button
         btn_frame = ttk.Frame(entry_frame)
         btn_frame.pack(fill='x', pady=10)
@@ -355,7 +399,7 @@ class ContestTab:
         self.log_tree = ttk.Treeview(log_frame, columns=columns, show='headings', height=8)
 
         # Configure columns
-        self.log_tree.heading('Time', text='Time')
+        self.log_tree.heading('Time', text='Time Off')
         self.log_tree.heading('Callsign', text='Callsign')
         self.log_tree.heading('RST S', text='RST S')
         self.log_tree.heading('RST R', text='RST R')
@@ -480,6 +524,7 @@ class ContestTab:
         self.ks1kcc_bands = set()
         self.designated_bands = set()
         self.monthly_theme_qsos = []
+        self.dec_special_stations = set()
         self.worked_stations = {}
         self.contest_qsos = []
 
@@ -490,10 +535,20 @@ class ContestTab:
         # Reset score display
         self.update_score_display()
 
+    def set_time_now(self):
+        """Set Time Off to current UTC time"""
+        now = datetime.now(timezone.utc)
+        self.time_off_var.set(now.strftime("%H:%M"))
+
     def on_callsign_change(self, event=None):
         """Handle callsign entry changes"""
         callsign = self.callsign_var.get().strip().upper()
         band = self.band_var.get()
+
+        # Auto-set Time On when callsign is first entered
+        if callsign and not self.time_on_var.get():
+            now = datetime.now(timezone.utc)
+            self.time_on_var.set(now.strftime("%H:%M"))
 
         # Check for duplicate
         if callsign in self.worked_stations:
@@ -524,9 +579,18 @@ class ContestTab:
                     f"{callsign} already worked on {band}.\nLog anyway?"):
                 return
 
-        # Get current UTC time
+        # Validate time formats
+        if self.time_on_var.get().strip() and not validate_time_format(self.time_on_var.get().strip()):
+            messagebox.showwarning("Invalid Time", "Time On must be in HH:MM format (00:00 to 23:59)")
+            return
+        if self.time_off_var.get().strip() and not validate_time_format(self.time_off_var.get().strip()):
+            messagebox.showwarning("Invalid Time", "Time Off must be in HH:MM format (00:00 to 23:59)")
+            return
+
+        # Get current UTC time as fallback for time_on and time_off if not set
         now = datetime.now(timezone.utc)
-        time_str = now.strftime("%H:%M")
+        time_on = self.time_on_var.get().strip() or now.strftime("%H:%M")
+        time_off = self.time_off_var.get().strip() or now.strftime("%H:%M")
         date_str = now.strftime("%Y-%m-%d")
 
         # Get exchange data
@@ -589,7 +653,8 @@ class ContestTab:
         qso_data = {
             'callsign': callsign,
             'date': date_str,
-            'time': time_str,
+            'time_on': time_on,
+            'time_off': time_off,
             'rst_sent': rst_sent,
             'rst_rcvd': rst_rcvd,
             'name': name,
@@ -603,9 +668,9 @@ class ContestTab:
         }
         self.contest_qsos.append(qso_data)
 
-        # Add to log display
+        # Add to log display (show time_off as the QSO end time)
         self.log_tree.insert('', 0, values=(
-            time_str, callsign, rst_sent, rst_rcvd, name, qth, skcc, band,
+            time_off, callsign, rst_sent, rst_rcvd, name, qth, skcc, band,
             qso_pts + bonus_pts, mult_new
         ))
 
@@ -625,8 +690,8 @@ class ContestTab:
             contact = {
                 'callsign': qso_data['callsign'],
                 'date': qso_data['date'],
-                'time_on': qso_data['time'].replace(':', ''),
-                'time_off': qso_data['time'].replace(':', ''),
+                'time_on': qso_data['time_on'].replace(':', ''),
+                'time_off': qso_data['time_off'].replace(':', ''),
                 'frequency': qso_data['frequency'],
                 'band': qso_data['band'],
                 'mode': 'CW',
@@ -676,6 +741,28 @@ class ContestTab:
             if band in ('10m', '15m', '20m'):
                 theme_bonus = self.bonus_theme
                 self.monthly_theme_qsos.append(callsign)
+
+        # December - Reindeer Stations (special callsigns, 5 pts each, once per band)
+        elif theme == 'Dec - Reindeer':
+            special_key = (callsign, band)
+            # Check if this is a special station and hasn't been worked on this band yet
+            if special_key not in self.dec_special_stations:
+                is_special = False
+
+                # Check all December special station categories
+                if callsign in self.dec_reindeer_stations:
+                    is_special = True
+                elif callsign == self.dec_santa_station:
+                    is_special = True
+                elif callsign == self.dec_scrooge_station:
+                    is_special = True
+                elif callsign in self.dec_elf_stations:
+                    is_special = True
+
+                if is_special:
+                    self.dec_special_stations.add(special_key)
+                    theme_bonus = self.bonus_theme  # 5 points per special station per band
+                    self.monthly_theme_qsos.append(f"{callsign}/{band}")
 
         # Other themes require special callsigns or external data
         # These will need to be tracked manually or with additional UI elements
@@ -727,10 +814,14 @@ class ContestTab:
 
         recent_qsos = 0
         for qso in self.contest_qsos:
-            qso_time = datetime.strptime(f"{qso['date']} {qso['time']}", "%Y-%m-%d %H:%M")
-            qso_time = qso_time.replace(tzinfo=timezone.utc)
-            if qso_time.timestamp() > one_hour_ago:
-                recent_qsos += 1
+            try:
+                qso_time = datetime.strptime(f"{qso['date']} {qso['time_on']}", "%Y-%m-%d %H:%M")
+                qso_time = qso_time.replace(tzinfo=timezone.utc)
+                if qso_time.timestamp() > one_hour_ago:
+                    recent_qsos += 1
+            except (ValueError, KeyError):
+                # Skip QSOs with invalid time format or missing keys
+                continue
 
         self.rate_var.set(str(recent_qsos))
 
@@ -746,6 +837,8 @@ class ContestTab:
         self.skcc_var.set('')
         self.rst_sent_var.set('599')
         self.rst_rcvd_var.set('599')
+        self.time_on_var.set('')
+        self.time_off_var.set('')
         self.dupe_label.config(text='')
         self.skcc_status.config(text='')
 
@@ -936,6 +1029,9 @@ class ContestTab:
                     f.write(f"Designated Member Bands: {len(self.designated_bands)} (×{self.bonus_designated} = {designated_bonus})\n")
                 if theme_bonus > 0:
                     f.write(f"Monthly Theme QSOs: {len(self.monthly_theme_qsos)} (×{self.bonus_theme} = {theme_bonus})\n")
+                    # If December theme, show special stations detail
+                    if self.monthly_theme == 'Dec - Reindeer' and self.dec_special_stations:
+                        f.write(f"  Special Stations Worked: {len(self.dec_special_stations)}\n")
                 f.write(f"\nTOTAL SCORE: {total}\n")
                 f.write(f"Formula: ({self.qso_points} × {mult_count}) + {total_bonuses}\n")
                 f.write(f"\n{'=' * 50}\n\n")
@@ -945,13 +1041,40 @@ class ContestTab:
                 f.write(', '.join(sorted(self.multipliers)) + "\n")
                 f.write(f"\n{'=' * 50}\n\n")
 
+                # December special stations detail (if applicable)
+                if self.monthly_theme == 'Dec - Reindeer' and self.dec_special_stations:
+                    f.write("DECEMBER SPECIAL STATIONS\n")
+                    # Group by callsign
+                    stations_by_call = {}
+                    for call, band in sorted(self.dec_special_stations):
+                        if call not in stations_by_call:
+                            stations_by_call[call] = []
+                        stations_by_call[call].append(band)
+
+                    # Determine station type and write
+                    for call, bands in sorted(stations_by_call.items()):
+                        station_type = ""
+                        if call in self.dec_reindeer_stations:
+                            station_type = "Reindeer"
+                        elif call == self.dec_santa_station:
+                            station_type = "Santa"
+                        elif call == self.dec_scrooge_station:
+                            station_type = "Scrooge"
+                        elif call in self.dec_elf_stations:
+                            station_type = "Elf"
+
+                        bands_str = ', '.join(sorted(bands))
+                        f.write(f"  {call:<12} ({station_type:<8}) - Bands: {bands_str}\n")
+
+                    f.write(f"\n{'=' * 50}\n\n")
+
                 # QSO Log
                 f.write("QSO LOG\n")
-                f.write(f"{'Date':<12} {'Time':<6} {'Call':<12} {'RST':<8} {'Name':<12} {'QTH':<8} {'SKCC':<12} {'Band':<6}\n")
-                f.write("-" * 80 + "\n")
+                f.write(f"{'Date':<12} {'Time On':<8} {'Time Off':<8} {'Call':<12} {'RST':<8} {'Name':<12} {'QTH':<8} {'SKCC':<12} {'Band':<6}\n")
+                f.write("-" * 94 + "\n")
 
                 for qso in self.contest_qsos:
-                    f.write(f"{qso['date']:<12} {qso['time']:<6} {qso['callsign']:<12} "
+                    f.write(f"{qso['date']:<12} {qso['time_on']:<8} {qso['time_off']:<8} {qso['callsign']:<12} "
                            f"{qso['rst_sent']}/{qso['rst_rcvd']:<4} {qso['name']:<12} "
                            f"{qso['qth']:<8} {qso['skcc']:<12} {qso['band']:<6}\n")
 

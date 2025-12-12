@@ -2,8 +2,12 @@
 
 Amateur Radio Contact Logging Application with DX Cluster Integration
 
-![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/blob/master/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/commits)
+[![Stars](https://img.shields.io/github/stars/garyPenhook/W4GNS-General-Logger)](https://github.com/garyPenhook/W4GNS-General-Logger/stargazers)
+[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey)](https://github.com/garyPenhook/W4GNS-General-Logger)
+[![Ham Radio](https://img.shields.io/badge/ham%20radio-W4GNS-red)](https://www.qrz.com/db/W4GNS)
 
 ## Features
 
@@ -44,6 +48,38 @@ Amateur Radio Contact Logging Application with DX Cluster Integration
 - Automatic spot parsing and display
 - Cache spots in local database
 - **SKCC member highlighting**: Spots for SKCC members with **Centurion (C)**, **Tribune (T)**, or **Senator (S)** suffixes are highlighted in **cyan** on the Logging tab
+
+### 🎯 **Smart Log Processing** (NEW!)
+Similar to SKCC Skimmer, the logger now intelligently analyzes DX spots and highlights contacts you **need** for award progress:
+
+**Intelligent Spot Analysis:**
+- **Real-time award analysis**: Every DX spot is automatically checked against your log to determine if you need it for awards
+- **Priority-based highlighting**:
+  - **HIGH (Green/Bold)**: Critical contacts for awards you're close to achieving (Senators, rare states, needed continents)
+  - **MEDIUM (Amber/Bold)**: Important contacts that advance your progress (Tribunes, new states, new countries)
+  - **LOW (Gray)**: Useful but lower priority contacts (new prefixes, incremental progress)
+- **Multi-award tracking**: One spot can show needs for multiple awards simultaneously
+
+**Awards Tracked:**
+- **SKCC Awards**: Centurion levels, Tribune, Senator requirements
+- **SKCC WAS**: Missing states with SKCC members
+
+**Smart Notifications:**
+- **Desktop notifications**: System notifications showing why you need the station (Linux/Mac/Windows)
+- **Configurable priority threshold**: Choose which priority levels trigger notifications
+- **Automatic de-duplication**: Won't spam you with repeated alerts for the same station
+
+**How It Works:**
+1. DX spot appears → Logger analyzes it against your log and award progress
+2. If needed → Spot is highlighted in priority color with reason displayed
+3. If high priority → Optional audio/desktop notification
+4. Double-click spot → Logging form pre-populated with "NEEDED: [reason]" in notes
+5. Log the contact → Cache cleared, spot analysis updates in real-time
+
+**Example Reasons Displayed:**
+- "SKCC Centurion: New member for Centurion x5 (487/500)"
+- "SKCC WAS: New state: AK (47/50)"
+- "SKCC Senator: Senator member (highest level)"
 
 ### ☀️ **Space Weather Integration**
 - **Real-time solar and geomagnetic conditions** affecting HF propagation
@@ -93,7 +129,7 @@ Comprehensive support for SKCC (Straight Key Century Club) contests with automat
   - September: Club Calls
   - October: TKA (Triple Key Award)
   - November: Veterans
-  - December: Reindeer
+  - December: Reindeer (automatically tracks 22 special stations: 10 Reindeer, Santa, Scrooge, 10 Elves - 5 pts per station per band)
 
 **Configurable Bonus Values:**
 - All bonus point values are configurable (update monthly per SKCC rules)
@@ -483,7 +519,6 @@ W4GNS-General-Logger/
         ├── contacts_tab.py          # Contact log viewer
         ├── contest_tab.py           # Contest logging (WES/SKS/K3Y)
         ├── dx_cluster_tab.py        # DX cluster interface
-        ├── awards_tab.py            # ARRL awards tracking
         ├── skcc_awards_tab.py       # SKCC awards tracking
         ├── settings_tab.py          # Settings interface
         ├── date_range_dialog.py     # Date/time range selection dialog
@@ -579,7 +614,6 @@ Completed features:
 - [x] Duplicate contact detection ✅
 - [x] Log4OM-style interface ✅
 - [x] SKCC awards tracking (all 11 awards) ✅
-- [x] ARRL awards tracking ✅
 - [x] Space weather integration with NASA DONKI ✅
 - [x] Google Drive automatic backups ✅
 - [x] Dark/Light themes ✅
