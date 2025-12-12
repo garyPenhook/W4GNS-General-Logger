@@ -812,12 +812,13 @@ class SKCCAwardsTab:
         count_1000 = progress.get('count_1000', 0)
         count_1500 = progress.get('count_1500', 0)
         count_2000 = progress.get('count_2000', 0)
-        current_level = progress.get('current_level', 'Not Yet')
+        current_level = progress.get('current_level', 'Not Achieved')
+        achieved = progress.get('achieved', False)
 
-        status = "✅ ACHIEVED!" if current_level != "Not Yet" else "In Progress"
+        status = "✅ ACHIEVED!" if achieved else "In Progress"
         self.qrp_mpw_progress.config(
             text=f"{status} - Best: {max_mpw:.1f} MPW - Level: {current_level}",
-            foreground=get_success_color(self.config) if current_level != "Not Yet" else 'black'
+            foreground=get_success_color(self.config) if achieved else 'black'
         )
         self.qrp_mpw_details.config(
             text=f"≥1,000 MPW: {count_1000} | ≥1,500 MPW: {count_1500} | ≥2,000 MPW: {count_2000}"
