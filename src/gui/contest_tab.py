@@ -49,17 +49,27 @@ class ContestTab:
         self.monthly_theme = config.get('contest.monthly_theme', 'None')
         self.bonus_theme = config.get('contest.bonus_theme', 5)
 
-        # December WES Special Stations
-        self.dec_reindeer_stations = {
+        # December WES Special Stations (load from config or use defaults)
+        default_reindeer = {
             'AI5BE', 'WM4Q', 'W2EB', 'W0EJ', 'NX1K',
             'AB4PP', 'NQ8T', 'KA3BPN', 'W7AMI', 'W7VC'
         }
-        self.dec_santa_station = 'K4KYN'
-        self.dec_scrooge_station = 'W4CMG'
-        self.dec_elf_stations = {
+        default_santa = 'K4KYN'
+        default_scrooge = 'W4CMG'
+        default_elves = {
             'G0RDO', 'W0NZZ', 'KD2YMM', 'W9KMK', 'K2MZ',
             'NQ3K', 'W4LRB', 'KM4JEG', 'K4TNE', 'F6EJN'
         }
+
+        # Load from config (stored as comma-separated strings)
+        reindeer_str = config.get('contest.dec_reindeer', ','.join(sorted(default_reindeer)))
+        self.dec_reindeer_stations = set(call.strip().upper() for call in reindeer_str.split(',') if call.strip())
+
+        self.dec_santa_station = config.get('contest.dec_santa', default_santa).strip().upper()
+        self.dec_scrooge_station = config.get('contest.dec_scrooge', default_scrooge).strip().upper()
+
+        elves_str = config.get('contest.dec_elves', ','.join(sorted(default_elves)))
+        self.dec_elf_stations = set(call.strip().upper() for call in elves_str.split(',') if call.strip())
 
         # Scoring data
         self.qso_points = 0
@@ -998,13 +1008,13 @@ class ContestTab:
 
     def manage_december_stations(self):
         """Dialog to manage December WES special station callsigns"""
-        dialog = tk.Toplevel(self.frame.winfo_toplevel())
+        dialog = tk.Toplevel(self.notebook.winfo_toplevel())
         dialog.title("Manage December WES Special Stations")
         dialog.geometry("600x700")
         dialog.resizable(False, False)
 
         # Make dialog modal
-        dialog.transient(self.frame.winfo_toplevel())
+        dialog.transient(self.notebook.winfo_toplevel())
         dialog.grab_set()
 
         # Main frame with scrollbar
@@ -1042,6 +1052,28 @@ class ContestTab:
 
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+        # Mousewheel scrolling support (cross-platform)
+        def _on_mousewheel(event):
+            """Handle mousewheel scrolling for cross-platform compatibility"""
+            if hasattr(event, 'delta'):
+                # Windows and macOS
+                delta = event.delta
+                if delta > 0:
+                    canvas.yview_scroll(-1, "units")
+                elif delta < 0:
+                    canvas.yview_scroll(1, "units")
+            elif hasattr(event, 'num'):
+                # Linux (X11)
+                if event.num == 4:
+                    canvas.yview_scroll(-1, "units")
+                elif event.num == 5:
+                    canvas.yview_scroll(1, "units")
+
+        # Bind mousewheel events directly to canvas (not bind_all to avoid conflicts)
+        canvas.bind("<MouseWheel>", _on_mousewheel)  # Windows/macOS
+        canvas.bind("<Button-4>", _on_mousewheel)    # Linux scroll up
+        canvas.bind("<Button-5>", _on_mousewheel)    # Linux scroll down
 
         # Store entry widgets for later retrieval
         entry_vars = {}
@@ -1105,11 +1137,19 @@ class ContestTab:
         def save_changes():
             """Save the edited callsigns"""
             try:
+                # Callsign validation pattern (basic amateur radio callsign format)
+                callsign_pattern = re.compile(r'^[A-Z0-9]{1,3}[0-9][A-Z0-9]{0,4}$')
+
                 # Update Reindeer stations
                 new_reindeer = set()
                 for i in range(10):
                     call = entry_vars[f'reindeer_{i}'].get().strip().upper()
                     if call:
+                        # Validate callsign format
+                        if not callsign_pattern.match(call):
+                            messagebox.showwarning("Validation Error",
+                                                 f"Invalid callsign format for Reindeer {i+1}: {call}")
+                            return
                         new_reindeer.add(call)
 
                 # Update Santa
@@ -1123,6 +1163,11 @@ class ContestTab:
                 for i in range(10):
                     call = entry_vars[f'elf_{i}'].get().strip().upper()
                     if call:
+                        # Validate callsign format
+                        if not callsign_pattern.match(call):
+                            messagebox.showwarning("Validation Error",
+                                                 f"Invalid callsign format for Elf {i+1}: {call}")
+                            return
                         new_elves.add(call)
 
                 # Validate we have the right counts
@@ -1135,8 +1180,20 @@ class ContestTab:
                     messagebox.showwarning("Validation Error", "Santa station cannot be empty")
                     return
 
+                # Validate Santa callsign format
+                if not callsign_pattern.match(new_santa):
+                    messagebox.showwarning("Validation Error",
+                                         f"Invalid callsign format for Santa: {new_santa}")
+                    return
+
                 if not new_scrooge:
                     messagebox.showwarning("Validation Error", "Scrooge station cannot be empty")
+                    return
+
+                # Validate Scrooge callsign format
+                if not callsign_pattern.match(new_scrooge):
+                    messagebox.showwarning("Validation Error",
+                                         f"Invalid callsign format for Scrooge: {new_scrooge}")
                     return
 
                 if len(new_elves) != 10:
@@ -1144,11 +1201,34 @@ class ContestTab:
                                          f"Must have exactly 10 Elf stations (found {len(new_elves)})")
                     return
 
+                # Validate uniqueness across all 22 stations
+                all_calls = (
+                    list(new_reindeer) +
+                    [new_santa] +
+                    [new_scrooge] +
+                    list(new_elves)
+                )
+                if len(all_calls) != len(set(all_calls)):
+                    messagebox.showwarning(
+                        "Validation Error",
+                        "Each callsign must be unique across all Reindeer, Elves, Santa, and Scrooge stations."
+                    )
+                    return
+
                 # Apply changes
                 self.dec_reindeer_stations = new_reindeer
                 self.dec_santa_station = new_santa
                 self.dec_scrooge_station = new_scrooge
                 self.dec_elf_stations = new_elves
+
+                # Persist to config
+                self.config.set('contest.dec_reindeer', ','.join(sorted(new_reindeer)))
+                self.config.set('contest.dec_santa', new_santa)
+                self.config.set('contest.dec_scrooge', new_scrooge)
+                self.config.set('contest.dec_elves', ','.join(sorted(new_elves)))
+
+                # Recalculate score if contest is active
+                self.update_score_display()
 
                 messagebox.showinfo("Success", "December special stations updated successfully!")
                 dialog.destroy()
