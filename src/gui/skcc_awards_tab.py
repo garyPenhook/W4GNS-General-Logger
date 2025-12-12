@@ -16,6 +16,7 @@ from src.skcc_roster import get_roster_manager
 from src.skcc_award_rosters import get_award_roster_manager
 from src.skcc_awards.award_application import AwardApplicationGenerator
 from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_info_color, get_muted_color
+from src.utils.gridsquare import gridsquare_distance_nm
 
 
 class SKCCAwardsTab:
@@ -423,6 +424,20 @@ class SKCCAwardsTab:
         # Get all contacts for calculations
         contacts = self.database.get_all_contacts(limit=999999)
         contacts_list = [dict(c) for c in contacts]
+
+        # Calculate distance from gridsquares if not already set
+        for contact in contacts_list:
+            if contact.get('distance_nm') is None:
+                my_grid = contact.get('my_gridsquare', '').strip()
+                their_grid = contact.get('gridsquare', '').strip()
+
+                if my_grid and their_grid and len(my_grid) >= 4 and len(their_grid) >= 4:
+                    try:
+                        distance_nm = gridsquare_distance_nm(my_grid, their_grid)
+                        if distance_nm is not None:
+                            contact['distance_nm'] = distance_nm
+                    except Exception:
+                        pass  # Skip if calculation fails
 
         # Centurion
         centurion_progress = self.awards['centurion'].calculate_progress(contacts_list)

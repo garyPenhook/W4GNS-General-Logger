@@ -96,7 +96,9 @@ class QRPMPWAward(SKCCAwardBase):
         qso_date = contact.get('qso_date', '').strip()
         skcc_num = contact.get('skcc_number', '').strip()
         power_watts = contact.get('power_watts')
-        distance_miles = contact.get('distance_miles')
+        # Database stores distance_nm (nautical miles), convert to statute miles
+        distance_nm = contact.get('distance_nm')
+        distance_miles = float(distance_nm) * 1.15078 if distance_nm else None
 
         # Must have valid SKCC number
         if not skcc_num:
@@ -214,12 +216,13 @@ class QRPMPWAward(SKCCAwardBase):
 
         for contact in contacts:
             power_watts = contact.get('power_watts')
-            distance_miles = contact.get('distance_miles')
+            distance_nm = contact.get('distance_nm')
 
-            if power_watts and distance_miles:
+            if power_watts and distance_nm:
                 try:
                     power = float(power_watts)
-                    distance = float(distance_miles)
+                    # Convert nautical miles to statute miles
+                    distance = float(distance_nm) * 1.15078
                     if power > 0:
                         mpw = distance / power
 
