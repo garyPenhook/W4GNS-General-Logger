@@ -202,6 +202,13 @@ class ContactsTab:
 
         # Bind double-click to open contact details
         self.log_tree.bind('<Double-Button-1>', self.on_contact_double_click)
+        self.log_tree.bind('<Button-3>', self.show_contact_menu)
+        self.log_tree.bind('<Control-Button-1>', self.show_contact_menu)
+
+        # Context menu for quick edit/delete
+        self.contact_menu = tk.Menu(self.log_tree, tearoff=0)
+        self.contact_menu.add_command(label="Edit Contact", command=self.edit_selected_contact)
+        self.contact_menu.add_command(label="Delete Contact", command=self.delete_selected_contact)
 
         # Delay loading contacts until main loop is running
         self.parent.after(100, self.refresh_log)
@@ -453,6 +460,199 @@ class ContactsTab:
         if contact:
             self.show_contact_detail(contact)
 
+    def show_contact_menu(self, event):
+        """Show context menu for the selected contact."""
+        item = self.log_tree.identify_row(event.y)
+        if item:
+            self.log_tree.selection_set(item)
+            try:
+                self.contact_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.contact_menu.grab_release()
+
+    def _get_selected_contact_id(self):
+        """Return selected contact ID from the treeview."""
+        selection = self.log_tree.selection()
+        if not selection:
+            return None
+        tags = self.log_tree.item(selection[0], 'tags')
+        if not tags:
+            return None
+        try:
+            return int(tags[0])
+        except (ValueError, TypeError):
+            return None
+
+    def edit_selected_contact(self):
+        """Open editor for the selected contact."""
+        contact_id = self._get_selected_contact_id()
+        if not contact_id:
+            messagebox.showwarning("No Selection", "Select a contact to edit.")
+            return
+        self.open_contact_by_id(contact_id)
+
+    def delete_selected_contact(self):
+        """Delete the selected contact after confirmation."""
+        contact_id = self._get_selected_contact_id()
+        if not contact_id:
+            messagebox.showwarning("No Selection", "Select a contact to delete.")
+            return
+
+        confirm = messagebox.askyesno(
+            "Confirm Delete",
+            "Are you sure you want to delete this contact?\n\nThis action cannot be undone.",
+            icon='warning'
+        )
+        if not confirm:
+            return
+
+        try:
+            self.database.delete_contact(contact_id)
+            self.refresh_log()
+            messagebox.showinfo("Deleted", "Contact deleted.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to delete contact: {str(e)}")
+
+    def open_contact_by_id(self, contact_id):
+        """Open the contact editor for a specific contact ID."""
+        contact = None
+        for c in self.all_contacts:
+            if c.get('id') == contact_id:
+                contact = c
+                break
+
+        if contact is None:
+            try:
+                cursor = self.database.conn.cursor()
+                cursor.execute("SELECT * FROM contacts WHERE id = ?", (contact_id,))
+                row = cursor.fetchone()
+                if row:
+                    contact = dict(row)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load contact: {str(e)}")
+                return
+
+        if contact:
+            self.show_contact_detail(contact)
+        else:
+            messagebox.showwarning("Not Found", "Contact not found.")
+
+    def open_edit_contact_dialog(self):
+        """Open a search dialog to find and edit a contact."""
+        root = self.parent.winfo_toplevel()
+        dialog = tk.Toplevel(root)
+        dialog.title("Edit Contact")
+        dialog.geometry("600x400")
+        dialog.transient(root)
+
+        form_frame = ttk.Frame(dialog, padding=10)
+        form_frame.pack(fill='x')
+
+        ttk.Label(form_frame, text="Callsign:").grid(row=0, column=0, sticky='e', padx=5, pady=2)
+        callsign_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=callsign_var, width=15).grid(row=0, column=1, sticky='w', pady=2)
+
+        ttk.Label(form_frame, text="Date (YYYY-MM-DD):").grid(row=0, column=2, sticky='e', padx=5, pady=2)
+        date_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=date_var, width=12).grid(row=0, column=3, sticky='w', pady=2)
+
+        ttk.Label(form_frame, text="Time (HH:MM):").grid(row=0, column=4, sticky='e', padx=5, pady=2)
+        time_var = tk.StringVar()
+        ttk.Entry(form_frame, textvariable=time_var, width=8).grid(row=0, column=5, sticky='w', pady=2)
+
+        results_frame = ttk.LabelFrame(dialog, text="Matches", padding=10)
+        results_frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        columns = ('ID', 'Call', 'Date', 'Time', 'Band', 'Name')
+        results_tree = ttk.Treeview(results_frame, columns=columns, show='headings', height=10)
+        for col in columns:
+            results_tree.heading(col, text=col)
+        results_tree.column('ID', width=60)
+        results_tree.column('Call', width=100)
+        results_tree.column('Date', width=90)
+        results_tree.column('Time', width=70)
+        results_tree.column('Band', width=70)
+        results_tree.column('Name', width=140)
+
+        results_tree.pack(side='left', fill='both', expand=True)
+        scrollbar = ttk.Scrollbar(results_frame, orient='vertical', command=results_tree.yview)
+        results_tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side='right', fill='y')
+
+        matches = []
+
+        def run_search():
+            results_tree.delete(*results_tree.get_children())
+            matches.clear()
+
+            callsign = callsign_var.get().strip().upper()
+            date = date_var.get().strip()
+            time_on = time_var.get().strip()
+
+            query = "SELECT * FROM contacts WHERE 1=1"
+            params = []
+
+            if callsign:
+                query += " AND UPPER(callsign) LIKE ?"
+                params.append(f"%{callsign}%")
+
+            if date:
+                query += " AND date = ?"
+                params.append(date)
+
+            if time_on:
+                query += " AND time_on = ?"
+                params.append(time_on)
+
+            query += " ORDER BY date DESC, time_on DESC LIMIT 200"
+
+            try:
+                cursor = self.database.conn.cursor()
+                cursor.execute(query, params)
+                rows = [dict(row) for row in cursor.fetchall()]
+            except Exception as e:
+                messagebox.showerror("Search Error", f"Failed to search contacts: {str(e)}")
+                return
+
+            for row in rows:
+                matches.append(row)
+                results_tree.insert('', 'end', values=(
+                    row.get('id', ''),
+                    row.get('callsign', ''),
+                    row.get('date', ''),
+                    row.get('time_on', ''),
+                    row.get('band', ''),
+                    row.get('name', '')
+                ))
+
+        def edit_selected():
+            selection = results_tree.selection()
+            if not selection:
+                messagebox.showwarning("No Selection", "Select a contact to edit.")
+                return
+            item = results_tree.item(selection[0])
+            contact_id = item['values'][0]
+            dialog.destroy()
+            try:
+                contact_id = int(contact_id)
+            except (ValueError, TypeError):
+                messagebox.showwarning("Invalid Selection", "Selected contact ID is invalid.")
+                return
+            self.open_contact_by_id(contact_id)
+
+        button_frame = ttk.Frame(dialog, padding=10)
+        button_frame.pack(fill='x')
+
+        ttk.Button(button_frame, text="Search", command=run_search).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Selected", command=edit_selected).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=dialog.destroy).pack(side='right', padx=5)
+
+        results_tree.bind('<Double-1>', lambda e: edit_selected())
+
+        dialog.wait_visibility()
+        dialog.grab_set()
+        dialog.focus_set()
+
     def show_contact_detail(self, contact):
         """Show contact detail dialog for viewing, editing, and deleting"""
         # Get the root window
@@ -567,6 +767,13 @@ class ContactsTab:
             ('my_skcc_number', 'My SKCC Number'),
             ('key_type', 'Key Type'),
             ('duration_minutes', 'Duration (minutes)'),
+            ('power_watts', 'My Power (W)'),
+            ('their_power_watts', 'Their Power (W)'),
+            ('distance_miles', 'MPW Distance (mi)'),
+            ('distance_source', 'Distance Source'),
+            ('site', 'Site'),
+            ('antenna', 'Antenna'),
+            ('is_satellite', 'Satellite (0/1)'),
         ]
 
         for field, label in skcc_fields:

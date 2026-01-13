@@ -11,6 +11,8 @@ Rules:
 - Output power must be 5 watts or less for entire QSO
 - Contact may NOT be initiated at high power then reduced
 - Must exchange signal report, location, name, SKCC number, and power output
+- Log must include site and antenna description
+- Distance must come from N9SSA calculator (miles)
 - SKCC-approved keying devices only (straight key, side-swiper, semi-automatic)
 - Satellite contacts are ineligible
 - Award is not affected by C, T, or S status of members
@@ -30,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 # Award effective date
 QRP_MPW_EFFECTIVE_DATE = "20140901"  # September 1, 2014
+QRP_MPW_DISTANCE_SOURCE = "N9SSA"
 
 # Miles per Watt thresholds
 MPW_THRESHOLDS = {
@@ -40,6 +43,12 @@ MPW_THRESHOLDS = {
 
 # Maximum QRP power in watts
 QRP_MAX_POWER = 5.0
+
+# Country identifiers for location validation
+US_COUNTRY_NAMES = {
+    'UNITED STATES', 'UNITED STATES OF AMERICA', 'USA', 'US', 'U.S.A.', 'U.S.'
+}
+CANADA_COUNTRY_NAMES = {'CANADA', 'CAN'}
 
 
 class QRPMPWAward(SKCCAwardBase):
@@ -67,6 +76,64 @@ class QRPMPWAward(SKCCAwardBase):
             return self.database.config.get('skcc.join_date', '')
         return ''
 
+    def _get_qso_date(self, contact: Dict[str, Any]) -> str:
+        """Return QSO date normalized to YYYYMMDD, or empty string if missing."""
+        qso_date = contact.get('qso_date') or contact.get('date') or ''
+        qso_date = str(qso_date).strip()
+        if qso_date:
+            qso_date = qso_date.replace('-', '')
+        return qso_date
+
+    def _parse_float(self, value: Any) -> float:
+        """Parse numeric values with minimal tolerance for formatting."""
+        if value is None or value == '':
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _is_truthy(self, value: Any) -> bool:
+        if value is None:
+            return False
+        return str(value).strip().lower() in ('1', 'true', 'yes', 'y')
+
+    def _get_location_code(self, contact: Dict[str, Any]) -> str:
+        """Return validated location code (state/province or IAAF country code)."""
+        state = (contact.get('state') or '').strip().upper()
+        country = (contact.get('country') or '').strip().upper()
+        qth = (contact.get('qth') or '').strip().upper()
+
+        if state:
+            return state
+
+        if country and len(country) == 3 and country.isalpha():
+            return country
+
+        if qth and len(qth) == 3 and qth.isalpha():
+            return qth
+
+        return ''
+
+    def _location_is_valid(self, contact: Dict[str, Any]) -> bool:
+        """Validate location rules for US/Canada vs. DX stations."""
+        state = (contact.get('state') or '').strip().upper()
+        country = (contact.get('country') or '').strip().upper()
+        qth = (contact.get('qth') or '').strip().upper()
+
+        if state and len(state) == 2 and state.isalpha():
+            if not country or country in US_COUNTRY_NAMES or country in CANADA_COUNTRY_NAMES:
+                return True
+            return False
+
+        if country in US_COUNTRY_NAMES or country in CANADA_COUNTRY_NAMES:
+            return False
+
+        if country and len(country) == 3 and country.isalpha():
+            return True
+
+        return bool(qth) and len(qth) == 3 and qth.isalpha()
+
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
         Check if a contact qualifies for QRP MPW award
@@ -88,17 +155,25 @@ class QRPMPWAward(SKCCAwardBase):
             bool: True if contact qualifies, False otherwise
         """
         # Base validation (CW mode, mechanical key)
-        if not super().validate(contact):
+        if not self.validate_common_rules(contact):
             return False
 
         # Extract fields
         callsign = contact.get('callsign', '').strip().upper()
-        qso_date = contact.get('qso_date', '').strip()
+        qso_date = self._get_qso_date(contact)
         skcc_num = contact.get('skcc_number', '').strip()
+        my_skcc_num = contact.get('my_skcc_number', '').strip()
         power_watts = contact.get('power_watts')
-        # Database stores distance_nm (nautical miles), convert to statute miles
-        distance_nm = contact.get('distance_nm')
-        distance_miles = float(distance_nm) * 1.15078 if distance_nm else None
+        distance_miles = contact.get('distance_miles')
+        distance_source = (contact.get('distance_source') or '').strip()
+        site = (contact.get('site') or '').strip()
+        antenna = (contact.get('antenna') or '').strip()
+        time_on = (contact.get('time_on') or '').strip()
+        band = (contact.get('band') or '').strip()
+        rst_sent = (contact.get('rst_sent') or '').strip()
+        rst_rcvd = (contact.get('rst_rcvd') or '').strip()
+        name = (contact.get('name') or '').strip()
+        is_satellite = contact.get('is_satellite')
 
         # Must have valid SKCC number
         if not skcc_num:
@@ -111,11 +186,49 @@ class QRPMPWAward(SKCCAwardBase):
             return False
 
         # CRITICAL RULE: QSOs made on or after Sept. 1, 2014 are eligible
-        if qso_date < QRP_MPW_EFFECTIVE_DATE:
+        if not qso_date or qso_date < QRP_MPW_EFFECTIVE_DATE:
             logger.debug(
                 f"Contact {callsign} not valid: QSO date {qso_date} before "
                 f"effective date {QRP_MPW_EFFECTIVE_DATE}"
             )
+            return False
+
+        # CRITICAL RULE: Satellite contacts are ineligible
+        if self._is_truthy(is_satellite):
+            logger.debug(f"Contact {callsign} not valid: satellite contact")
+            return False
+
+        # CRITICAL RULE: Logging requires date, time, band, and full exchange
+        if not time_on or not band:
+            logger.debug(f"Contact {callsign} missing time/band")
+            return False
+
+        if not rst_sent or not rst_rcvd:
+            logger.debug(f"Contact {callsign} missing RST exchange")
+            return False
+
+        if rst_sent in ('599', '559') and rst_rcvd in ('599', '559'):
+            logger.debug(f"Contact {callsign} has perfunctory RST exchange")
+            return False
+
+        if not name:
+            logger.debug(f"Contact {callsign} missing operator name")
+            return False
+
+        if not my_skcc_num:
+            logger.debug(f"Contact {callsign} missing operator SKCC number")
+            return False
+
+        if not self._location_is_valid(contact):
+            logger.debug(f"Contact {callsign} missing/invalid location")
+            return False
+
+        if not site or not antenna:
+            logger.debug(f"Contact {callsign} missing site/antenna description")
+            return False
+
+        if distance_source.strip().upper() != QRP_MPW_DISTANCE_SOURCE:
+            logger.debug(f"Contact {callsign} invalid distance source: {distance_source}")
             return False
 
         # Get callsign (remove portable/suffix indicators)
@@ -159,18 +272,10 @@ class QRPMPWAward(SKCCAwardBase):
             logger.debug(f"Contact {callsign} has invalid power value: {power_watts}")
             return False
 
-        # Must have distance information
-        if distance_miles is None:
-            logger.debug(f"Contact {callsign} missing distance information")
-            return False
-
-        try:
-            distance = float(distance_miles)
-            if distance <= 0:
-                logger.debug(f"Contact {callsign} has invalid distance: {distance}")
-                return False
-        except (ValueError, TypeError):
-            logger.debug(f"Contact {callsign} has invalid distance value: {distance_miles}")
+        # Must have distance information from N9SSA calculator
+        distance = self._parse_float(distance_miles)
+        if distance is None or distance <= 0:
+            logger.debug(f"Contact {callsign} has invalid distance: {distance_miles}")
             return False
 
         # Calculate miles per watt
@@ -185,7 +290,8 @@ class QRPMPWAward(SKCCAwardBase):
             return False
 
         logger.debug(
-            f"Contact {callsign} valid for QRP MPW: {distance:.1f} miles @ {power}W = {mpw:.1f} MPW"
+            f"Contact {callsign} valid for QRP MPW: "
+            f"{distance:.1f} miles @ {power}W = {mpw:.1f} MPW"
         )
         return True
 
@@ -215,41 +321,53 @@ class QRPMPWAward(SKCCAwardBase):
         qualified_contacts = []
 
         for contact in contacts:
+            if not self.validate(contact):
+                continue
+
             power_watts = contact.get('power_watts')
-            distance_nm = contact.get('distance_nm')
+            distance_miles = contact.get('distance_miles')
 
-            if power_watts and distance_nm:
-                try:
-                    power = float(power_watts)
-                    # Convert nautical miles to statute miles
-                    distance = float(distance_nm) * 1.15078
-                    if power > 0:
-                        mpw = distance / power
+            try:
+                power = float(power_watts)
+                distance = float(distance_miles)
+            except (ValueError, TypeError):
+                continue
 
-                        # Track highest MPW
-                        if mpw > max_mpw:
-                            max_mpw = mpw
+            if power <= 0:
+                continue
 
-                        # Count contacts at each threshold
-                        if mpw >= MPW_THRESHOLDS['base']:
-                            count_1000 += 1
-                        if mpw >= MPW_THRESHOLDS['level_2']:
-                            count_1500 += 1
-                        if mpw >= MPW_THRESHOLDS['level_3']:
-                            count_2000 += 1
+            mpw = distance / power
 
-                        # Store qualified contact details
-                        qualified_contacts.append({
-                            'callsign': contact.get('callsign'),
-                            'qso_date': contact.get('qso_date'),
-                            'distance_miles': distance,
-                            'power_watts': power,
-                            'mpw': mpw,
-                            'band': contact.get('band'),
-                            'mode': contact.get('mode')
-                        })
-                except (ValueError, TypeError):
-                    continue
+            # Track highest MPW
+            if mpw > max_mpw:
+                max_mpw = mpw
+
+            # Count contacts at each threshold
+            if mpw >= MPW_THRESHOLDS['base']:
+                count_1000 += 1
+            if mpw >= MPW_THRESHOLDS['level_2']:
+                count_1500 += 1
+            if mpw >= MPW_THRESHOLDS['level_3']:
+                count_2000 += 1
+
+            # Store qualified contact details
+            qualified_contacts.append({
+                'callsign': contact.get('callsign'),
+                'qso_date': contact.get('qso_date', contact.get('date')),
+                'time_on': contact.get('time_on'),
+                'rst_sent': contact.get('rst_sent'),
+                'rst_rcvd': contact.get('rst_rcvd'),
+                'location': self._get_location_code(contact),
+                'site': contact.get('site'),
+                'antenna': contact.get('antenna'),
+                'distance_source': contact.get('distance_source'),
+                'distance_miles': distance,
+                'power_watts': power,
+                'mpw': mpw,
+                'my_skcc_number': contact.get('my_skcc_number'),
+                'band': contact.get('band'),
+                'mode': contact.get('mode')
+            })
 
         # Determine current achievement level
         # Per SKCC rules: "Additional endorsements continue in 500-mile increments with no upper limit"
@@ -302,7 +420,7 @@ class QRPMPWAward(SKCCAwardBase):
             'program_id': 'SKCC_QRP_MPW',
             'description': (
                 'Achieve QRP contacts with a distance of at least 1,000 miles per watt. '
-                'Subsequent endorsements at 1,500 and 2,000 MPW thresholds.'
+                'Subsequent endorsements at 1,500 and 2,000 MPW thresholds (and beyond).'
             ),
             'minimum_mpw': MPW_THRESHOLDS['base'],
             'max_power_watts': QRP_MAX_POWER,
@@ -316,6 +434,8 @@ class QRPMPWAward(SKCCAwardBase):
                 'Output power must be 5 watts or less for entire QSO',
                 'Contact may NOT be initiated at high power then reduced to increase MPW',
                 'Must exchange signal report, location, name, SKCC number, and power output',
+                'Log must include date, time, band, location, site, antenna, distance, and MPW',
+                'Distance must be from N9SSA calculator',
                 'Satellite contacts are ineligible',
                 'Award is not affected by C, T, or S member status',
                 'Distance and power information required for calculation'
@@ -372,5 +492,5 @@ class QRPMPWAward(SKCCAwardBase):
             "  • Maximum power: 5 watts for entire QSO\n"
             "  • Both stations must be SKCC members at time of contact\n"
             "  • CW mode with mechanical key only\n"
-            "  • Must include distance and power information"
+            "  • Must include distance (N9SSA), site, antenna, and power information"
         )

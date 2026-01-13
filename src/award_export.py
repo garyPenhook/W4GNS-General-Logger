@@ -154,7 +154,7 @@ class AwardExporter:
             CenturionAward, TribuneAward, SenatorAward,
             TripleKeyAward, RagChewAward, MarathonAward,
             CanadianMapleAward, SKCCDXQAward, SKCCDXCAward,
-            PFXAward, QRPMPWAward,
+            PFXAward, QRP1xAward, QRP2xAward, QRPMPWAward,
             SKCCWASAward, SKCCWASTAward, SKCCWASSAward, SKCCWACAward
         )
 
@@ -170,6 +170,8 @@ class AwardExporter:
             SKCCDXQAward(self.database),
             SKCCDXCAward(self.database),
             PFXAward(self.database),
+            QRP1xAward(self.database),
+            QRP2xAward(self.database),
             QRPMPWAward(self.database),
             SKCCWASAward(self.database),
             SKCCWASTAward(self.database),

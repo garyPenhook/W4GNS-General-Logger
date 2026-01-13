@@ -15,6 +15,9 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+# QRP points mapping for 1x/2x QRP awards
+from src.skcc_awards.qrp_awards import QRP_BAND_POINTS
+
 # Application version for "Created by" line
 APP_VERSION = "1.0.0"
 
@@ -69,30 +72,50 @@ class TextAwardExporter:
         if not contacts:
             raise ValueError("No contacts found in database")
 
-        # Filter qualifying contacts
-        qualifying = [c for c in contacts if award_instance.validate(c)]
+        # Filter qualifying contacts (allow award-specific selection)
+        if hasattr(award_instance, 'get_application_contacts'):
+            qualifying = award_instance.get_application_contacts(contacts)
+        else:
+            qualifying = [c for c in contacts if award_instance.validate(c)]
 
         if not qualifying:
             raise ValueError(f"No qualifying contacts found for {award_instance.name} award")
 
-        # Deduplicate by SKCC number (keep only first QSO with each unique member)
-        from src.utils.skcc_number import extract_base_skcc_number
+        dedupe = True
+        if hasattr(award_instance, 'should_deduplicate_for_export'):
+            dedupe = award_instance.should_deduplicate_for_export()
 
-        # Sort by date/time to ensure we keep the first contact with each member
-        qualifying.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
+        if dedupe:
+            # Deduplicate by SKCC number (keep only first QSO with each unique member)
+            from src.utils.skcc_number import extract_base_skcc_number
 
-        seen_skcc_numbers = set()
-        deduplicated = []
+            # Sort by date/time to ensure we keep the first contact with each member
+            qualifying.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
 
-        for contact in qualifying:
-            skcc_number = contact.get('skcc_number', '').strip()
-            if skcc_number:
-                base_number = extract_base_skcc_number(skcc_number)
-                if base_number and base_number not in seen_skcc_numbers:
-                    seen_skcc_numbers.add(base_number)
-                    deduplicated.append(contact)
+            seen_skcc_numbers = set()
+            deduplicated = []
 
-        qualifying = deduplicated
+            for contact in qualifying:
+                skcc_number = contact.get('skcc_number', '').strip()
+                if skcc_number:
+                    base_number = extract_base_skcc_number(skcc_number)
+                    if base_number and base_number not in seen_skcc_numbers:
+                        seen_skcc_numbers.add(base_number)
+                        deduplicated.append(contact)
+
+            qualifying = deduplicated
+
+        # Normalize callsigns for award submission rules
+        if hasattr(award_instance, 'normalize_callsign_for_export'):
+            normalized_contacts = []
+            for contact in qualifying:
+                contact_copy = dict(contact)
+                callsign = contact_copy.get('callsign', '')
+                normalized = award_instance.normalize_callsign_for_export(callsign)
+                if normalized:
+                    contact_copy['callsign'] = normalized
+                normalized_contacts.append(contact_copy)
+            qualifying = normalized_contacts
 
         # Generate filename based on award and dates
         award_name = award_instance.name.replace(' ', '-')
@@ -154,6 +177,28 @@ class TextAwardExporter:
             str: Formatted application text
         """
         lines = []
+
+        # Check if this is a QRP points award
+        if award_instance.name in ("1xQRP", "2xQRP"):
+            return self._build_qrp_application_text(
+                award_instance=award_instance,
+                contacts=contacts,
+                callsign=callsign,
+                applicant_name=applicant_name,
+                applicant_address=applicant_address,
+                user_skcc_number=user_skcc_number,
+                include_their_power=(award_instance.name == "2xQRP")
+            )
+
+        if award_instance.name == "QRP MPW":
+            return self._build_qrp_mpw_application_text(
+                award_instance=award_instance,
+                contacts=contacts,
+                callsign=callsign,
+                applicant_name=applicant_name,
+                applicant_address=applicant_address,
+                user_skcc_number=user_skcc_number
+            )
 
         # Check if this is a DX award (DXQ or DXC)
         award_name = award_instance.name
@@ -231,6 +276,226 @@ class TextAwardExporter:
         lines.append("")
 
         return "\n".join(lines)
+
+    def _build_qrp_mpw_application_text(
+        self,
+        award_instance,
+        contacts: List[Dict[str, Any]],
+        callsign: str,
+        applicant_name: Optional[str] = None,
+        applicant_address: Optional[str] = None,
+        user_skcc_number: Optional[str] = None
+    ) -> str:
+        """Build the formatted QRP MPW application text."""
+        lines = []
+
+        award_title = "SKCC QRP Miles-Per-Watt Award/Endorsement Application"
+        lines.append(f"              {award_title}")
+        lines.append(self._get_created_by_line())
+        lines.append("")
+
+        name_part = f"   Name: {applicant_name}" if applicant_name else "   Name: "
+        skcc_part = f"   SKCC#: {user_skcc_number}" if user_skcc_number else "   SKCC#: "
+        lines.append(f" Call: {callsign}{name_part}{skcc_part}")
+
+        submission_date = datetime.now().strftime("%Y-%m-%d")
+        address_line = f" Address: {applicant_address}" if applicant_address else " Address:"
+        address_padded = address_line.ljust(44)
+        lines.append(f"{address_padded}Submission Date: {submission_date}")
+
+        distance_source = ''
+        if contacts:
+            distance_source = (contacts[0].get('distance_source') or '').strip()
+        if distance_source:
+            lines.append(f" Distance Source: {distance_source}")
+
+        lines.append("")
+        lines.append("QSO   Date       Time  Callsign    SKCC#   My#     RSTs RSTr Loc  Dist  MPW   Pwr  Band  Site         Antenna")
+        lines.append("-" * 110)
+
+        best_mpw = 0.0
+        for idx, contact in enumerate(contacts, 1):
+            line, mpw = self._format_qrp_mpw_line(idx, contact)
+            if mpw is not None:
+                best_mpw = max(best_mpw, mpw)
+            lines.append(line)
+
+        lines.append("")
+        lines.append(f"Best MPW: {best_mpw:.1f}")
+        lines.append("")
+
+        cert_name = applicant_name if applicant_name else callsign
+        lines.append(f"I, {cert_name}, certify that the above contacts were made as stated.")
+        lines.append(datetime.now().strftime("%A, %B %d, %Y"))
+        lines.append("")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _format_qrp_mpw_line(self, qso_number: int, contact: Dict[str, Any]) -> tuple:
+        """Format a QRP MPW QSO line."""
+        date = contact.get('date', '')
+        if date and len(date) == 8 and '-' not in date:
+            date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+
+        time_on = (contact.get('time_on', '') or '').strip()
+        callsign = (contact.get('callsign', '') or '').upper().strip()
+        skcc_number = (contact.get('skcc_number', '') or '').strip()
+        my_skcc = (contact.get('my_skcc_number', '') or '').strip()
+        rst_sent = (contact.get('rst_sent', '') or '').strip()
+        rst_rcvd = (contact.get('rst_rcvd', '') or '').strip()
+        location = (
+            contact.get('state')
+            or contact.get('country')
+            or contact.get('qth')
+            or ''
+        ).strip().upper()
+
+        distance = contact.get('distance_miles', '')
+        power = contact.get('power_watts', '') or contact.get('power', '')
+        band = (contact.get('band', '') or '').strip().upper()
+        site = (contact.get('site', '') or '').strip()
+        antenna = (contact.get('antenna', '') or '').strip()
+
+        distance_str = self._format_numeric_value(distance)
+        power_str = self._format_numeric_value(power)
+
+        mpw = None
+        if distance_str and power_str:
+            try:
+                mpw = float(distance) / float(power)
+            except (TypeError, ValueError, ZeroDivisionError):
+                mpw = None
+
+        mpw_str = self._format_numeric_value(mpw) if mpw is not None else ''
+
+        if len(site) > 12:
+            site = site[:12]
+        if len(antenna) > 12:
+            antenna = antenna[:12]
+
+        line = (
+            f"{qso_number:<6}{date:<11}{time_on:<6}{callsign:<12}{skcc_number:<8}"
+            f"{my_skcc:<8}{rst_sent:<5}{rst_rcvd:<5}{location:<5}"
+            f"{distance_str:<6}{mpw_str:<6}{power_str:<5}{band:<6}"
+            f"{site:<13}{antenna:<12}"
+        )
+
+        return line, mpw
+
+    def _build_qrp_application_text(
+        self,
+        award_instance,
+        contacts: List[Dict[str, Any]],
+        callsign: str,
+        applicant_name: Optional[str] = None,
+        applicant_address: Optional[str] = None,
+        user_skcc_number: Optional[str] = None,
+        include_their_power: bool = False
+    ) -> str:
+        """Build the formatted QRP points application text."""
+        lines = []
+
+        award_title = f"SKCC {award_instance.name} Award/Endorsement Application"
+        lines.append(f"              {award_title}")
+        lines.append(self._get_created_by_line())
+        lines.append("")
+
+        name_part = f"   Name: {applicant_name}" if applicant_name else "   Name: "
+        skcc_part = f"   SKCC#: {user_skcc_number}" if user_skcc_number else "   SKCC#: "
+        lines.append(f" Call: {callsign}{name_part}{skcc_part}")
+
+        submission_date = datetime.now().strftime("%Y-%m-%d")
+        address_line = f" Address: {applicant_address}" if applicant_address else " Address:"
+        address_padded = address_line.ljust(44)
+        lines.append(f"{address_padded}Submission Date: {submission_date}")
+        lines.append("")
+
+        if include_their_power:
+            lines.append("QSO   QSO Date    Callsign    SKCC#   Name            Pwr   Their  Band  Pts")
+            lines.append("-" * 78)
+        else:
+            lines.append("QSO   QSO Date    Callsign    SKCC#   Name            Pwr   Band  Pts")
+            lines.append("-" * 72)
+
+        total_points = 0.0
+        for idx, contact in enumerate(contacts, 1):
+            line, points = self._format_qrp_line(idx, contact, include_their_power=include_their_power)
+            if points is not None:
+                total_points += points
+            lines.append(line)
+
+        lines.append("")
+        lines.append(f"Total Points: {total_points:.1f}")
+        lines.append("")
+
+        cert_name = applicant_name if applicant_name else callsign
+        lines.append(f"I, {cert_name}, certify that the above contacts were made as stated.")
+        lines.append(datetime.now().strftime("%A, %B %d, %Y"))
+        lines.append("")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _format_qrp_line(
+        self,
+        qso_number: int,
+        contact: Dict[str, Any],
+        include_their_power: bool = False
+    ) -> tuple:
+        """Format a single QRP points QSO line."""
+        date = contact.get('date', '')
+        if date and len(date) == 8 and '-' not in date:
+            date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+
+        callsign = (contact.get('callsign', '') or '').upper().strip()
+        skcc_number = (contact.get('skcc_number', '') or '').strip()
+
+        name = (contact.get('name', '') or '').strip()
+        if len(name) > 15:
+            name = name[:15]
+
+        band = (contact.get('band', '') or '').strip().upper().replace(' ', '')
+        if band and not band.endswith('M') and band.isdigit():
+            band = band + 'M'
+
+        points = contact.get('band_points')
+        if points is None:
+            points = QRP_BAND_POINTS.get(band)
+
+        points_str = ""
+        if points is not None:
+            points_str = f"{points:.1f}" if points % 1 else f"{int(points)}"
+
+        power = contact.get('power_watts', '') or contact.get('power', '')
+        power_str = self._format_numeric_value(power)
+
+        if include_their_power:
+            their_power = contact.get('their_power_watts', '') or ''
+            their_power_str = self._format_numeric_value(their_power)
+            line = (
+                f"{qso_number:<6}{date:<12}{callsign:<12}{skcc_number:<8}"
+                f"{name:<16}{power_str:<6}{their_power_str:<7}{band:<6}{points_str:<4}"
+            )
+        else:
+            line = (
+                f"{qso_number:<6}{date:<12}{callsign:<12}{skcc_number:<8}"
+                f"{name:<16}{power_str:<6}{band:<6}{points_str:<4}"
+            )
+
+        return line, points
+
+    def _format_numeric_value(self, value: Any) -> str:
+        """Format numeric values without forcing trailing .0."""
+        if value is None or value == '':
+            return ''
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return str(value).strip()
+        if num % 1:
+            return f"{num:.1f}"
+        return f"{int(num)}"
 
     def _get_created_by_line(self) -> str:
         """

@@ -1635,8 +1635,8 @@ class HelpContent:
             ("• Effective date: Nov 10, 2018\n\n", 'bullet'),
 
             ("5. Rag Chew Award:\n", 'subheading'),
-            ("• Complete 30+ QSOs of 30+ minutes each\n", 'bullet'),
-            ("• Total = 900+ minutes (15 hours)\n", 'bullet'),
+            ("• Accumulate 300+ total minutes\n", 'bullet'),
+            ("• Minimum 30 minutes per QSO\n", 'bullet'),
             ("• Encourages leisurely conversations\n", 'bullet'),
             ("• Endorsements based on total minutes\n\n", 'bullet'),
 
@@ -1677,7 +1677,7 @@ class HelpContent:
 
             ("Important Requirements:\n", 'heading'),
             ("• SKCC join date MUST be configured\n", 'bullet'),
-            ("• Centurion date needed for Tribune/Senator\n", 'bullet'),
+            ("• Centurion date needed for Tribune\n", 'bullet'),
             ("• Tribune x8 date needed for Senator\n", 'bullet'),
             ("• Only mechanical keys valid (no keyers)\n", 'bullet'),
             ("• Special event calls may not count\n\n", 'bullet'),

@@ -101,6 +101,11 @@ class W4GNSLogger:
         menubar.add_cascade(label="Reports", menu=reports_menu)
         reports_menu.add_command(label="SKCC Monthly Brag Report...", command=self.show_monthly_brag_report)
 
+        # Edit menu
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+        edit_menu.add_command(label="Edit Contact...", command=self.show_edit_contact_dialog)
+
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
@@ -143,6 +148,13 @@ class W4GNSLogger:
         # Status bar
         self.status_bar = ttk.Label(self.root, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def show_edit_contact_dialog(self):
+        """Open contact search dialog for editing."""
+        if hasattr(self, 'contacts_tab') and self.contacts_tab:
+            self.contacts_tab.open_edit_contact_dialog()
+        else:
+            messagebox.showwarning("Unavailable", "Contacts tab is not available yet.")
 
     def export_adif(self):
         """Export contacts to ADIF format"""

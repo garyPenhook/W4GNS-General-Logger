@@ -15,6 +15,7 @@ Awards Implemented:
 - SKCC DXC: Country-based DX contacts
 - PFX: 500,000 points from prefixes
 - QRP MPW: Miles per watt achievement (1,000/1,500/2,000 MPW)
+- QRP 1x/2x: Points-based QRP awards (300/150 points)
 - SKCC WAS: All 50 US states
 - SKCC WAS-T: All 50 US states (Tribune/Senator only)
 - SKCC WAS-S: All 50 US states (Senator only)
@@ -40,6 +41,7 @@ from .marathon import MarathonAward
 from .canadian_maple import CanadianMapleAward
 from .skcc_dx import SKCCDXQAward, SKCCDXCAward
 from .pfx import PFXAward
+from .qrp_awards import QRP1xAward, QRP2xAward
 from .qrp_mpw import QRPMPWAward
 from .was import SKCCWASAward
 from .was_t import SKCCWASTAward
@@ -58,6 +60,8 @@ __all__ = [
     'SKCCDXQAward',
     'SKCCDXCAward',
     'PFXAward',
+    'QRP1xAward',
+    'QRP2xAward',
     'QRPMPWAward',
     'SKCCWASAward',
     'SKCCWASTAward',

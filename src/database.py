@@ -179,6 +179,12 @@ class Database:
             'key_type': 'TEXT',              # STRAIGHT, BUG, or SIDESWIPER (mechanical keys only)
             'duration_minutes': 'INTEGER',   # For Rag Chew award (minimum 30 minutes)
             'power_watts': 'REAL',           # For QRP endorsements (≤5W)
+            'their_power_watts': 'REAL',     # Other station's power (for 2xQRP)
+            'distance_miles': 'REAL',        # QRP MPW distance in statute miles
+            'distance_source': 'TEXT',       # Distance calculator source (e.g., N9SSA)
+            'site': 'TEXT',                  # QRP MPW site description
+            'antenna': 'TEXT',               # QRP MPW antenna description
+            'is_satellite': 'INTEGER',       # Satellite contact flag (0/1)
             'distance_nm': 'REAL',           # Distance in nautical miles (for Maritime-mobile validation)
             'dxcc_entity': 'INTEGER'         # DXCC entity code
         }
@@ -343,6 +349,12 @@ class Database:
                     duration_minutes INTEGER,
                     distance_nm REAL,
                     power_watts INTEGER,
+                    their_power_watts INTEGER,
+                    distance_miles REAL,
+                    distance_source TEXT,
+                    site TEXT,
+                    antenna TEXT,
+                    is_satellite INTEGER,
                     dxcc_entity TEXT
                 )
             ''')
@@ -416,8 +428,9 @@ class Database:
                      rst_sent, rst_rcvd, power, name, first_name, qth, gridsquare, county, state,
                      country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
                      my_gridsquare, comment, notes, email,
-                     skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, distance_nm, dxcc_entity)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, their_power_watts,
+                     distance_miles, distance_source, site, antenna, is_satellite, distance_nm, dxcc_entity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     contact_data.get('callsign', ''),
                     contact_data.get('date', ''),
@@ -453,6 +466,12 @@ class Database:
                     contact_data.get('key_type', ''),
                     contact_data.get('duration_minutes', None),
                     contact_data.get('power_watts', None),
+                    contact_data.get('their_power_watts', None),
+                    contact_data.get('distance_miles', None),
+                    contact_data.get('distance_source', ''),
+                    contact_data.get('site', ''),
+                    contact_data.get('antenna', ''),
+                    contact_data.get('is_satellite', None),
                     contact_data.get('distance_nm', None),
                     contact_data.get('dxcc_entity', None)
                 ))
@@ -594,6 +613,12 @@ class Database:
                             contact.get('key_type', ''),
                             contact.get('duration_minutes', None),
                             contact.get('power_watts', None),
+                            contact.get('their_power_watts', None),
+                            contact.get('distance_miles', None),
+                            contact.get('distance_source', ''),
+                            contact.get('site', ''),
+                            contact.get('antenna', ''),
+                            contact.get('is_satellite', None),
                             contact.get('distance_nm', None),
                             contact.get('dxcc_entity', None)
                         )
@@ -615,8 +640,9 @@ class Database:
                          rst_sent, rst_rcvd, power, name, qth, gridsquare, county, state,
                          country, continent, cq_zone, itu_zone, dxcc, iota, sota, pota,
                          my_gridsquare, comment, notes,
-                         skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, distance_nm, dxcc_entity)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         skcc_number, my_skcc_number, key_type, duration_minutes, power_watts, their_power_watts,
+                         distance_miles, distance_source, site, antenna, is_satellite, distance_nm, dxcc_entity)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', contacts_to_insert)
 
                     imported_count = len(contacts_to_insert)

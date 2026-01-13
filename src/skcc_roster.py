@@ -24,7 +24,56 @@ class SKCCRosterManager:
 
     def __init__(self):
         self.roster_data = {}  # Maps callsign -> member info
+        self.roster_by_number = {}  # Maps base SKCC number -> member info
+        self.member_count = 0
         self.load_local_roster()
+
+    @staticmethod
+    def normalize_callsign(callsign: str) -> str:
+        """
+        Normalize callsign by removing portable prefixes/suffixes.
+
+        Uses the longest segment around '/' as the base callsign.
+        """
+        if not callsign:
+            return ""
+        callsign = callsign.strip().upper()
+        if '/' in callsign:
+            parts = [part for part in callsign.split('/') if part]
+            if parts:
+                return max(parts, key=len)
+        return callsign
+
+    @staticmethod
+    def normalize_skcc_number(skcc_number: str) -> str:
+        """Normalize SKCC number to digits-only base."""
+        if not skcc_number:
+            return ""
+        return re.sub(r'[^0-9]', '', str(skcc_number).strip().upper())
+
+    def _split_other_calls(self, other_calls: str) -> List[str]:
+        """Split other calls field into individual callsigns."""
+        if not other_calls:
+            return []
+        parts = re.split(r'[,\s]+', other_calls.strip())
+        return [part for part in (p.strip().upper() for p in parts) if part]
+
+    def _add_roster_entry(self, callsign: str, member: Dict) -> None:
+        """Add callsign and its normalized form to the roster index."""
+        if not callsign:
+            return
+        callsign = callsign.strip().upper()
+        if callsign:
+            self.roster_data.setdefault(callsign, member)
+        normalized = self.normalize_callsign(callsign)
+        if normalized:
+            self.roster_data.setdefault(normalized, member)
+
+    def _add_number_entry(self, skcc_number: str, member: Dict) -> None:
+        """Add SKCC number and its base form to the roster index."""
+        base_number = self.normalize_skcc_number(skcc_number)
+        if base_number:
+            self.roster_by_number.setdefault(base_number, member)
 
     def download_roster(self, progress_callback=None) -> bool:
         """
@@ -63,7 +112,14 @@ class SKCCRosterManager:
             self._save_roster_to_csv(members)
 
             # Load into memory
-            self.roster_data = {m['call']: m for m in members}
+            self.roster_data = {}
+            self.roster_by_number = {}
+            self.member_count = len(members)
+            for member in members:
+                self._add_roster_entry(member.get('call', ''), member)
+                self._add_number_entry(member.get('skcc_number', ''), member)
+                for other_call in self._split_other_calls(member.get('other_calls', '')):
+                    self._add_roster_entry(other_call, member)
 
             if progress_callback:
                 progress_callback(f"✅ Successfully downloaded {len(members)} SKCC members")
@@ -110,21 +166,23 @@ class SKCCRosterManager:
             r'<td class="left">([^<]*)</td>\s*'  # City
             r'<td class="left">([^<]*)</td>\s*'  # SPC
             r'<td class="right">(\d+)</td>\s*'  # DXCC
-            r'<td class="right[^"]*">([^<]+)</td>',  # Member Date (e.g., "2-Jan-2006")
+            r'<td class="right[^"]*">([^<]+)</td>\s*'  # Member Date (e.g., "2-Jan-2006")
+            r'<td class="left">([^<]*)</td>',  # Other Calls
             re.DOTALL
         )
 
         matches = tr_pattern.findall(html_content)
 
         for match in matches:
-            skcc_num, call, name, city, spc, dxcc, member_date = match
+            skcc_num, call, name, city, spc, dxcc, member_date, other_calls = match
 
             # Clean up the data
-            call = call.strip()
+            call = call.strip().upper()
             name = name.strip()
             city = city.strip()
             spc = spc.strip()
             member_date = member_date.strip()
+            other_calls = other_calls.strip().upper()
 
             # Skip silent keys (SK in callsign)
             if '/SK' in call.upper():
@@ -141,7 +199,8 @@ class SKCCRosterManager:
                 'city': city,
                 'spc': spc,
                 'dxcc': dxcc.strip(),
-                'join_date': join_date_yyyymmdd  # YYYYMMDD format
+                'join_date': join_date_yyyymmdd,  # YYYYMMDD format
+                'other_calls': other_calls
             })
 
         return members
@@ -178,7 +237,16 @@ class SKCCRosterManager:
         # Write CSV file
         with open(self.ROSTER_FILE, 'w', newline='', encoding='utf-8') as f:
             if members:
-                fieldnames = ['skcc_number', 'call', 'name', 'city', 'spc', 'dxcc', 'join_date']
+                fieldnames = [
+                    'skcc_number',
+                    'call',
+                    'name',
+                    'city',
+                    'spc',
+                    'dxcc',
+                    'join_date',
+                    'other_calls'
+                ]
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(members)
@@ -196,10 +264,19 @@ class SKCCRosterManager:
 
         try:
             self.roster_data = {}
+            self.roster_by_number = {}
+            unique_numbers = set()
             with open(self.ROSTER_FILE, 'r', newline='', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    self.roster_data[row['call']] = row
+                    skcc_number = row.get('skcc_number', '').strip()
+                    if skcc_number:
+                        unique_numbers.add(skcc_number)
+                    self._add_roster_entry(row.get('call', ''), row)
+                    self._add_number_entry(skcc_number, row)
+                    for other_call in self._split_other_calls(row.get('other_calls', '')):
+                        self._add_roster_entry(other_call, row)
+            self.member_count = len(unique_numbers)
             return True
         except Exception as e:
             print(f"Error loading roster: {e}")
@@ -218,17 +295,17 @@ class SKCCRosterManager:
         Returns:
             Member info dict or None if not found
         """
-        callsign_upper = callsign.upper()
+        callsign_upper = callsign.upper().strip()
 
         # First try exact match
         if callsign_upper in self.roster_data:
             return self.roster_data[callsign_upper]
 
         # Extract base callsign if it has a slash
-        if '/' in callsign_upper:
-            base_call = callsign_upper.split('/')[0]
-        else:
-            base_call = callsign_upper
+        base_call = self.normalize_callsign(callsign_upper)
+
+        if base_call in self.roster_data:
+            return self.roster_data[base_call]
 
         # Try base callsign with common portable suffixes
         # e.g., "W8CBC" matches "W8CBC/EX" in roster
@@ -278,6 +355,18 @@ class SKCCRosterManager:
         member = self.lookup_callsign(callsign)
         return member.get('join_date') if member else None
 
+    def get_member_by_number(self, skcc_number: str) -> Optional[Dict]:
+        """Look up a member by SKCC number (base digits)."""
+        base_number = self.normalize_skcc_number(skcc_number)
+        if not base_number:
+            return None
+        return self.roster_by_number.get(base_number)
+
+    def get_join_date_by_number(self, skcc_number: str) -> Optional[str]:
+        """Get SKCC join date by SKCC number."""
+        member = self.get_member_by_number(skcc_number)
+        return member.get('join_date') if member else None
+
     def was_member_on_date(self, callsign: str, qso_date: str) -> bool:
         """
         Check if a callsign was an SKCC member on a specific date.
@@ -299,9 +388,32 @@ class SKCCRosterManager:
 
         return join_date_norm <= qso_date_norm
 
+    def was_member_number_on_date(self, skcc_number: str, qso_date: str) -> bool:
+        """
+        Check if an SKCC number was an active member on a specific date.
+
+        Args:
+            skcc_number: SKCC number (may include suffix)
+            qso_date: QSO date in YYYYMMDD format
+
+        Returns:
+            True if join_date <= qso_date
+        """
+        join_date = self.get_join_date_by_number(skcc_number)
+        if not join_date or not qso_date:
+            return False
+
+        qso_date_norm = qso_date.replace('-', '')
+        join_date_norm = join_date.replace('-', '')
+
+        return join_date_norm <= qso_date_norm
+
     def get_member_count(self) -> int:
         """Get total number of members in roster"""
-        return len(self.roster_data)
+        if self.member_count:
+            return self.member_count
+        unique_numbers = {member.get('skcc_number') for member in self.roster_data.values()}
+        return len({num for num in unique_numbers if num})
 
     def get_roster_age(self) -> Optional[str]:
         """Get age of local roster file"""
