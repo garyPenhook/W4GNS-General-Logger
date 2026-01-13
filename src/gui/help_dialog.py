@@ -181,7 +181,6 @@ class HelpDialog:
             'awards': {
                 'name': 'Awards Tracking',
                 'children': {
-                    'arrl_awards': 'ARRL Awards (WAS, DXCC, etc.)',
                     'skcc_awards': 'SKCC Awards (All 11)'
                 }
             },

@@ -63,6 +63,10 @@ class RagChewAward(SKCCAwardBase):
             return self.database.config.get('skcc.join_date', '')
         return ''
 
+    def should_deduplicate_for_export(self) -> bool:
+        """Rag Chew allows multiple QSOs with the same member over time."""
+        return False
+
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
         Check if a contact qualifies for Rag Chew award

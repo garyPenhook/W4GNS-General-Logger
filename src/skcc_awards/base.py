@@ -126,6 +126,18 @@ class SKCCAwardBase(ABC):
 
         return True
 
+    def should_deduplicate_for_export(self) -> bool:
+        """
+        Return True when export should keep only the first QSO per SKCC member.
+
+        Some awards (e.g., Rag Chew) allow multiple QSOs with the same member.
+        """
+        return True
+
+    def normalize_callsign_for_export(self, callsign: str) -> str:
+        """Normalize callsign for award export output."""
+        return callsign
+
     def export_qualifying_contacts_to_adif(
         self,
         contacts: List[Dict[str, Any]],
@@ -157,25 +169,26 @@ class SKCCAwardBase(ABC):
         if not qualifying:
             raise ValueError(f"No qualifying contacts found for {self.name} award")
 
-        # CRITICAL: Deduplicate by SKCC number (keep only first QSO with each unique member)
-        # Per SKCC rules: "Each call sign counts only once (per category)"
-        from src.utils.skcc_number import extract_base_skcc_number
+        if self.should_deduplicate_for_export():
+            # CRITICAL: Deduplicate by SKCC number (keep only first QSO with each unique member)
+            # Per SKCC rules: "Each call sign counts only once (per category)"
+            from src.utils.skcc_number import extract_base_skcc_number
 
-        # Sort by date/time to ensure we keep the first contact with each member
-        qualifying.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
+            # Sort by date/time to ensure we keep the first contact with each member
+            qualifying.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
 
-        seen_skcc_numbers = set()
-        deduplicated = []
+            seen_skcc_numbers = set()
+            deduplicated = []
 
-        for contact in qualifying:
-            skcc_number = contact.get('skcc_number', '').strip()
-            if skcc_number:
-                base_number = extract_base_skcc_number(skcc_number)
-                if base_number and base_number not in seen_skcc_numbers:
-                    seen_skcc_numbers.add(base_number)
-                    deduplicated.append(contact)
+            for contact in qualifying:
+                skcc_number = contact.get('skcc_number', '').strip()
+                if skcc_number:
+                    base_number = extract_base_skcc_number(skcc_number)
+                    if base_number and base_number not in seen_skcc_numbers:
+                        seen_skcc_numbers.add(base_number)
+                        deduplicated.append(contact)
 
-        qualifying = deduplicated
+            qualifying = deduplicated
 
         # Add award information to comments if requested
         if include_award_info:
@@ -188,6 +201,18 @@ class SKCCAwardBase(ABC):
                         contact['comment'] = f"{existing_comment} {award_note}"
                 else:
                     contact['comment'] = award_note
+
+        # Normalize callsigns for export without mutating original records
+        normalized_contacts = []
+        for contact in qualifying:
+            contact_copy = dict(contact)
+            callsign = contact_copy.get('callsign', '')
+            normalized = self.normalize_callsign_for_export(callsign)
+            if normalized:
+                contact_copy['callsign'] = normalized
+            normalized_contacts.append(contact_copy)
+
+        qualifying = normalized_contacts
 
         # Import ADIF export function
         from src.adif import export_contacts_to_adif

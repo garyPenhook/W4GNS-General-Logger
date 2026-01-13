@@ -226,6 +226,29 @@ class QRZLogbook:
         self.api_key = api_key
         self.base_url = "https://logbook.qrz.com/api"
 
+    def _validate_required_fields(self, contact_data):
+        def has_value(key):
+            value = contact_data.get(key, '')
+            return bool(str(value).strip())
+
+        missing = []
+        if not has_value('callsign'):
+            missing.append('callsign')
+        if not has_value('date'):
+            missing.append('date')
+        if not has_value('time_on'):
+            missing.append('time_on')
+        if not (has_value('frequency') or has_value('band')):
+            missing.append('frequency or band')
+        if not has_value('mode'):
+            missing.append('mode')
+
+        if missing:
+            missing_text = ', '.join(missing)
+            return False, f"QRZ upload failed: missing required fields: {missing_text}"
+
+        return True, ""
+
     def upload_contact(self, contact_data):
         """
         Upload a contact to QRZ Logbook
@@ -237,6 +260,10 @@ class QRZLogbook:
             (bool, str): (success, message)
         """
         try:
+            valid, message = self._validate_required_fields(contact_data)
+            if not valid:
+                return False, message
+
             # Build ADIF record for upload
             adif_record = self._build_adif_record(contact_data)
 

@@ -10,7 +10,7 @@ from src.skcc_awards import (
     TripleKeyAward, RagChewAward, CanadianMapleAward,
     SKCCDXQAward, SKCCDXCAward, PFXAward,
     SKCCWASAward, SKCCWASTAward, SKCCWASSAward, SKCCWACAward,
-    QRPMPWAward, MarathonAward
+    QRP1xAward, QRP2xAward, QRPMPWAward, MarathonAward
 )
 from src.skcc_roster import get_roster_manager
 from src.skcc_award_rosters import get_award_roster_manager
@@ -46,6 +46,8 @@ class SKCCAwardsTab:
             'triple_key': TripleKeyAward(database),
             'rag_chew': RagChewAward(database),
             'marathon': MarathonAward(database),
+            'qrp_1x': QRP1xAward(database),
+            'qrp_2x': QRP2xAward(database),
             'qrp_mpw': QRPMPWAward(database),
             'canadian_maple': CanadianMapleAward(database),
             'dxq': SKCCDXQAward(database),
@@ -241,6 +243,11 @@ class SKCCAwardsTab:
                                                         length=300, mode='determinate')
         self.senator_endorsement_bar.pack(anchor='w', pady=(2, 0))
 
+        self.senator_band_progress = ttk.Label(
+            senator_frame, text="", font=('', 9), foreground=get_muted_color(self.config)
+        )
+        self.senator_band_progress.pack(anchor='w', pady=(2, 0))
+
         # Generate Application button
         ttk.Button(senator_frame, text="📄 Generate Award Application",
                   command=self.generate_senator_application).pack(anchor='w', pady=(10, 0))
@@ -327,11 +334,51 @@ class SKCCAwardsTab:
         ttk.Button(marathon_frame, text="📄 Generate Award Application",
                   command=self.generate_marathon_application).pack(anchor='w', pady=(10, 0))
 
+        # 1xQRP
+        qrp_1x_frame = ttk.LabelFrame(self.specialty_frame, text="1xQRP Award", padding=10)
+        qrp_1x_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(qrp_1x_frame,
+                 text="300 points; applicant QRP (≤5W), one contact per band per station",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.qrp_1x_progress = ttk.Label(qrp_1x_frame, text="", font=('', 11, 'bold'))
+        self.qrp_1x_progress.pack(anchor='w', pady=2)
+
+        self.qrp_1x_bar = ttk.Progressbar(qrp_1x_frame, length=400, mode='determinate')
+        self.qrp_1x_bar.pack(fill='x', pady=2)
+
+        self.qrp_1x_details = ttk.Label(qrp_1x_frame, text="", font=('', 9))
+        self.qrp_1x_details.pack(anchor='w')
+
+        ttk.Button(qrp_1x_frame, text="📄 Generate Award Application",
+                  command=self.generate_qrp_1x_application).pack(anchor='w', pady=(10, 0))
+
+        # 2xQRP
+        qrp_2x_frame = ttk.LabelFrame(self.specialty_frame, text="2xQRP Award", padding=10)
+        qrp_2x_frame.pack(fill='x', padx=10, pady=5)
+
+        ttk.Label(qrp_2x_frame,
+                 text="150 points; both stations QRP (≤5W), one contact per band per station",
+                 font=('', 9, 'italic')).pack(anchor='w')
+
+        self.qrp_2x_progress = ttk.Label(qrp_2x_frame, text="", font=('', 11, 'bold'))
+        self.qrp_2x_progress.pack(anchor='w', pady=2)
+
+        self.qrp_2x_bar = ttk.Progressbar(qrp_2x_frame, length=400, mode='determinate')
+        self.qrp_2x_bar.pack(fill='x', pady=2)
+
+        self.qrp_2x_details = ttk.Label(qrp_2x_frame, text="", font=('', 9))
+        self.qrp_2x_details.pack(anchor='w')
+
+        ttk.Button(qrp_2x_frame, text="📄 Generate Award Application",
+                  command=self.generate_qrp_2x_application).pack(anchor='w', pady=(10, 0))
+
         # QRP/MPW
         qrp_mpw_frame = ttk.LabelFrame(self.specialty_frame, text="QRP Miles Per Watt Award", padding=10)
         qrp_mpw_frame.pack(fill='x', padx=10, pady=5)
 
-        ttk.Label(qrp_mpw_frame, text="3 levels: 1,000 MPW, 1,500 MPW, 2,000 MPW (QRP power ≤5W)",
+        ttk.Label(qrp_mpw_frame, text="Endorsements every 500 MPW starting at 1,000 (QRP ≤5W, N9SSA distance)",
                  font=('', 9, 'italic')).pack(anchor='w')
 
         self.qrp_mpw_progress = ttk.Label(qrp_mpw_frame, text="", font=('', 11, 'bold'))
@@ -515,6 +562,14 @@ class SKCCAwardsTab:
         marathon_progress = self.awards['marathon'].calculate_progress(contacts_list)
         self.update_marathon_display(marathon_progress)
 
+        # 1xQRP
+        qrp_1x_progress = self.awards['qrp_1x'].calculate_progress(contacts_list)
+        self.update_qrp_1x_display(qrp_1x_progress)
+
+        # 2xQRP
+        qrp_2x_progress = self.awards['qrp_2x'].calculate_progress(contacts_list)
+        self.update_qrp_2x_display(qrp_2x_progress)
+
         # QRP/MPW
         qrp_mpw_progress = self.awards['qrp_mpw'].calculate_progress(contacts_list)
         self.update_qrp_mpw_display(qrp_mpw_progress)
@@ -690,6 +745,22 @@ class SKCCAwardsTab:
                 self.senator_next_endorsement.config(text="🌟 Maximum endorsement level achieved!")
                 self.senator_endorsement_bar['value'] = 100
 
+        band_counts = progress.get('band_counts') or {}
+        band_endorsements = progress.get('band_endorsements') or []
+        if band_endorsements:
+            bands_str = ", ".join(band_endorsements)
+            self.senator_band_progress.config(
+                text=f"Per-band endorsements earned: {bands_str}"
+            )
+        elif band_counts:
+            best_band, best_count = max(band_counts.items(), key=lambda item: item[1])
+            needed = max(0, 200 - best_count)
+            self.senator_band_progress.config(
+                text=f"Per-band best: {best_band} {best_count}/200 (need {needed})"
+            )
+        else:
+            self.senator_band_progress.config(text="Per-band endorsements: none yet")
+
     def update_triple_key_display(self, progress):
         """Update Triple Key award display"""
         status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
@@ -817,6 +888,65 @@ class SKCCAwardsTab:
         self.marathon_details.config(
             text=f"Total minutes: {total_minutes:,} | Unique members: {unique_members} | Avg duration: {avg_duration:.1f} min"
         )
+
+    def _format_qrp_band_summary(self, progress):
+        """Format band/points summary for QRP awards."""
+        points_by_band = progress.get('points_by_band', {})
+        qsos_by_band = progress.get('qsos_by_band', {})
+        if not points_by_band:
+            return "No qualifying QSOs yet"
+
+        band_order = ['160M', '80M', '60M', '40M', '30M', '20M', '17M',
+                      '15M', '12M', '10M', '6M', '2M']
+        parts = []
+
+        for band in band_order:
+            if band in points_by_band:
+                points = points_by_band[band]
+                points_str = f"{points:.1f}" if points % 1 else f"{int(points)}"
+                qsos = qsos_by_band.get(band, 0)
+                parts.append(f"{band}:{points_str} ({qsos})")
+
+        for band in sorted(points_by_band.keys()):
+            if band not in band_order:
+                points = points_by_band[band]
+                points_str = f"{points:.1f}" if points % 1 else f"{int(points)}"
+                qsos = qsos_by_band.get(band, 0)
+                parts.append(f"{band}:{points_str} ({qsos})")
+
+        duplicate_contacts = progress.get('duplicate_contacts', 0)
+        summary = "Bands: " + " | ".join(parts)
+        if duplicate_contacts:
+            summary += f" | Duplicates ignored: {duplicate_contacts}"
+        return summary
+
+    def update_qrp_1x_display(self, progress):
+        """Update 1xQRP award display"""
+        current_points = progress.get('current_points', 0)
+        required = progress.get('required_points', 0)
+        pct = progress.get('progress_pct', 0)
+
+        status = "✅ ACHIEVED!" if progress.get('achieved', False) else "In Progress"
+        self.qrp_1x_progress.config(
+            text=f"{status} - {current_points:.1f} of {required} points ({pct:.1f}%)",
+            foreground=get_success_color(self.config) if progress.get('achieved', False) else 'black'
+        )
+        self.qrp_1x_bar['value'] = pct
+        self.qrp_1x_details.config(text=self._format_qrp_band_summary(progress))
+
+    def update_qrp_2x_display(self, progress):
+        """Update 2xQRP award display"""
+        current_points = progress.get('current_points', 0)
+        required = progress.get('required_points', 0)
+        pct = progress.get('progress_pct', 0)
+
+        status = "✅ ACHIEVED!" if progress.get('achieved', False) else "In Progress"
+        self.qrp_2x_progress.config(
+            text=f"{status} - {current_points:.1f} of {required} points ({pct:.1f}%)",
+            foreground=get_success_color(self.config) if progress.get('achieved', False) else 'black'
+        )
+        self.qrp_2x_bar['value'] = pct
+        self.qrp_2x_details.config(text=self._format_qrp_band_summary(progress))
 
     def update_qrp_mpw_display(self, progress):
         """Update QRP/MPW award display"""
@@ -990,6 +1120,14 @@ class SKCCAwardsTab:
         """Generate Marathon award application"""
         self._generate_award_application('marathon', 'Marathon')
 
+    def generate_qrp_1x_application(self):
+        """Generate 1xQRP award application"""
+        self._generate_award_application('qrp_1x', '1xQRP')
+
+    def generate_qrp_2x_application(self):
+        """Generate 2xQRP award application"""
+        self._generate_award_application('qrp_2x', '2xQRP')
+
     def generate_pfx_application(self):
         """Generate PFX award application"""
         self._generate_award_application('pfx', 'PFX')
@@ -1041,11 +1179,29 @@ class SKCCAwardsTab:
 
         # Get qualifying contacts for this award
         award_instance = self.awards[award_type]
-        qualifying_contacts = []
+        if hasattr(award_instance, 'get_application_contacts'):
+            qualifying_contacts = award_instance.get_application_contacts(contacts_list)
+        else:
+            qualifying_contacts = [c for c in contacts_list if award_instance.validate(c)]
 
-        for contact in contacts_list:
-            if award_instance.validate(contact):
-                qualifying_contacts.append(contact)
+            # Sort by date (earliest first)
+            qualifying_contacts.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
+
+            # Deduplicate by SKCC number when required by award rules
+            if award_instance.should_deduplicate_for_export():
+                from src.utils.skcc_number import extract_base_skcc_number
+                seen_skcc_numbers = set()
+                deduplicated_contacts = []
+
+                for contact in qualifying_contacts:
+                    skcc_number = contact.get('skcc_number', '').strip()
+                    if skcc_number:
+                        base_number = extract_base_skcc_number(skcc_number)
+                        if base_number and base_number not in seen_skcc_numbers:
+                            seen_skcc_numbers.add(base_number)
+                            deduplicated_contacts.append(contact)
+
+                qualifying_contacts = deduplicated_contacts
 
         if not qualifying_contacts:
             messagebox.showwarning(
@@ -1059,24 +1215,8 @@ class SKCCAwardsTab:
             )
             return
 
-        # Sort by date (earliest first)
+        # Sort for output consistency if not already sorted
         qualifying_contacts.sort(key=lambda x: (x.get('date', ''), x.get('time_on', '')))
-
-        # CRITICAL: Deduplicate by SKCC number (keep only first QSO with each unique member)
-        # Per SKCC rules: "Each call sign counts only once (per category)"
-        from src.utils.skcc_number import extract_base_skcc_number
-        seen_skcc_numbers = set()
-        deduplicated_contacts = []
-
-        for contact in qualifying_contacts:
-            skcc_number = contact.get('skcc_number', '').strip()
-            if skcc_number:
-                base_number = extract_base_skcc_number(skcc_number)
-                if base_number and base_number not in seen_skcc_numbers:
-                    seen_skcc_numbers.add(base_number)
-                    deduplicated_contacts.append(contact)
-
-        qualifying_contacts = deduplicated_contacts
 
         # Generate the report based on award type
         try:
@@ -1141,6 +1281,8 @@ class SKCCAwardsTab:
             'triple_key': self.app_generator.generate_triple_key_report,
             'rag_chew': self.app_generator.generate_rag_chew_report,
             'marathon': self.app_generator.generate_marathon_report,
+            'qrp_1x': self.app_generator.generate_qrp_1x_report,
+            'qrp_2x': self.app_generator.generate_qrp_2x_report,
             'pfx': self.app_generator.generate_pfx_report,
             'canadian_maple': self.app_generator.generate_canadian_maple_report,
             'qrp_mpw': self.app_generator.generate_qrp_mpw_report,

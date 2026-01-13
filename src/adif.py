@@ -173,8 +173,16 @@ class ADIFParser:
                 'APP_SKCC_MY_NUMBER': 'my_skcc_number',
                 'APP_SKCC_KEY_TYPE': 'key_type',
                 'APP_SKCC_DURATION': 'duration_minutes',
-                'APP_SKCC_DISTANCE': 'distance_nm',
+                'APP_SKCC_DISTANCE': 'distance_miles',
+                'APP_SKCC_DISTANCE_NM': 'distance_nm',
                 'APP_SKCC_POWER': 'power_watts',
+                'APP_SKCC_THEIR_POWER': 'their_power_watts',
+                'APP_SKCC_MPW_DISTANCE': 'distance_miles',
+                'APP_SKCC_DISTANCE_MILES': 'distance_miles',
+                'APP_SKCC_DISTANCE_SOURCE': 'distance_source',
+                'APP_SKCC_SITE': 'site',
+                'APP_SKCC_ANTENNA': 'antenna',
+                'APP_SKCC_SATELLITE': 'is_satellite',
                 # SKCC Logger-specific fields (uses different naming)
                 'SKCC': 'skcc_number',  # SKCC Logger uses this field name
                 'APP_SKCCLOGGER_KEYTYPE': 'key_type',
@@ -411,8 +419,13 @@ class ADIFGenerator:
             # SKCC-specific fields (user-defined ADIF fields)
             'my_skcc_number': 'APP_SKCC_MY_NUMBER',
             'duration_minutes': 'APP_SKCC_DURATION',
-            'distance_nm': 'APP_SKCC_DISTANCE',
-            'distance_miles': 'APP_SKCC_DISTANCE',  # Support alternate field name
+            'distance_nm': 'APP_SKCC_DISTANCE_NM',
+            'distance_miles': 'APP_SKCC_DISTANCE',
+            'distance_source': 'APP_SKCC_DISTANCE_SOURCE',
+            'site': 'APP_SKCC_SITE',
+            'antenna': 'APP_SKCC_ANTENNA',
+            'is_satellite': 'APP_SKCC_SATELLITE',
+            'their_power_watts': 'APP_SKCC_THEIR_POWER',
             'dxcc_entity': 'DXCC_ENTITY'
         }
 
@@ -423,6 +436,9 @@ class ADIFGenerator:
                 value = value.strip()
             else:
                 value = str(value) if value else ''
+
+            if db_field == 'is_satellite':
+                value = '1' if str(value).strip().lower() in ('1', 'true', 'yes', 'y') else ''
 
             if not value:
                 continue

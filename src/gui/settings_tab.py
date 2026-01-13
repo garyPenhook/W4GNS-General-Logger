@@ -190,7 +190,7 @@ class SettingsTab:
                  text="⚠️ Critical: Join date required for all awards.",
                  font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w', pady=(5, 0))
         ttk.Label(user_skcc_frame,
-                 text="Centurion date required for Tribune/Senator. Tribune x8 date required for Senator.",
+                 text="Centurion date required for Tribune. Tribune x8 date required for Senator.",
                  font=('', 9, 'italic'), foreground=get_warning_color(self.config)).pack(anchor='w')
         ttk.Label(user_skcc_frame,
                  text="QSOs before these dates will not count toward respective awards.",

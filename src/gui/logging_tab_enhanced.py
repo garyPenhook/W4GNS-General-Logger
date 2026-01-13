@@ -74,8 +74,8 @@ class EnhancedLoggingTab:
         # Focus on callsign field
         self.callsign_entry.focus()
 
-        # Do initial POTA fetch - delay until after main loop is running to avoid threading errors
-        self.parent.after(100, self.refresh_pota_spots)
+        # Do initial POTA fetch in background to avoid UI stalls on network timeouts.
+        self.parent.after(100, self.refresh_pota_spots_async)
 
         # Start auto-refresh if it was enabled
         if self.auto_refresh:
@@ -83,10 +83,19 @@ class EnhancedLoggingTab:
 
         # Reference to contacts tab for refreshing after logging
         self.contacts_tab = None
+        self.last_contact_id = None
 
     def set_contacts_tab(self, contacts_tab):
         """Set reference to contacts tab for refreshing after logging"""
         self.contacts_tab = contacts_tab
+
+    def edit_last_contact(self):
+        """Open editor for the most recently logged contact."""
+        if not self.contacts_tab or not self.last_contact_id:
+            messagebox.showwarning("No Contact", "No recent contact available to edit.")
+            return
+
+        self.contacts_tab.open_contact_by_id(self.last_contact_id)
 
     def create_widgets(self):
         """Create the enhanced logging interface"""
@@ -261,6 +270,39 @@ class EnhancedLoggingTab:
         ttk.Entry(skcc_row, textvariable=self.duration_var, width=8).pack(side='left', padx=5)
         ttk.Label(skcc_row, text="(for Rag Chew)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
 
+        # Row 5.6: QRP fields
+        qrp_row = ttk.Frame(row5_5)
+        qrp_row.pack(fill='x', pady=(4, 0))
+
+        ttk.Label(qrp_row, text="Their Power (W):", width=12, anchor='e').pack(side='left')
+        self.their_power_var = tk.StringVar()
+        ttk.Entry(qrp_row, textvariable=self.their_power_var, width=8).pack(side='left', padx=5)
+        ttk.Label(qrp_row, text="(for 2xQRP)", font=('', 8), foreground=get_muted_color(self.config)).pack(side='left')
+
+        mpw_row = ttk.Frame(row5_5)
+        mpw_row.pack(fill='x', pady=(4, 0))
+
+        ttk.Label(mpw_row, text="MPW Distance (mi):", width=12, anchor='e').pack(side='left')
+        self.distance_miles_var = tk.StringVar()
+        ttk.Entry(mpw_row, textvariable=self.distance_miles_var, width=8).pack(side='left', padx=5)
+
+        ttk.Label(mpw_row, text="Source:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.distance_source_var = tk.StringVar(value='N9SSA')
+        source_combo = ttk.Combobox(mpw_row, textvariable=self.distance_source_var, width=10, state='readonly')
+        source_combo['values'] = ('N9SSA',)
+        source_combo.pack(side='left', padx=5)
+
+        ttk.Label(mpw_row, text="Site:", width=6, anchor='e').pack(side='left', padx=(10, 0))
+        self.site_var = tk.StringVar()
+        ttk.Entry(mpw_row, textvariable=self.site_var, width=14).pack(side='left', padx=5)
+
+        ttk.Label(mpw_row, text="Antenna:", width=8, anchor='e').pack(side='left', padx=(10, 0))
+        self.antenna_var = tk.StringVar()
+        ttk.Entry(mpw_row, textvariable=self.antenna_var, width=18).pack(side='left', padx=5)
+
+        self.is_satellite_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(mpw_row, text="Satellite", variable=self.is_satellite_var).pack(side='left', padx=(10, 0))
+
         # Row 5.75: QRZ License Info (Email, License Date, Expiry, Class)
         qrz_info_frame = ttk.LabelFrame(entry_frame, text="QRZ License Info", padding=5)
         qrz_info_frame.pack(fill='x', pady=2)
@@ -299,6 +341,10 @@ class EnhancedLoggingTab:
         self.log_btn = ttk.Button(btn_row, text="Log Contact (Enter)", command=self.log_contact,
                                   style='Accent.TButton')
         self.log_btn.pack(side='left', padx=5)
+
+        self.edit_last_btn = ttk.Button(btn_row, text="Edit Last Contact",
+                                        command=self.edit_last_contact, state='disabled')
+        self.edit_last_btn.pack(side='left', padx=5)
 
         ttk.Button(btn_row, text="Clear (Esc)", command=self.clear_form).pack(side='left', padx=5)
 
@@ -1037,8 +1083,12 @@ class EnhancedLoggingTab:
             self.callsign_entry.focus()
             return
 
-        # Capture time_off when logging contact
+        # Capture time_on/time_off when logging contact (fallback if time_on was missed)
         current_time = self.get_corrected_utc().strftime("%H:%M")
+        if not self.time_on_var.get():
+            self.time_on_var.set(current_time)
+            self.time_on_captured = True
+            print(f"Time ON captured at log: {current_time}")
         self.time_off_var.set(current_time)
         print(f"Time OFF captured: {current_time}")
 
@@ -1074,11 +1124,20 @@ class EnhancedLoggingTab:
             'my_skcc_number': self.my_skcc_number_var.get(),
             'key_type': self.key_type_var.get(),
             'duration_minutes': self.duration_var.get() if self.duration_var.get() else None,
-            'power_watts': self.power_var.get() if self.power_var.get() else None
+            'power_watts': self.power_var.get() if self.power_var.get() else None,
+            'their_power_watts': self.their_power_var.get() if self.their_power_var.get() else None,
+            'distance_miles': self.distance_miles_var.get() if self.distance_miles_var.get() else None,
+            'distance_source': self.distance_source_var.get(),
+            'site': self.site_var.get(),
+            'antenna': self.antenna_var.get(),
+            'is_satellite': 1 if self.is_satellite_var.get() else 0
         }
 
         try:
             contact_id = self.database.add_contact(contact_data)
+            self.last_contact_id = contact_id
+            if hasattr(self, 'edit_last_btn'):
+                self.edit_last_btn.config(state='normal')
 
             # Clear analyzer cache and refresh displayed spots
             # This ensures spots won't show as "needed" if we just worked them
@@ -1184,6 +1243,12 @@ class EnhancedLoggingTab:
         last_key_type = self.config.get('logging.last_key_type', '')
         self.key_type_var.set(last_key_type)
         self.duration_var.set('')
+        self.their_power_var.set('')
+        self.distance_miles_var.set('')
+        self.distance_source_var.set('N9SSA')
+        self.site_var.set('')
+        self.antenna_var.set('')
+        self.is_satellite_var.set(False)
         # Keep my_skcc_number_var (don't clear operator's own number)
         self.notes_var.set('')
         self.dupe_label.config(text='')

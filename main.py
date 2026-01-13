@@ -20,7 +20,6 @@ from src.theme import ThemeManager
 from src.gui.logging_tab_enhanced import EnhancedLoggingTab
 from src.gui.contacts_tab import ContactsTab
 from src.gui.dx_cluster_tab import DXClusterTab
-from src.gui.awards_tab import AwardsTab
 from src.gui.skcc_awards_tab import SKCCAwardsTab
 from src.gui.space_weather_tab import SpaceWeatherTab
 from src.gui.weather_tab import WeatherTab
@@ -102,6 +101,11 @@ class W4GNSLogger:
         menubar.add_cascade(label="Reports", menu=reports_menu)
         reports_menu.add_command(label="SKCC Monthly Brag Report...", command=self.show_monthly_brag_report)
 
+        # Edit menu
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+        edit_menu.add_command(label="Edit Contact...", command=self.show_edit_contact_dialog)
+
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
@@ -119,7 +123,6 @@ class W4GNSLogger:
         self.logging_tab = EnhancedLoggingTab(self.notebook, self.database, self.config)
         self.contacts_tab = ContactsTab(self.notebook, self.database, self.config)
         self.dx_cluster_tab = DXClusterTab(self.notebook, self.database, self.config)
-        self.awards_tab = AwardsTab(self.notebook, self.database, self.config)
         self.skcc_awards_tab = SKCCAwardsTab(self.notebook, self.database, self.config)
         self.weather_tab = WeatherTab(self.notebook, self.config)
         self.space_weather_tab = SpaceWeatherTab(self.notebook, self.database, self.config)
@@ -136,7 +139,6 @@ class W4GNSLogger:
         self.notebook.add(self.logging_tab.get_frame(), text="  Log Contacts  ")
         self.notebook.add(self.contacts_tab.get_frame(), text="  Contacts  ")
         self.notebook.add(self.dx_cluster_tab.get_frame(), text="  DX Clusters  ")
-        self.notebook.add(self.awards_tab.get_frame(), text="  ARRL Awards  ")
         self.notebook.add(self.skcc_awards_tab.get_frame(), text="  SKCC Awards  ")
         self.notebook.add(self.contest_tab.get_frame(), text="  Contest  ")
         self.notebook.add(self.weather_tab.get_frame(), text="  Weather  ")
@@ -146,6 +148,13 @@ class W4GNSLogger:
         # Status bar
         self.status_bar = ttk.Label(self.root, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def show_edit_contact_dialog(self):
+        """Open contact search dialog for editing."""
+        if hasattr(self, 'contacts_tab') and self.contacts_tab:
+            self.contacts_tab.open_edit_contact_dialog()
+        else:
+            messagebox.showwarning("Unavailable", "Contacts tab is not available yet.")
 
     def export_adif(self):
         """Export contacts to ADIF format"""
@@ -583,8 +592,7 @@ class W4GNSLogger:
             # Refresh the contacts log display
             self.contacts_tab.refresh_log()
 
-            # Refresh awards calculations
-            self.awards_tab.refresh_awards()
+            # Refresh SKCC awards calculations
             self.skcc_awards_tab.refresh_awards()
 
             # Show results

@@ -23,7 +23,8 @@ import logging
 from typing import Dict, List, Any, Set
 
 from src.skcc_awards.base import SKCCAwardBase
-from src.utils.skcc_number import extract_base_skcc_number, get_member_type
+from src.skcc_awards.centurion import CenturionAward
+from src.utils.skcc_number import extract_base_skcc_number
 from src.skcc_awards.constants import (
     TRIBUNE_ENDORSEMENTS,
     TRIBUNE_EFFECTIVE_DATE,
@@ -70,6 +71,10 @@ class TribuneAward(SKCCAwardBase):
             return self.database.config.get('skcc.centurion_date', '')
         return ''
 
+    def normalize_callsign_for_export(self, callsign: str) -> str:
+        """Remove prefixes/suffixes for Tribune applications."""
+        return self.roster_manager.normalize_callsign(callsign)
+
     def validate(self, contact: Dict[str, Any]) -> bool:
         """
         Check if a contact qualifies for Tribune award
@@ -95,6 +100,12 @@ class TribuneAward(SKCCAwardBase):
         if not self.validate_common_rules(contact):
             return False
 
+        # CRITICAL RULE: Exchanges must include SKCC number AND name
+        name = (contact.get('name') or contact.get('first_name') or '').strip()
+        if not name:
+            logger.debug("Contact missing name exchange for Tribune award")
+            return False
+
         # Get contact date
         qso_date = contact.get('date', '')
         if qso_date:
@@ -107,30 +118,14 @@ class TribuneAward(SKCCAwardBase):
 
         # Get callsign (remove portable/suffix indicators)
         callsign = contact.get('callsign', '').upper().strip()
-        base_call = callsign.split('/')[0] if '/' in callsign else callsign
+        base_call = self.roster_manager.normalize_callsign(callsign)
 
         # CRITICAL RULE: Club calls and special event calls don't count after Oct 1, 2008
-        if qso_date >= TRIBUNE_SPECIAL_EVENT_CUTOFF:
-            if base_call in SPECIAL_EVENT_CALLS:
-                logger.debug(
-                    f"Special-event call filtered after Oct 1, 2008: {callsign} "
-                    f"(date: {qso_date})"
-                )
-                return False
-
-        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
-        # Check if contacted station was SKCC member at time of QSO
-        if not self.roster_manager.was_member_on_date(base_call, qso_date):
+        is_special_event_call = base_call in SPECIAL_EVENT_CALLS
+        if qso_date >= TRIBUNE_SPECIAL_EVENT_CUTOFF and is_special_event_call:
             logger.debug(
-                f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
-            )
-            return False
-
-        # CRITICAL RULE: User must have been SKCC member at time of QSO
-        if self.user_join_date and qso_date < self.user_join_date:
-            logger.debug(
-                f"Contact {base_call} not valid: QSO date {qso_date} before "
-                f"user join date {self.user_join_date}"
+                f"Special-event call filtered after Oct 1, 2008: {callsign} "
+                f"(date: {qso_date})"
             )
             return False
 
@@ -141,47 +136,54 @@ class TribuneAward(SKCCAwardBase):
             logger.debug(f"Contact {base_call} missing SKCC number")
             return False
 
+        # CRITICAL RULE: "Both parties in the QSO must be SKCC members at the time of the QSO"
+        # For special event calls, validate membership by SKCC number instead of callsign.
+        if is_special_event_call:
+            if not self.roster_manager.was_member_number_on_date(skcc_num, qso_date):
+                logger.debug(
+                    f"Contact {callsign} not valid: SKCC# {skcc_num} not a member on {qso_date}"
+                )
+                return False
+        else:
+            if not self.roster_manager.was_member_on_date(base_call, qso_date):
+                logger.debug(
+                    f"Contact {base_call} not valid: not an SKCC member on {qso_date}"
+                )
+                return False
+
+        # CRITICAL RULE: User must have been SKCC member at time of QSO
+        if self.user_join_date and qso_date < self.user_join_date:
+            logger.debug(
+                f"Contact {base_call} not valid: QSO date {qso_date} before "
+                f"user join date {self.user_join_date}"
+            )
+            return False
+
+        # CRITICAL RULE: User must have achieved Centurion prior to Tribune QSOs
+        if not self.user_centurion_date:
+            logger.debug("User Centurion achievement date not set; Tribune validation blocked")
+            return False
+
         # Check if the contacted station was Centurion/Tribune/Senator at time of QSO
         is_valid_centurion_or_higher = self.award_rosters.was_centurion_or_higher_on_date(skcc_num, qso_date)
 
-        # FALLBACK: If rosters aren't available, check the SKCC number suffix (C, T, or S)
-        # This is less precise but allows validation when rosters haven't been downloaded
         if not is_valid_centurion_or_higher:
-            from src.utils.skcc_number import is_centurion
-
-            # Check if the SKCC number has C, T, or S suffix
-            if is_centurion(skcc_num):
-                # Check if rosters are actually loaded
-                roster_info = self.award_rosters.get_roster_info()
-                centurion_loaded = roster_info.get('centurion', {}).get('loaded', False)
-                tribune_loaded = roster_info.get('tribune', {}).get('loaded', False)
-                senator_loaded = roster_info.get('senator', {}).get('loaded', False)
-
-                # If rosters aren't loaded, use suffix as fallback
-                if not centurion_loaded and not tribune_loaded and not senator_loaded:
-                    logger.debug(
-                        f"Contact {callsign} with SKCC#{skcc_num}: "
-                        f"Using C/T/S suffix validation (rosters not loaded)"
-                    )
-                    is_valid_centurion_or_higher = True
-                else:
-                    # Rosters are loaded but member not found - reject
-                    logger.debug(
-                        f"Contact {callsign} with SKCC#{skcc_num} not valid: "
-                        f"was not Centurion/Tribune/Senator on {qso_date}"
-                    )
+            roster_info = self.award_rosters.get_roster_info()
+            if not roster_info.get('centurion', {}).get('loaded', False):
+                logger.debug(
+                    f"Contact {callsign} with SKCC#{skcc_num} not valid: "
+                    f"Centurion roster not loaded"
+                )
             else:
                 logger.debug(
                     f"Contact {callsign} with SKCC#{skcc_num} not valid: "
                     f"was not Centurion/Tribune/Senator on {qso_date}"
                 )
-
-        if not is_valid_centurion_or_higher:
             return False
 
         # CRITICAL RULE: "The QSO date must be on or after both participants' Centurion Award date"
         # Check user's Centurion achievement date
-        if self.user_centurion_date and qso_date < self.user_centurion_date:
+        if qso_date < self.user_centurion_date:
             logger.debug(
                 f"Contact {base_call} not valid: QSO date {qso_date} before "
                 f"user Centurion date {self.user_centurion_date}"
@@ -216,20 +218,12 @@ class TribuneAward(SKCCAwardBase):
             }
         """
         # First, check if user is a Centurion (prerequisite)
-        # Count unique SKCC members for Centurion check
         all_contacts = self.database.get_all_contacts(limit=999999)
-        unique_centurions = set()
-
-        for contact in all_contacts:
-            contact_dict = dict(contact)
-            if contact_dict.get('mode', '').upper() == 'CW' and contact_dict.get('skcc_number'):
-                skcc_num = contact_dict.get('skcc_number', '').strip()
-                if skcc_num:
-                    base_number = extract_base_skcc_number(skcc_num)
-                    if base_number and base_number.isdigit():
-                        unique_centurions.add(base_number)
-
-        is_centurion = len(unique_centurions) >= 100
+        centurion_award = CenturionAward(self.database)
+        centurion_progress = centurion_award.calculate_progress(all_contacts)
+        unique_centurions = centurion_progress.get('unique_members', set())
+        centurion_count = centurion_progress.get('current', len(unique_centurions))
+        is_centurion = centurion_progress.get('achieved', centurion_count >= 100)
 
         # Collect unique Tribune members
         unique_members = set()
@@ -258,7 +252,7 @@ class TribuneAward(SKCCAwardBase):
             'unique_members': unique_members,
             'next_level_count': next_level,
             'is_centurion': is_centurion,
-            'centurion_count': len(unique_centurions),
+            'centurion_count': centurion_count,
             'prerequisite_met': is_centurion
         }
 
