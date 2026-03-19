@@ -11,6 +11,8 @@ from pathlib import Path
 import threading
 import time
 
+from src.app_paths import app_path
+
 try:
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
@@ -47,19 +49,17 @@ class GoogleDriveBackup:
         self.auto_backup_thread = None
         self.stop_auto_backup = False
 
-        # Get project root directory
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.project_root = os.path.dirname(script_dir)
+        self.project_root = app_path()
 
         # Set database path
         if database_path is None:
-            self.database_path = os.path.join(self.project_root, "logger.db")
+            self.database_path = app_path("logger.db")
         else:
             self.database_path = database_path
 
         # Paths for credentials
-        self.token_path = os.path.join(self.project_root, 'gdrive_token.json')
-        self.credentials_path = os.path.join(self.project_root, 'gdrive_credentials.json')
+        self.token_path = app_path('gdrive_token.json')
+        self.credentials_path = app_path('gdrive_credentials.json')
 
         # Initialize if credentials exist
         if os.path.exists(self.token_path):
@@ -199,7 +199,7 @@ class GoogleDriveBackup:
 
             # Optionally backup config
             if include_config:
-                config_path = os.path.join(self.project_root, 'config.json')
+                config_path = app_path('config.json')
                 if os.path.exists(config_path):
                     config_backup_name = f'config_{timestamp}.json'
                     config_backup_path = os.path.join(temp_backup_dir, config_backup_name)

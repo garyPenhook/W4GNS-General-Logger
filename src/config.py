@@ -10,16 +10,14 @@ import time
 from functools import lru_cache
 from threading import Lock
 
+from src.app_paths import app_path
+
 
 class Config:
     def __init__(self, config_path=None):
-        # Default to config.json in the project root directory
+        # Default to config.json in the runtime app directory
         if config_path is None:
-            # Get the directory where this script is located (src/)
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go up one level to the project root
-            project_root = os.path.dirname(script_dir)
-            config_path = os.path.join(project_root, "config.json")
+            config_path = app_path("config.json")
 
         self.config_path = config_path
         self.data = self.load()

@@ -29,6 +29,7 @@ from src.gui.date_range_dialog import DateRangeDialog
 from src.gui.monthly_brag_dialog import MonthlyBragDialog
 from src.gui.help_dialog import HelpDialog
 from src.adif import export_contacts_to_adif, import_contacts_from_adif, validate_adif_file
+from src.app_paths import app_path
 
 
 class W4GNSLogger:
@@ -694,7 +695,7 @@ https://www.ng3k.com/Misc/cluster.html
             db_filename = f"w4gns_log_{timestamp}.db"
 
             # Always backup to local logs directory
-            logs_dir = "logs"
+            logs_dir = app_path("logs")
             os.makedirs(logs_dir, exist_ok=True)
 
             # Backup ADIF

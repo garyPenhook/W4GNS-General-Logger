@@ -155,7 +155,7 @@ class HelpContent:
 
             ("First Launch:\n", 'heading'),
             ("On first launch, the application will:\n", ()),
-            ("• Create a logger.db SQLite database\n", 'bullet'),
+            ("• Use a provided w4gns_log_*.db or logger_*.db backup as logger.db, or create a new logger.db database\n", 'bullet'),
             ("• Create a config.json settings file\n", 'bullet'),
             ("• Download SKCC roster files for awards tracking\n", 'bullet'),
             ("• Open to the Log Contacts tab\n\n", 'bullet'),
@@ -2390,7 +2390,7 @@ class HelpContent:
             ("Restore Process:\n", 'heading'),
             ("1. Download backup from Google Drive\n", 'numbered'),
             ("2. Close application\n", 'numbered'),
-            ("3. Replace logger.db with backup\n", 'numbered'),
+            ("3. Replace logger.db with backup (or place the backup beside the app before first launch)\n", 'numbered'),
             ("4. Restart application\n\n", 'numbered'),
 
             ("Security:\n", 'heading'),
@@ -2661,7 +2661,7 @@ class HelpContent:
             ("1. Find most recent backup\n", 'numbered'),
             ("2. Close application\n", 'numbered'),
             ("3. Rename broken logger.db to logger.db.bad\n", 'numbered'),
-            ("4. Copy backup to logger.db\n", 'numbered'),
+            ("4. Copy backup to logger.db, or on a fresh install place the backup beside the app before first launch\n", 'numbered'),
             ("5. Restart application\n\n", 'numbered'),
 
             ("Related Topics:\n", 'heading'),

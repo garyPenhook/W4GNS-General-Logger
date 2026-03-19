@@ -3,27 +3,166 @@ Database management for contact logging
 Uses SQLite for local storage
 """
 
+import glob
+import os
+import shutil
 import sqlite3
 import threading
-import os
 from datetime import datetime
+
+from src.app_paths import app_path
+
+
+BOOTSTRAP_DB_PATTERNS = (
+    "w4gns_log_*.db",
+    "logger_*.db",
+)
+
+BACKUP_REQUIRED_COLUMNS = {
+    "callsign",
+    "date",
+    "time_on",
+}
+
+CONTACT_TEXT_FIELDS = {
+    "callsign",
+    "date",
+    "time_on",
+    "time_off",
+    "frequency",
+    "band",
+    "mode",
+    "rst_sent",
+    "rst_rcvd",
+    "power",
+    "name",
+    "qth",
+    "gridsquare",
+    "county",
+    "state",
+    "country",
+    "continent",
+    "cq_zone",
+    "itu_zone",
+    "dxcc",
+    "iota",
+    "sota",
+    "pota",
+    "my_gridsquare",
+    "comment",
+    "notes",
+    "email",
+    "first_name",
+    "skcc_number",
+    "my_skcc_number",
+    "key_type",
+    "distance_source",
+    "site",
+    "antenna",
+}
 
 
 class Database:
     def __init__(self, db_path=None):
-        # Default to logger.db in the project root directory
+        # Default to logger.db in the runtime app directory
         if db_path is None:
-            # Get the directory where this script is located (src/)
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go up one level to the project root
-            project_root = os.path.dirname(script_dir)
-            db_path = os.path.join(project_root, "logger.db")
+            db_path = app_path("logger.db")
 
         self.db_path = db_path
         self.conn = None
         # Thread lock for all write operations to prevent corruption
         self._write_lock = threading.Lock()
+        self._adopt_provided_backup_if_needed()
         self.init_database()
+
+    def _adopt_provided_backup_if_needed(self):
+        """Use a provided backup database when no primary logger DB exists yet."""
+        if os.path.exists(self.db_path):
+            return
+
+        backup_path = self._find_provided_backup_database()
+        if not backup_path:
+            return
+
+        try:
+            shutil.copy2(backup_path, self.db_path)
+            print(
+                "Using provided backup database "
+                f"{os.path.basename(backup_path)} as {os.path.basename(self.db_path)}"
+            )
+        except OSError as exc:
+            print(f"Warning: Failed to copy provided backup database {backup_path}: {exc}")
+
+    def _find_provided_backup_database(self):
+        """Return the newest valid backup DB placed beside the active logger database."""
+        search_dir = os.path.dirname(os.path.abspath(self.db_path)) or "."
+        candidates = []
+
+        for pattern in BOOTSTRAP_DB_PATTERNS:
+            candidates.extend(glob.glob(os.path.join(search_dir, pattern)))
+
+        unique_candidates = []
+        seen_paths = set()
+        for candidate in candidates:
+            candidate_path = os.path.abspath(candidate)
+            if candidate_path == os.path.abspath(self.db_path):
+                continue
+            if candidate_path in seen_paths:
+                continue
+            seen_paths.add(candidate_path)
+            unique_candidates.append(candidate_path)
+
+        for candidate_path in sorted(unique_candidates, key=os.path.getmtime, reverse=True):
+            if self._is_valid_backup_database(candidate_path):
+                return candidate_path
+
+        return None
+
+    def _is_valid_backup_database(self, candidate_path):
+        """Verify that a provided backup is a SQLite DB with a usable contacts table."""
+        conn = None
+        try:
+            conn = sqlite3.connect(candidate_path)
+            cursor = conn.cursor()
+
+            cursor.execute("PRAGMA quick_check(1)")
+            quick_check = cursor.fetchone()
+            if not quick_check or quick_check[0] != "ok":
+                print(f"Skipping invalid backup database {candidate_path}: quick_check failed")
+                return False
+
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='contacts'")
+            if not cursor.fetchone():
+                print(f"Skipping invalid backup database {candidate_path}: missing contacts table")
+                return False
+
+            cursor.execute("PRAGMA table_info(contacts)")
+            columns = {row[1] for row in cursor.fetchall()}
+            if not BACKUP_REQUIRED_COLUMNS.issubset(columns):
+                print(
+                    f"Skipping invalid backup database {candidate_path}: "
+                    "contacts table is missing required columns"
+                )
+                return False
+
+            return True
+        except sqlite3.Error as exc:
+            print(f"Skipping invalid backup database {candidate_path}: {exc}")
+            return False
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def _normalize_contact_record(self, contact):
+        """Normalize nullable text fields so older backups behave like current records."""
+        for field in CONTACT_TEXT_FIELDS:
+            if contact.get(field) is None:
+                contact[field] = ""
+        return contact
+
+    def _normalize_contact_records(self, rows):
+        """Convert rows to dictionaries with nullable text fields normalized."""
+        return [self._normalize_contact_record(dict(row)) for row in rows]
 
     def init_database(self):
         """
@@ -255,13 +394,10 @@ class Database:
             bool: True if recovery successful, False otherwise
         """
         try:
-            import glob
-
             print("Attempting automatic database recovery...")
 
             # Find most recent ADIF backup
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            logs_dir = os.path.join(project_root, "logs")
+            logs_dir = app_path("logs")
 
             if not os.path.exists(logs_dir):
                 print(f"ERROR: Backup directory not found: {logs_dir}")
@@ -558,14 +694,14 @@ class Database:
                             progress_callback(idx, len(contacts), f"Processing contact {idx + 1} of {len(contacts)}...")
 
                         # Validate required fields
-                        callsign = contact.get('callsign', '').strip()
+                        callsign = (contact.get('callsign') or '').strip()
                         if not callsign:
                             error_count += 1
                             error_details.append(f"Contact {idx + 1}: Missing callsign")
                             continue
 
-                        date = contact.get('date', '').strip()
-                        time_on = contact.get('time_on', '').strip()
+                        date = (contact.get('date') or '').strip()
+                        time_on = (contact.get('time_on') or '').strip()
 
                         # Check for duplicates using our pre-loaded set
                         if skip_duplicates and callsign and date and time_on:
@@ -677,7 +813,7 @@ class Database:
                 LIMIT ?
             ''', (limit,))
             # Convert Row objects to dicts for compatibility
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database read failed in get_all_contacts: {e}")
             return []
@@ -716,7 +852,7 @@ class Database:
             ''', (start_date, start_date, start_time, end_date, end_date, end_time))
 
             # Convert Row objects to dicts for compatibility
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database read failed in get_contacts_by_date_range: {e}")
             return []
@@ -734,7 +870,7 @@ class Database:
                 ORDER BY date DESC, time_on DESC
             ''', (f'%{callsign}%',))
             # Convert Row objects to dicts for compatibility
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database read failed in search_contacts: {e}")
             return []
@@ -862,7 +998,7 @@ class Database:
                 LIMIT ?
             ''', (limit,))
             # Convert Row objects to dicts for compatibility
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database read failed in get_recent_spots: {e}")
             return []
@@ -975,7 +1111,7 @@ class Database:
             '''
 
             cursor.execute(query, params)
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
 
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database query failed in get_unique_skcc_contacts: {e}")
@@ -1096,7 +1232,7 @@ class Database:
                 params.append(limit)
 
             cursor.execute(query, params)
-            return [dict(row) for row in cursor.fetchall()]
+            return self._normalize_contact_records(cursor.fetchall())
 
         except sqlite3.DatabaseError as e:
             print(f"ERROR: Database query failed in get_filtered_contacts: {e}")

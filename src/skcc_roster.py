@@ -15,14 +15,16 @@ from datetime import datetime
 from typing import Optional, Dict, List
 import threading
 
+from src.app_paths import app_path, bundled_path
+
 
 class SKCCRosterManager:
     """Manager for SKCC membership roster data"""
 
     ROSTER_URL = "https://www.skccgroup.com/membership_data/membership_roster.php"
-    ROSTER_FILE = "data/skcc_roster.csv"
-
     def __init__(self):
+        self.roster_file = app_path("data", "skcc_roster.csv")
+        self.bundled_roster_file = bundled_path("data", "skcc_roster.csv")
         self.roster_data = {}  # Maps callsign -> member info
         self.roster_by_number = {}  # Maps base SKCC number -> member info
         self.member_count = 0
@@ -232,10 +234,10 @@ class SKCCRosterManager:
     def _save_roster_to_csv(self, members: List[Dict]):
         """Save roster to CSV file"""
         # Ensure data directory exists
-        os.makedirs(os.path.dirname(self.ROSTER_FILE), exist_ok=True)
+        os.makedirs(os.path.dirname(self.roster_file), exist_ok=True)
 
         # Write CSV file
-        with open(self.ROSTER_FILE, 'w', newline='', encoding='utf-8') as f:
+        with open(self.roster_file, 'w', newline='', encoding='utf-8') as f:
             if members:
                 fieldnames = [
                     'skcc_number',
@@ -252,21 +254,30 @@ class SKCCRosterManager:
                 writer.writerows(members)
 
         # Write metadata file with download timestamp
-        meta_file = self.ROSTER_FILE + '.meta'
+        meta_file = self.roster_file + '.meta'
         with open(meta_file, 'w') as f:
             f.write(f"downloaded: {datetime.now().isoformat()}\n")
             f.write(f"count: {len(members)}\n")
 
+    def _resolve_roster_file(self) -> Optional[str]:
+        """Prefer the writable local roster, then fall back to the bundled copy."""
+        if os.path.exists(self.roster_file):
+            return self.roster_file
+        if os.path.exists(self.bundled_roster_file):
+            return self.bundled_roster_file
+        return None
+
     def load_local_roster(self) -> bool:
         """Load roster from local CSV file"""
-        if not os.path.exists(self.ROSTER_FILE):
+        roster_file = self._resolve_roster_file()
+        if roster_file is None:
             return False
 
         try:
             self.roster_data = {}
             self.roster_by_number = {}
             unique_numbers = set()
-            with open(self.ROSTER_FILE, 'r', newline='', encoding='utf-8') as f:
+            with open(roster_file, 'r', newline='', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     skcc_number = row.get('skcc_number', '').strip()
@@ -417,7 +428,9 @@ class SKCCRosterManager:
 
     def get_roster_age(self) -> Optional[str]:
         """Get age of local roster file"""
-        meta_file = self.ROSTER_FILE + '.meta'
+        meta_file = self.roster_file + '.meta'
+        if not os.path.exists(meta_file) and os.path.exists(self.bundled_roster_file + '.meta'):
+            meta_file = self.bundled_roster_file + '.meta'
         if not os.path.exists(meta_file):
             return None
 
@@ -444,7 +457,7 @@ class SKCCRosterManager:
 
     def has_local_roster(self) -> bool:
         """Check if local roster file exists"""
-        return os.path.exists(self.ROSTER_FILE) and len(self.roster_data) > 0
+        return self._resolve_roster_file() is not None and len(self.roster_data) > 0
 
 
 # Global instance

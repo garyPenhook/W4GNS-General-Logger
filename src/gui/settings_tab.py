@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox, filedialog
 from src.qrz import test_qrz_login
 from src.theme_colors import get_error_color, get_info_color, get_muted_color, get_success_color, get_warning_color
 from src.google_drive_backup import GoogleDriveBackup, format_file_size, format_timestamp
+from src.app_paths import app_path
 
 
 class SettingsTab:
@@ -646,7 +647,7 @@ Cluster list sources:
             adif_filename = f"w4gns_log_{timestamp}.adi"
 
             # Backup to local logs directory
-            logs_dir = "logs"
+            logs_dir = app_path("logs")
             os.makedirs(logs_dir, exist_ok=True)
 
             # Backup database file
@@ -703,7 +704,7 @@ Cluster list sources:
                     ("Database files", "*.db"),
                     ("All files", "*.*")
                 ],
-                initialdir="./logs"
+                initialdir=app_path("logs")
             )
 
             if not file_path:

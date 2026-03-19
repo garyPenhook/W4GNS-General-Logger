@@ -21,7 +21,13 @@ A desktop contact logging app for amateur radio operators with SKCC award tracki
 - Open Settings and enter your callsign, SKCC number, and station info.
 - Configure QRZ and other integrations if you use them.
 - The database is stored in `logger.db` in the project directory.
+- If you place a valid backup database next to the app before first launch, it will be adopted as `logger.db`.
+- Recognized first-run backup names are `w4gns_log_*.db` and `logger_*.db`.
 - Download SKCC rosters from the Awards tab when prompted.
+
+## Restoring from backup
+- For a fresh install, copy a valid `w4gns_log_*.db` or `logger_*.db` backup into the app directory before first launch.
+- For an existing install, either use the Restore Database action in Settings or replace `logger.db` while the app is closed.
 
 ## Basic use
 - Logging tab: enter QSO details and press Log (or Ctrl+Enter).
