@@ -70,7 +70,7 @@ class LoggingTab:
         self.callsign_entry.pack(side='left', padx=5)
 
         # Add trace to callsign entry for auto-lookup
-        self.callsign_var.trace_add('write', self.on_callsign_changed)
+        self.callsign_var.trace_add('write', lambda *_: self.on_callsign_changed())
 
         ttk.Label(row1, text="Date:").pack(side='left', padx=(20, 0))
         self.date_var = tk.StringVar(value=datetime.utcnow().strftime("%Y-%m-%d"))
@@ -180,7 +180,7 @@ class LoggingTab:
         # Load and display recent QSOs
         self.display_recent_qsos()
 
-    def on_callsign_changed(self, *args):
+    def on_callsign_changed(self, event=None):
         """
         Callback when callsign entry changes.
         Automatically looks up and fills in SKCC number from previous contacts.

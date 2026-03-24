@@ -264,7 +264,7 @@ class MonthlyBragDialog:
         try:
             with open(filename, 'w') as f:
                 # Header
-                f.write(f"SKCC Monthly Brag Report\n")
+                f.write("SKCC Monthly Brag Report\n")
                 f.write(f"{'=' * 50}\n\n")
 
                 # Station info
@@ -276,7 +276,7 @@ class MonthlyBragDialog:
                 f.write(f"\n{'=' * 50}\n\n")
 
                 # Summary
-                f.write(f"SUMMARY\n")
+                f.write("SUMMARY\n")
                 f.write(f"Unique SKCC Members Worked: {self.report_data['unique_count']}\n")
 
                 if self.report_data['bonus_member']:
@@ -287,7 +287,7 @@ class MonthlyBragDialog:
                 f.write(f"\n{'=' * 50}\n\n")
 
                 # Members list
-                f.write(f"SKCC MEMBERS WORKED\n")
+                f.write("SKCC MEMBERS WORKED\n")
                 f.write(f"{'SKCC #':<15} {'Callsign':<15}\n")
                 f.write(f"{'-' * 30}\n")
 
@@ -296,7 +296,7 @@ class MonthlyBragDialog:
                     f.write(f"{skcc_num:<15} {callsign:<15}\n")
 
                 f.write(f"\n{'=' * 50}\n")
-                f.write(f"\nNOTE: Contest contacts (WES, SKS, K3Y) are excluded per Monthly Brag rules.\n")
+                f.write("\nNOTE: Contest contacts (WES, SKS, K3Y) are excluded per Monthly Brag rules.\n")
 
             messagebox.showinfo("Export Complete",
                               f"Exported Monthly Brag report to:\n{filename}")

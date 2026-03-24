@@ -66,7 +66,7 @@ class HelpDialog:
 
         ttk.Label(search_frame, text="Search:").pack(side='left')
         self.search_var = tk.StringVar()
-        self.search_var.trace('w', self.filter_topics)
+        self.search_var.trace_add('write', lambda *_: self.filter_topics())
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
         search_entry.pack(side='left', fill='x', expand=True, padx=5)
 
@@ -259,7 +259,7 @@ class HelpDialog:
                 self.topics_tree.insert('', 'end', key, text=value)
                 self.all_topics[key] = value
 
-    def filter_topics(self, *args):
+    def filter_topics(self):
         """Filter topics based on search"""
         search_text = self.search_var.get().lower()
 

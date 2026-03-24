@@ -218,7 +218,6 @@ class SKCCRosterManager:
             Date in YYYYMMDD format, or empty string if parse fails
         """
         try:
-            from datetime import datetime
             # Parse formats like "2-Jan-2006"
             dt = datetime.strptime(date_str, "%d-%b-%Y")
             return dt.strftime("%Y%m%d")
@@ -327,6 +326,10 @@ class SKCCRosterManager:
 
         # No match found
         return None
+
+    def lookup_member(self, callsign: str) -> Optional[Dict]:
+        """Backward-compatible alias used by existing GUI code."""
+        return self.lookup_callsign(callsign)
 
     def is_skcc_member(self, callsign: str) -> bool:
         """

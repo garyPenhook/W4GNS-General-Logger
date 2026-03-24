@@ -3,7 +3,7 @@ SKCC Awards Tab - Display Straight Key Century Club award progress
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 from src.skcc_awards import (
     CenturionAward, TribuneAward, SenatorAward,
@@ -590,7 +590,7 @@ class SKCCAwardsTab:
         endorsement = progress['endorsement']
         next_level_count = progress.get('next_level_count')
 
-        status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
         self.centurion_progress.config(
             text=f"{status} - {current} of {required} members ({pct:.1f}%)",
             foreground=get_success_color(self.config) if progress['achieved'] else 'black'
@@ -644,7 +644,7 @@ class SKCCAwardsTab:
         next_level_count = progress.get('next_level_count')
 
         prereq_status = "✅" if progress.get('prerequisite_met') else "❌"
-        status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
 
         self.tribune_progress.config(
             text=f"{prereq_status} Centurion | {status} - {current} of {required} Tribune/Senator members ({pct:.1f}%)",
@@ -699,7 +699,7 @@ class SKCCAwardsTab:
         next_level_count = progress.get('next_level_count')
 
         prereq_status = "✅" if progress.get('prerequisite_met') else "❌"
-        status = "✅ ACHIEVED!" if progress['achieved'] else f"In Progress"
+        status = "✅ ACHIEVED!" if progress['achieved'] else "In Progress"
 
         self.senator_progress.config(
             text=f"{prereq_status} Tribune x8 | {status} - {current} of {required} post-x8 contacts ({pct:.1f}%)",
@@ -1037,7 +1037,7 @@ class SKCCAwardsTab:
         else:
             report += "⚪ Tribune x8 Date: NOT SET\n"
 
-        report += f"\nCONTACT DATA:\n" + "-"*60 + "\n"
+        report += "\nCONTACT DATA:\n" + "-"*60 + "\n"
         report += f"Total contacts: {total_contacts:,}\n"
         if total_contacts > 0:
             report += f"CW contacts: {cw_contacts:,} ({cw_contacts/total_contacts*100:.1f}%)\n"
@@ -1079,19 +1079,19 @@ class SKCCAwardsTab:
             )
 
         if issues:
-            report += f"\nISSUES FOUND:\n" + "-"*60 + "\n"
+            report += "\nISSUES FOUND:\n" + "-"*60 + "\n"
             for i, issue in enumerate(issues, 1):
                 report += f"{i}. {issue}\n"
 
-            report += f"\nHOW TO FIX:\n" + "-"*60 + "\n"
+            report += "\nHOW TO FIX:\n" + "-"*60 + "\n"
             for fix in fixes:
                 report += f"\n{fix}\n"
 
             # Show error dialog
             messagebox.showwarning("SKCC Awards Diagnostic", report)
         else:
-            report += f"\n✅ Configuration looks good!\n"
-            report += f"\nIf awards still don't show, click 'Refresh Awards'."
+            report += "\n✅ Configuration looks good!\n"
+            report += "\nIf awards still don't show, click 'Refresh Awards'."
             messagebox.showinfo("SKCC Awards Diagnostic", report)
 
     # Core Awards

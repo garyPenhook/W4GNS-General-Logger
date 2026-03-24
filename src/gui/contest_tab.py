@@ -10,7 +10,6 @@ import re
 
 from src.theme_colors import get_muted_color, get_info_color
 from src.qrz import QRZSession
-from src.dxcc import lookup_dxcc
 from src.skcc_roster import SKCCRosterManager
 
 
@@ -934,7 +933,7 @@ class ContestTab:
             ))
 
         except Exception as e:
-            self.frame.after(0, lambda: self._lookup_error(original_button_text, str(e)))
+            self.frame.after(0, lambda e=e: self._lookup_error(original_button_text, str(e)))
 
     def _lookup_skcc_number(self, callsign):
         """Look up SKCC number from roster and previous contacts"""

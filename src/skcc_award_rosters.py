@@ -12,8 +12,8 @@ import requests
 import re
 import os
 import time
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
+from datetime import datetime
+from typing import Dict, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 

@@ -7,7 +7,6 @@ import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.parse
 import urllib.error
-from datetime import datetime
 
 
 class QRZSession:
@@ -146,7 +145,7 @@ class QRZSession:
             url = f"{self.base_url}?{params}"
 
             # Debug output
-            print(f"\n=== QRZ Callsign Lookup Debug ===")
+            print("\n=== QRZ Callsign Lookup Debug ===")
             print(f"Looking up: {callsign.upper()}")
             print(f"Request URL: {url}")
 
@@ -154,7 +153,7 @@ class QRZSession:
                 xml_data = response.read().decode('utf-8')
 
             # Debug: Print raw XML response
-            print(f"Response XML:")
+            print("Response XML:")
             print(xml_data)
             print("=== End Debug ===\n")
 

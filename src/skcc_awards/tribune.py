@@ -20,7 +20,7 @@ Rules:
 """
 
 import logging
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any
 
 from src.skcc_awards.base import SKCCAwardBase
 from src.skcc_awards.centurion import CenturionAward

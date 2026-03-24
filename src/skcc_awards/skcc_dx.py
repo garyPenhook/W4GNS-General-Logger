@@ -29,7 +29,7 @@ Levels (both awards):
 """
 
 import logging
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any
 from collections import defaultdict
 
 from src.skcc_awards.base import SKCCAwardBase

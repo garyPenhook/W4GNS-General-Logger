@@ -671,7 +671,7 @@ Cluster list sources:
                 shutil.copy2(self.database.db_path, external_db_file)
                 export_contacts_to_adif(contacts, external_adif_file)
 
-                backup_message += f"\n\nAlso backed up to external path:\n"
+                backup_message += "\n\nAlso backed up to external path:\n"
                 backup_message += f"Database: {external_db_file}\n"
                 backup_message += f"ADIF: {external_adif_file}"
 
@@ -1057,16 +1057,18 @@ Cluster list sources:
                         self.parent.after(5000, self.update_roster_status)
 
                     self.parent.after(0, show_failure)
-                    print(f"⚠ SKCC membership roster download failed")
+                    print("⚠ SKCC membership roster download failed")
 
             except Exception as e:
                 print(f"Error downloading membership roster: {e}")
                 import traceback
                 traceback.print_exc()
 
+                error_msg = str(e)
+
                 def show_error():
                     self.roster_status_label.config(
-                        text=f"❌ Error: {str(e)[:50]}",
+                        text=f"❌ Error: {error_msg[:50]}",
                         foreground=get_error_color(self.config)
                     )
                     # After 5 seconds, try to show what we have
@@ -1104,7 +1106,7 @@ Cluster list sources:
 
                     self.parent.after(0, show_success)
 
-                    print(f"✓ SKCC award rosters updated:")
+                    print("✓ SKCC award rosters updated:")
                     print(f"  Centurion: {info['centurion']['count']:,} members")
                     print(f"  Tribune: {info['tribune']['count']:,} members")
                     print(f"  Senator: {info['senator']['count']:,} members")
@@ -1128,9 +1130,11 @@ Cluster list sources:
                 import traceback
                 traceback.print_exc()
 
+                error_msg = str(e)
+
                 def show_error():
                     self.award_roster_status_label.config(
-                        text=f"❌ Download failed: {str(e)[:50]}",
+                        text=f"❌ Download failed: {error_msg[:50]}",
                         foreground=get_error_color(self.config)
                     )
                     # After 5 seconds, try to show what we have
@@ -1342,7 +1346,7 @@ Cluster list sources:
             result = self.gdrive_backup.create_backup(include_config=self.gdrive_include_config_var.get())
 
             if result['success']:
-                msg = f"Backup completed successfully!\n\n"
+                msg = "Backup completed successfully!\n\n"
                 msg += f"Timestamp: {result['timestamp']}\n"
                 if 'database' in result:
                     msg += f"Database: {result['database'].get('name', 'N/A')}\n"

@@ -3,11 +3,10 @@ Weather Tab - Local weather conditions display
 Uses Open-Meteo API (free, open source, no API key required)
 """
 
-import tkinter as tk
 from tkinter import ttk, messagebox
 import requests
 from datetime import datetime
-from src.theme_colors import get_info_color, get_muted_color, get_error_color
+from src.theme_colors import get_info_color, get_muted_color
 
 
 class WeatherTab:

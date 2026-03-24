@@ -51,12 +51,24 @@ class W4GNSLogger:
         # Initialize theme manager
         self.theme_manager = ThemeManager(self.root, self.config)
 
+        # UI attributes set by create_main_interface()
+        self.notebook: ttk.Notebook = None  # type: ignore[assignment]
+        self.logging_tab: EnhancedLoggingTab = None  # type: ignore[assignment]
+        self.contacts_tab: ContactsTab = None  # type: ignore[assignment]
+        self.dx_cluster_tab: DXClusterTab = None  # type: ignore[assignment]
+        self.skcc_awards_tab: SKCCAwardsTab = None  # type: ignore[assignment]
+        self.weather_tab: WeatherTab = None  # type: ignore[assignment]
+        self.space_weather_tab: SpaceWeatherTab = None  # type: ignore[assignment]
+        self.contest_tab: ContestTab = None  # type: ignore[assignment]
+        self.settings_tab: SettingsTab = None  # type: ignore[assignment]
+        self.status_bar: ttk.Label = None  # type: ignore[assignment]
+
         # Create UI
         self.create_menu()
         self.create_main_interface()
 
         # Apply saved theme
-        saved_theme = self.config.get('theme', 'light')
+        saved_theme = str(self.config.get('theme', 'light'))
         self.theme_manager.apply_theme(saved_theme)
 
         # Handle window close
@@ -147,8 +159,8 @@ class W4GNSLogger:
         self.notebook.add(self.settings_tab.get_frame(), text="  Settings  ")
 
         # Status bar
-        self.status_bar = ttk.Label(self.root, text="Ready", relief=tk.SUNKEN, anchor=tk.W)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.status_bar = ttk.Label(self.root, text="Ready", relief="sunken", anchor="w")
+        self.status_bar.pack(side="bottom", fill="x")
 
     def show_edit_contact_dialog(self):
         """Open contact search dialog for editing."""
@@ -218,7 +230,7 @@ class W4GNSLogger:
 
         except Exception as e:
             # Handle errors gracefully
-            self.root.after(0, lambda: self._export_error(progress_dialog, str(e)))
+            self.root.after(0, lambda e=e: self._export_error(progress_dialog, str(e)))
 
     def _export_success(self, progress_dialog, count, filename):
         """Handle successful export (runs on main thread)"""
@@ -274,7 +286,6 @@ class W4GNSLogger:
             return
 
         # Build default filename with date range
-        from datetime import datetime
         start_date_formatted = result['start_date'].replace('-', '')
         end_date_formatted = result['end_date'].replace('-', '')
         default_filename = f"contacts_{start_date_formatted}_{end_date_formatted}.adi"
@@ -366,7 +377,7 @@ class W4GNSLogger:
 
         try:
             # Get user's callsign and SKCC number from config
-            user_callsign = self.config.get('callsign', '')
+            user_callsign = str(self.config.get('callsign', ''))
             user_skcc = self.config.get('skcc_number', '')
 
             # Write ADIF file
@@ -581,7 +592,8 @@ class W4GNSLogger:
                 imported_count = result['imported']
                 duplicate_count = result['duplicates']
                 error_count = result['errors']
-                error_details = result.get('error_details', [])
+                raw_details = result.get('error_details', [])
+                error_details = raw_details if isinstance(raw_details, list) else []
 
             except Exception as e:
                 progress_window.destroy()
@@ -603,7 +615,7 @@ class W4GNSLogger:
             if error_count > 0:
                 result_message += f"\nFailed to import {error_count} contacts"
                 if error_details:
-                    result_message += f"\n\nFirst errors:\n" + "\n".join(error_details[:5])
+                    result_message += "\n\nFirst errors:\n" + "\n".join(error_details[:5])
 
             if error_count == 0:
                 messagebox.showinfo("Import Successful", result_message)
@@ -643,7 +655,7 @@ https://www.ng3k.com/Misc/cluster.html
 
 © 2024
         """
-        tk.messagebox.showinfo("About W4GNS Logger", about_text.strip())
+        messagebox.showinfo("About W4GNS Logger", about_text.strip())
 
     def cleanup_old_backups(self, directory, keep_count=5):
         """Keep only the most recent backup files, delete older ones"""
@@ -677,7 +689,6 @@ https://www.ng3k.com/Misc/cluster.html
         """Backup log to local and external locations on shutdown"""
         try:
             from datetime import datetime
-            import shutil
 
             # Check if database connection is still open
             if not self.database or not self.database.conn:
@@ -716,7 +727,7 @@ https://www.ng3k.com/Misc/cluster.html
             self.cleanup_old_backups(logs_dir, keep_count=5)
 
             # Backup to external path if configured
-            external_path = self.config.get('backup.external_path', '').strip()
+            external_path = str(self.config.get('backup.external_path', '')).strip()
             if external_path and os.path.exists(external_path):
                 # Backup ADIF to external
                 external_adif_file = os.path.join(external_path, adif_filename)

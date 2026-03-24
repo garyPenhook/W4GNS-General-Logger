@@ -19,7 +19,7 @@ Rules:
 """
 
 import logging
-from typing import Dict, List, Any, Set, Tuple
+from typing import Dict, List, Any, Set
 
 from src.skcc_awards.base import SKCCAwardBase
 from src.utils.skcc_number import extract_base_skcc_number

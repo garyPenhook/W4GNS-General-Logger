@@ -1,20 +1,55 @@
 """
-DX Cluster Telnet Client with async support for better performance
-Handles connections to DX cluster servers
+DX Cluster client with async support for better performance.
+Handles connections to DX cluster servers without depending on telnetlib,
+which was removed from the Python standard library in Python 3.13.
 """
 
-import telnetlib
+import asyncio
+import socket
 import threading
 import queue
 import time
 import re
 
-# Optional async support
-try:
-    import asyncio
-    ASYNC_AVAILABLE = True
-except ImportError:
-    ASYNC_AVAILABLE = False
+ASYNC_AVAILABLE = True
+
+
+class _SocketLineConnection:
+    """Minimal line-oriented socket wrapper used by DXClusterClient."""
+
+    def __init__(self, hostname, port, timeout=10):
+        self._socket = socket.create_connection((hostname, port), timeout=timeout)
+        self._socket.settimeout(timeout)
+        self._buffer = b""
+
+    def write(self, data):
+        self._socket.sendall(data)
+
+    def read_until(self, separator=b"\n", timeout=1):
+        previous_timeout = self._socket.gettimeout()
+        self._socket.settimeout(timeout)
+        try:
+            while separator not in self._buffer:
+                chunk = self._socket.recv(4096)
+                if not chunk:
+                    raise EOFError("Connection closed by server")
+                self._buffer += chunk
+
+            split_index = self._buffer.index(separator) + len(separator)
+            data = self._buffer[:split_index]
+            self._buffer = self._buffer[split_index:]
+            return data
+        except socket.timeout:
+            return b""
+        finally:
+            self._socket.settimeout(previous_timeout)
+
+    def close(self):
+        try:
+            self._socket.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        self._socket.close()
 
 
 class DXClusterClient:
@@ -28,11 +63,13 @@ class DXClusterClient:
         self.read_thread = None
         self.message_queue = queue.Queue()
         self.spot_callback = None
+        self._async_reader = None
+        self._async_writer = None
 
     def connect(self):
         """Connect to DX cluster"""
         try:
-            self.connection = telnetlib.Telnet(self.hostname, self.port, timeout=10)
+            self.connection = _SocketLineConnection(self.hostname, self.port, timeout=10)
             self.connected = True
             self.running = True
 
@@ -201,7 +238,7 @@ class DXClusterClient:
 
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.message_queue.put(f"Connection timeout to {self.hostname}:{self.port}")
             self.connected = False
             return False
@@ -253,7 +290,7 @@ class DXClusterClient:
                         lines.append(line)
                         self._parse_spot(line)
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break  # No more data available
 
         except Exception as e:

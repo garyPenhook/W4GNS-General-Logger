@@ -5,7 +5,6 @@ Contacts Tab - View and manage logged contacts
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
-from datetime import datetime
 
 from src.qrz import QRZSession
 from src.skcc_roster import SKCCRosterManager
@@ -38,7 +37,7 @@ class ContactsTab:
         # Callsign search
         ttk.Label(search_row1, text="Callsign:", width=10).pack(side='left', padx=2)
         self.callsign_search_var = tk.StringVar()
-        self.callsign_search_var.trace('w', lambda *args: self.apply_search())
+        self.callsign_search_var.trace_add('write', lambda *_: self.apply_search())
         callsign_entry = ttk.Entry(search_row1, textvariable=self.callsign_search_var, width=12)
         callsign_entry.pack(side='left', padx=2)
         callsign_entry.bind('<Return>', lambda e: self.lookup_callsign())
@@ -51,25 +50,25 @@ class ContactsTab:
         # Prefix search
         ttk.Label(search_row1, text="Prefix:", width=6).pack(side='left', padx=2)
         self.prefix_search_var = tk.StringVar()
-        self.prefix_search_var.trace('w', lambda *args: self.apply_search())
+        self.prefix_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row1, textvariable=self.prefix_search_var, width=8).pack(side='left', padx=2)
 
         # Country search
         ttk.Label(search_row1, text="Country:", width=8).pack(side='left', padx=2)
         self.country_search_var = tk.StringVar()
-        self.country_search_var.trace('w', lambda *args: self.apply_search())
+        self.country_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row1, textvariable=self.country_search_var, width=15).pack(side='left', padx=2)
 
         # State search
         ttk.Label(search_row1, text="State:", width=6).pack(side='left', padx=2)
         self.state_search_var = tk.StringVar()
-        self.state_search_var.trace('w', lambda *args: self.apply_search())
+        self.state_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row1, textvariable=self.state_search_var, width=8).pack(side='left', padx=2)
 
         # Continent search
         ttk.Label(search_row1, text="Continent:", width=10).pack(side='left', padx=2)
         self.continent_search_var = tk.StringVar()
-        self.continent_search_var.trace('w', lambda *args: self.apply_search())
+        self.continent_search_var.trace_add('write', lambda *_: self.apply_search())
         continent_values = ['', 'AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA']
         ttk.Combobox(search_row1, textvariable=self.continent_search_var, values=continent_values, width=5, state='readonly').pack(side='left', padx=2)
 
@@ -80,21 +79,21 @@ class ContactsTab:
         # Band search
         ttk.Label(search_row2, text="Band:", width=10).pack(side='left', padx=2)
         self.band_search_var = tk.StringVar()
-        self.band_search_var.trace('w', lambda *args: self.apply_search())
+        self.band_search_var.trace_add('write', lambda *_: self.apply_search())
         band_values = ['', '160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m', '2m', '70cm']
         ttk.Combobox(search_row2, textvariable=self.band_search_var, values=band_values, width=8, state='readonly').pack(side='left', padx=2)
 
         # Mode search
         ttk.Label(search_row2, text="Mode:", width=6).pack(side='left', padx=2)
         self.mode_search_var = tk.StringVar()
-        self.mode_search_var.trace('w', lambda *args: self.apply_search())
+        self.mode_search_var.trace_add('write', lambda *_: self.apply_search())
         mode_values = ['', 'CW', 'SSB', 'AM', 'FM', 'FT8', 'FT4', 'RTTY', 'PSK31', 'JS8']
         ttk.Combobox(search_row2, textvariable=self.mode_search_var, values=mode_values, width=8, state='readonly').pack(side='left', padx=2)
 
         # Date From
         ttk.Label(search_row2, text="From:", width=6).pack(side='left', padx=2)
         self.date_from_var = tk.StringVar()
-        self.date_from_var.trace('w', lambda *args: self.apply_search())
+        self.date_from_var.trace_add('write', lambda *_: self.apply_search())
         date_from_entry = ttk.Entry(search_row2, textvariable=self.date_from_var, width=10)
         date_from_entry.pack(side='left', padx=2)
         date_from_entry.insert(0, 'YYYY-MM-DD')
@@ -105,7 +104,7 @@ class ContactsTab:
         # Date To
         ttk.Label(search_row2, text="To:", width=4).pack(side='left', padx=2)
         self.date_to_var = tk.StringVar()
-        self.date_to_var.trace('w', lambda *args: self.apply_search())
+        self.date_to_var.trace_add('write', lambda *_: self.apply_search())
         date_to_entry = ttk.Entry(search_row2, textvariable=self.date_to_var, width=10)
         date_to_entry.pack(side='left', padx=2)
         date_to_entry.insert(0, 'YYYY-MM-DD')
@@ -116,13 +115,13 @@ class ContactsTab:
         # CQ Zone
         ttk.Label(search_row2, text="CQ Zone:", width=8).pack(side='left', padx=2)
         self.cq_zone_var = tk.StringVar()
-        self.cq_zone_var.trace('w', lambda *args: self.apply_search())
+        self.cq_zone_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row2, textvariable=self.cq_zone_var, width=4).pack(side='left', padx=2)
 
         # ITU Zone
         ttk.Label(search_row2, text="ITU Zone:", width=9).pack(side='left', padx=2)
         self.itu_zone_var = tk.StringVar()
-        self.itu_zone_var.trace('w', lambda *args: self.apply_search())
+        self.itu_zone_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row2, textvariable=self.itu_zone_var, width=4).pack(side='left', padx=2)
 
         # Row 3: DXCC, POTA, SOTA, SKCC, QRP
@@ -132,30 +131,30 @@ class ContactsTab:
         # DXCC entity
         ttk.Label(search_row3, text="DXCC:", width=10).pack(side='left', padx=2)
         self.dxcc_search_var = tk.StringVar()
-        self.dxcc_search_var.trace('w', lambda *args: self.apply_search())
+        self.dxcc_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row3, textvariable=self.dxcc_search_var, width=10).pack(side='left', padx=2)
 
         # POTA reference
         ttk.Label(search_row3, text="POTA:", width=6).pack(side='left', padx=2)
         self.pota_search_var = tk.StringVar()
-        self.pota_search_var.trace('w', lambda *args: self.apply_search())
+        self.pota_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row3, textvariable=self.pota_search_var, width=10).pack(side='left', padx=2)
 
         # SOTA reference
         ttk.Label(search_row3, text="SOTA:", width=6).pack(side='left', padx=2)
         self.sota_search_var = tk.StringVar()
-        self.sota_search_var.trace('w', lambda *args: self.apply_search())
+        self.sota_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row3, textvariable=self.sota_search_var, width=10).pack(side='left', padx=2)
 
         # SKCC number
         ttk.Label(search_row3, text="SKCC#:", width=7).pack(side='left', padx=2)
         self.skcc_search_var = tk.StringVar()
-        self.skcc_search_var.trace('w', lambda *args: self.apply_search())
+        self.skcc_search_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Entry(search_row3, textvariable=self.skcc_search_var, width=8).pack(side='left', padx=2)
 
         # QRP checkbox (5W or less)
         self.qrp_var = tk.BooleanVar()
-        self.qrp_var.trace('w', lambda *args: self.apply_search())
+        self.qrp_var.trace_add('write', lambda *_: self.apply_search())
         ttk.Checkbutton(search_row3, text="QRP (≤5W)", variable=self.qrp_var).pack(side='left', padx=10)
 
         # Search button
@@ -236,7 +235,7 @@ class ContactsTab:
             self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
         except Exception as e:
             # Handle errors gracefully
-            self.parent.after(0, lambda: self._load_error(str(e)))
+            self.parent.after(0, lambda e=e: self._load_error(str(e)))
 
     def _update_contacts_display(self, contacts_list):
         """Update UI with loaded contacts (runs on main thread)"""
@@ -631,7 +630,10 @@ class ContactsTab:
                 messagebox.showwarning("No Selection", "Select a contact to edit.")
                 return
             item = results_tree.item(selection[0])
-            contact_id = item['values'][0]
+            values = item['values']
+            if not values:
+                return
+            contact_id = values[0]
             dialog.destroy()
             try:
                 contact_id = int(contact_id)

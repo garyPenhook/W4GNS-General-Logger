@@ -5,9 +5,7 @@ Automatic backup of database and configuration to Google Drive
 
 import os
 import shutil
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
 import threading
 import time
 
@@ -359,10 +357,10 @@ class GoogleDriveBackup:
                     should_backup = True
 
             if should_backup and self.is_authenticated:
-                print(f"[Auto Backup] Creating scheduled backup...")
+                print("[Auto Backup] Creating scheduled backup...")
                 result = self.create_backup()
                 if result['success']:
-                    print(f"[Auto Backup] Backup completed successfully")
+                    print("[Auto Backup] Backup completed successfully")
                 else:
                     print(f"[Auto Backup] Backup failed: {result.get('error', 'Unknown error')}")
 

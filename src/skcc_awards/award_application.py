@@ -13,7 +13,7 @@ Supported awards:
 
 import platform
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from src.skcc_roster import SKCCRosterManager
 from src.skcc_awards.qrp_awards import QRP_BAND_POINTS

@@ -216,7 +216,7 @@ class CombinedSpotsTab:
         # Load saved location filter
         saved_location = self.config.get('pota_filter.location', '')
         self.location_filter_var = tk.StringVar(value=saved_location)
-        self.location_filter_var.trace('w', lambda *args: self.save_and_apply_pota_filters())
+        self.location_filter_var.trace_add('write', lambda *_: self.save_and_apply_pota_filters())
         ttk.Entry(loc_row, textvariable=self.location_filter_var, width=15).pack(side='left', padx=2)
 
         # POTA Spots display
@@ -426,7 +426,7 @@ class CombinedSpotsTab:
                 foreground=get_success_color(self.config)))
         except Exception as e:
             self.parent.after(0, lambda: self.pota_status_label.config(
-                text=f"Error", foreground=get_error_color(self.config)))
+                text="Error", foreground=get_error_color(self.config)))
 
     def _update_pota_spots_display(self):
         """Update POTA spots display with filtered spots"""

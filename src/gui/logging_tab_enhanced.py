@@ -123,7 +123,7 @@ class EnhancedLoggingTab:
 
         ttk.Label(row1, text="Callsign:", width=12, anchor='e').pack(side='left')
         self.callsign_var = tk.StringVar()
-        self.callsign_var.trace_add('write', lambda *args: self.display_recent_qsos())
+        self.callsign_var.trace_add('write', lambda *_: self.display_recent_qsos())
         self.callsign_entry = ttk.Entry(row1, textvariable=self.callsign_var, width=15, font=('', 12, 'bold'))
         self.callsign_entry.pack(side='left', padx=5)
 
@@ -872,7 +872,7 @@ class EnhancedLoggingTab:
 
         except Exception as e:
             # Handle unexpected errors
-            self.parent.after(0, lambda: self._lookup_error(
+            self.parent.after(0, lambda e=e: self._lookup_error(
                 callsign, auto, original_button_text, str(e)
             ))
 
@@ -1444,7 +1444,7 @@ class EnhancedLoggingTab:
                 foreground=get_success_color(self.config)))
         except Exception as e:
             self.parent.after(0, lambda: self.pota_status_label.config(
-                text=f"Error", foreground=get_error_color(self.config)))
+                text="Error", foreground=get_error_color(self.config)))
 
     def _update_pota_spots_display(self):
         """Update POTA spots display with filtered spots"""

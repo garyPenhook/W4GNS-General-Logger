@@ -509,7 +509,7 @@ class TextAwardExporter:
         arch = platform.machine()
 
         if system == "Linux":
-            platform_str = f"64-bit Linux" if "64" in arch else "32-bit Linux"
+            platform_str = "64-bit Linux" if "64" in arch else "32-bit Linux"
         elif system == "Darwin":
             platform_str = "64-bit macOS" if "64" in arch else "macOS"
         elif system == "Windows":

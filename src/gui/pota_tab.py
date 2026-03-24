@@ -88,7 +88,7 @@ class POTATab:
 
         ttk.Label(search_row, text="Filter Location:").pack(side='left', padx=(0, 5))
         self.location_filter_var = tk.StringVar()
-        self.location_filter_var.trace('w', lambda *args: self.apply_filters())
+        self.location_filter_var.trace_add('write', lambda *_: self.apply_filters())
         ttk.Entry(search_row, textvariable=self.location_filter_var, width=20).pack(side='left', padx=5)
         ttk.Label(search_row, text="(e.g., US-CA, US-TX)").pack(side='left', padx=5)
 
@@ -164,9 +164,9 @@ class POTATab:
                 text=f"Last updated: {datetime.now().strftime('%H:%M:%S')} - {len(spots)} spots",
                 foreground=get_success_color(self.config)))
         except Exception as e:
-            self.parent.after(0, lambda: self.status_label.config(
+            self.parent.after(0, lambda e=e: self.status_label.config(
                 text=f"Error: {str(e)}", foreground=get_error_color(self.config)))
-            self.parent.after(0, lambda: messagebox.showerror(
+            self.parent.after(0, lambda e=e: messagebox.showerror(
                 "POTA API Error", f"Failed to fetch POTA spots:\n{str(e)}"))
 
     def _update_spots_display(self):
@@ -291,7 +291,7 @@ class POTATab:
                     break
 
             # Build detail message
-            details = f"POTA Activator Spot Details\n\n"
+            details = "POTA Activator Spot Details\n\n"
             details += f"Activator: {activator}\n"
             details += f"Park: {park_display}\n"
 

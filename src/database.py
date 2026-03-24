@@ -8,7 +8,6 @@ import os
 import shutil
 import sqlite3
 import threading
-from datetime import datetime
 
 from src.app_paths import app_path
 
@@ -69,7 +68,7 @@ class Database:
             db_path = app_path("logger.db")
 
         self.db_path = db_path
-        self.conn = None
+        self.conn: sqlite3.Connection = None  # type: ignore[assignment]
         # Thread lock for all write operations to prevent corruption
         self._write_lock = threading.Lock()
         self._adopt_provided_backup_if_needed()
@@ -915,7 +914,7 @@ class Database:
         Returns:
             dict with duplicate info or None if not a duplicate
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         cursor = self.conn.cursor()
 

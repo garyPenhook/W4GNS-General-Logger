@@ -7,8 +7,8 @@ import os
 import tempfile
 import shutil
 import time
-from functools import lru_cache
 from threading import Lock
+from typing import cast
 
 from src.app_paths import app_path
 
@@ -194,11 +194,11 @@ class Config:
     def set(self, key, value):
         """Set configuration value with cache invalidation"""
         keys = key.split('.')
-        d = self.data
+        d: dict = self.data
         for k in keys[:-1]:
-            if k not in d:
+            if k not in d or not isinstance(d[k], dict):
                 d[k] = {}
-            d = d[k]
+            d = cast(dict, d[k])
         d[keys[-1]] = value
 
         # Invalidate cache for this key and any parent keys

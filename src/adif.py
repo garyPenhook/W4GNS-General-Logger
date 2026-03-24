@@ -210,7 +210,7 @@ class ADIFParser:
                 elif field_name in ('APP_SKCCLOGGER_KEYTYPE', 'APP_SKCC_KEY_TYPE') and db_field == 'key_type':
                     field_data = self._translate_key_type(field_data)
 
-                contact[db_field] = field_data.strip()
+                contact[db_field] = field_data.strip() if field_data is not None else ''
 
         return contact if contact else None
 

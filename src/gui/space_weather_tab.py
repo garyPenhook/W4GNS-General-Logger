@@ -8,7 +8,7 @@ from tkinter import ttk
 from datetime import datetime
 import threading
 from src.space_weather import SpaceWeatherClient
-from src.theme_colors import get_success_color, get_error_color, get_warning_color, get_muted_color
+from src.theme_colors import get_muted_color
 
 
 class SpaceWeatherTab:

@@ -11,7 +11,7 @@ Data sources:
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import time
 
 
