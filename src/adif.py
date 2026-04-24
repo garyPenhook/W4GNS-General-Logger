@@ -4,7 +4,7 @@ Supports ADIF 3.x format for import/export of contact logs
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ADIFParser:
@@ -55,10 +55,11 @@ class ADIFParser:
         if self._records is None:
             if self._record_strings is not None:
                 # Lazy parse from cached record strings
-                self._records = [
-                    self._parse_record(rec) for rec in self._record_strings
-                    if self._parse_record(rec)
-                ]
+                self._records = []
+                for rec in self._record_strings:
+                    contact = self._parse_record(rec)
+                    if contact:
+                        self._records.append(contact)
             else:
                 self._records = []
         return self._records
@@ -131,14 +132,21 @@ class ADIFParser:
         """Parse a single ADIF record"""
         # ADIF field format: <FIELD_NAME:LENGTH:TYPE>DATA
         # Type is optional, most common is just <FIELD_NAME:LENGTH>DATA
-        pattern = r'<([A-Za-z0-9_]+):(\d+)(?::([A-Z]))?>(.*?(?=<|$))'
-        matches = re.finditer(pattern, record, re.IGNORECASE | re.DOTALL)
+        pattern = re.compile(r'<([A-Za-z0-9_]+):(\d+)(?::[^>]*)?>', re.IGNORECASE)
 
         contact = {}
-        for match in matches:
+        pos = 0
+        while True:
+            match = pattern.search(record, pos)
+            if not match:
+                break
+
             field_name = match.group(1).upper()
             field_length = int(match.group(2))
-            field_data = match.group(4)[:field_length]
+            data_start = match.end()
+            data_end = data_start + field_length
+            field_data = record[data_start:data_end]
+            pos = data_end
 
             # Map ADIF fields to our database fields
             field_map = {
@@ -333,7 +341,8 @@ class ADIFGenerator:
             f.write(f"<ADIF_VER:{len(self.version)}>{self.version}\n")
             f.write(f"<PROGRAMID:{len(program_name)}>{program_name}\n")
             f.write(f"<PROGRAMVERSION:{len(program_version)}>{program_version}\n")
-            f.write(f"<CREATED_TIMESTAMP:15>{datetime.utcnow().strftime('%Y%m%d %H%M%S')}\n")
+            timestamp = datetime.now(timezone.utc).strftime('%Y%m%d %H%M%S')
+            f.write(f"<CREATED_TIMESTAMP:15>{timestamp}\n")
             f.write("<EOH>\n\n")
 
             # Write records
@@ -410,8 +419,6 @@ class ADIFGenerator:
             'continent': 'CONT',
             'cq_zone': 'CQZ',
             'itu_zone': 'ITUZ',
-            'dxcc': 'DXCC',
-            'dxcc_entity': 'DXCC',  # Support alternate field name
             'iota': 'IOTA',
             'sota': 'SOTA_REF',
             'pota': 'POTA_REF',
@@ -428,6 +435,12 @@ class ADIFGenerator:
             'their_power_watts': 'APP_SKCC_THEIR_POWER',
             'dxcc_entity': 'DXCC_ENTITY'
         }
+
+        dxcc_value = contact.get('dxcc') or contact.get('dxcc_entity')
+        if dxcc_value:
+            dxcc_value = str(dxcc_value).strip()
+            if dxcc_value:
+                fields.append(f"<DXCC:{len(dxcc_value)}>{dxcc_value}")
 
         for db_field, adif_field in field_map.items():
             value = contact.get(db_field, '')
@@ -661,10 +674,6 @@ def validate_adif_file(filename):
 
         if not content.strip():
             return False, "File is empty"
-
-        # Check for basic ADIF structure
-        if not re.search(r'<eoh>|<EOH>', content, re.IGNORECASE):
-            return False, "No <EOH> marker found - may not be a valid ADIF file"
 
         # Check for at least one record
         if not re.search(r'<eor>|<EOR>', content, re.IGNORECASE):

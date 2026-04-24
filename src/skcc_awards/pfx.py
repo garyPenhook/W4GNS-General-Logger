@@ -274,14 +274,12 @@ class PFXAward(SKCCAwardBase):
 
         # Determine endorsement level
         current_level = "Not Yet"
-        next_level = "PFX"
         next_points = 500000
 
         for threshold, level_name in PFX_ENDORSEMENTS:
             if total_points >= threshold:
                 current_level = level_name
             elif total_points < threshold:
-                next_level = level_name
                 next_points = threshold
                 break
 

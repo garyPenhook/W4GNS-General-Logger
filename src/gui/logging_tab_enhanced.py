@@ -682,7 +682,6 @@ class EnhancedLoggingTab:
             # Parse response - extract transmit timestamp (bytes 40-47)
             unpacked = struct.unpack(NTP_PACKET_FORMAT, response)
             tx_timestamp_int = unpacked[10]
-            tx_timestamp_frac = unpacked[11]
 
             # Convert from NTP time (since 1900) to Unix time (since 1970)
             ntp_time = tx_timestamp_int - NTP_DELTA
@@ -699,8 +698,6 @@ class EnhancedLoggingTab:
 
     def on_callsign_keypress(self, event=None):
         """Display previous QSOs as user types in callsign field"""
-        callsign = self.callsign_var.get().strip()
-
         # Previous QSOs feature removed - now showing Recent QSOs only
 
     def on_callsign_tab(self, event=None):
@@ -872,8 +869,9 @@ class EnhancedLoggingTab:
 
         except Exception as e:
             # Handle unexpected errors
-            self.parent.after(0, lambda e=e: self._lookup_error(
-                callsign, auto, original_button_text, str(e)
+            error_msg = str(e)
+            self.parent.after(0, lambda: self._lookup_error(
+                callsign, auto, original_button_text, error_msg
             ))
 
     def _update_lookup_results(self, callsign, auto, original_button_text,
@@ -1442,7 +1440,7 @@ class EnhancedLoggingTab:
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text=f"{len(spots)} spots - {datetime.now().strftime('%H:%M:%S')}",
                 foreground=get_success_color(self.config)))
-        except Exception as e:
+        except Exception:
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text="Error", foreground=get_error_color(self.config)))
 
@@ -1548,12 +1546,9 @@ class EnhancedLoggingTab:
         if len(values) >= 8:
             activator = values[0]
             park_ref = values[1]
-            location = values[2]
             frequency = values[3]
             mode = values[4]
             band = values[5]
-            time = values[6]
-            qsos = values[7]
 
             # Find full spot details for park name and grid
             park_name = ""

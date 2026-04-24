@@ -76,8 +76,6 @@ def parse_skcc_suffix(skcc_number: str) -> Tuple[Optional[str], Optional[str]]:
     skcc_number = skcc_number.strip()
     base = skcc_number.split()[0]
 
-    # Extract suffix
-    suffix = None
     if base and not base.isdigit():
         # Find where digits end
         match = re.match(r'^(\d+)(.*)$', base)

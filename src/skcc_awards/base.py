@@ -161,7 +161,6 @@ class SKCCAwardBase(ABC):
             ValueError: If no qualifying contacts found
             IOError: If file cannot be written
         """
-
         # Filter for qualifying contacts only
         qualifying = [c for c in contacts if self.validate(c)]
 

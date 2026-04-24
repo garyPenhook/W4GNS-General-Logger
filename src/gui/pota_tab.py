@@ -164,10 +164,11 @@ class POTATab:
                 text=f"Last updated: {datetime.now().strftime('%H:%M:%S')} - {len(spots)} spots",
                 foreground=get_success_color(self.config)))
         except Exception as e:
-            self.parent.after(0, lambda e=e: self.status_label.config(
-                text=f"Error: {str(e)}", foreground=get_error_color(self.config)))
-            self.parent.after(0, lambda e=e: messagebox.showerror(
-                "POTA API Error", f"Failed to fetch POTA spots:\n{str(e)}"))
+            error_msg = str(e)
+            self.parent.after(0, lambda: self.status_label.config(
+                text=f"Error: {error_msg}", foreground=get_error_color(self.config)))
+            self.parent.after(0, lambda: messagebox.showerror(
+                "POTA API Error", f"Failed to fetch POTA spots:\n{error_msg}"))
 
     def _update_spots_display(self):
         """Update the spots display with filtered spots"""

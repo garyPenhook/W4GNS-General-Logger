@@ -235,7 +235,8 @@ class ContactsTab:
             self.parent.after(0, lambda: self._update_contacts_display(contacts_list))
         except Exception as e:
             # Handle errors gracefully
-            self.parent.after(0, lambda e=e: self._load_error(str(e)))
+            error_msg = str(e)
+            self.parent.after(0, lambda: self._load_error(error_msg))
 
     def _update_contacts_display(self, contacts_list):
         """Update UI with loaded contacts (runs on main thread)"""
@@ -918,7 +919,7 @@ class ContactsTab:
                 callsign, original_button_text, qrz_data, skcc_number
             ))
 
-        except Exception as e:
+        except Exception:
             self.frame.after(0, lambda: self._lookup_done(original_button_text))
 
     def _show_lookup_results(self, callsign, original_button_text, qrz_data, skcc_number):

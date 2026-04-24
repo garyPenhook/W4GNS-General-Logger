@@ -6,7 +6,6 @@ import json
 import os
 import tempfile
 import shutil
-import time
 from threading import Lock
 from typing import cast
 
@@ -25,9 +24,7 @@ class Config:
         # Performance optimizations
         self._lock = Lock()  # Thread-safe operations
         self._last_mtime = self._get_mtime()  # Track file modification time
-        self._pending_save = False  # Debounced save flag
-        self._last_save_time = 0  # Last save timestamp
-        self._save_debounce_seconds = 0.5  # Wait 0.5s before writing to disk
+        self._pending_save = False
         self._get_cache = {}  # Simple cache for get() operations
 
     def _get_mtime(self):
@@ -76,18 +73,11 @@ class Config:
 
     def save(self, force=False):
         """
-        Save configuration to file using atomic write with debouncing
+        Save configuration to file using an atomic write.
 
         Args:
-            force: If True, bypass debouncing and save immediately
+            force: Kept for compatibility with older call sites.
         """
-        current_time = time.time()
-
-        # Debounce: Skip save if we saved recently (unless forced)
-        if not force and (current_time - self._last_save_time) < self._save_debounce_seconds:
-            self._pending_save = True
-            return
-
         with self._lock:
             try:
                 # Get directory of config file
@@ -103,7 +93,6 @@ class Config:
                     shutil.move(temp_path, self.config_path)
 
                     # Update tracking variables
-                    self._last_save_time = current_time
                     self._last_mtime = self._get_mtime()
                     self._pending_save = False
 

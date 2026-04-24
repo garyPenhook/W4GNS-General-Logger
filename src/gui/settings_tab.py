@@ -1060,7 +1060,8 @@ Cluster list sources:
                     print("⚠ SKCC membership roster download failed")
 
             except Exception as e:
-                print(f"Error downloading membership roster: {e}")
+                error_msg = str(e)
+                print(f"Error downloading membership roster: {error_msg}")
                 import traceback
                 traceback.print_exc()
 
@@ -1126,7 +1127,8 @@ Cluster list sources:
                     print(f"⚠ Some award rosters failed to download: {results}")
 
             except Exception as e:
-                print(f"Error downloading award rosters: {e}")
+                error_msg = str(e)
+                print(f"Error downloading award rosters: {error_msg}")
                 import traceback
                 traceback.print_exc()
 
