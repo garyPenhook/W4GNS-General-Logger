@@ -33,6 +33,8 @@ ENV/
 *~
 
 # Application specific
+/.codex
+/W4GNS-General-Logger
 config.json
 *.db
 *.sqlite

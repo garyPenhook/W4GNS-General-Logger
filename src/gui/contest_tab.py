@@ -933,7 +933,11 @@ class ContestTab:
             ))
 
         except Exception as e:
-            self.frame.after(0, lambda e=e: self._lookup_error(original_button_text, str(e)))
+            error_msg = str(e)
+            self.frame.after(
+                0,
+                lambda: self._lookup_error(original_button_text, error_msg),
+            )
 
     def _lookup_skcc_number(self, callsign):
         """Look up SKCC number from roster and previous contacts"""

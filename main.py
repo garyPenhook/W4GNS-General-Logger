@@ -230,7 +230,8 @@ class W4GNSLogger:
 
         except Exception as e:
             # Handle errors gracefully
-            self.root.after(0, lambda e=e: self._export_error(progress_dialog, str(e)))
+            error_msg = str(e)
+            self.root.after(0, lambda: self._export_error(progress_dialog, error_msg))
 
     def _export_success(self, progress_dialog, count, filename):
         """Handle successful export (runs on main thread)"""

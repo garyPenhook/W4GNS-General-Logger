@@ -424,7 +424,7 @@ class CombinedSpotsTab:
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text=f"{len(spots)} spots - {datetime.now().strftime('%H:%M:%S')}",
                 foreground=get_success_color(self.config)))
-        except Exception as e:
+        except Exception:
             self.parent.after(0, lambda: self.pota_status_label.config(
                 text="Error", foreground=get_error_color(self.config)))
 
@@ -538,7 +538,6 @@ class CombinedSpotsTab:
         if len(values) >= 6:
             activator = values[0]
             park_display = values[1]
-            location = values[2]
             frequency = values[3]
             mode = values[4]
             band = values[5]

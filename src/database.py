@@ -163,6 +163,26 @@ class Database:
         """Convert rows to dictionaries with nullable text fields normalized."""
         return [self._normalize_contact_record(dict(row)) for row in rows]
 
+    def _normalize_qso_date(self, date_value):
+        """Normalize supported QSO date formats to YYYYMMDD for comparison."""
+        date_text = str(date_value or "").strip()
+        if len(date_text) == 10 and date_text[4] == "-" and date_text[7] == "-":
+            return date_text.replace("-", "")
+        return date_text
+
+    def _qso_time_to_minutes(self, time_value):
+        """Convert HH:MM, HHMM, or HHMMSS to minutes since midnight."""
+        time_text = str(time_value or "").strip().replace(":", "")
+        if len(time_text) < 4 or not time_text[:4].isdigit():
+            return None
+
+        hours = int(time_text[:2])
+        minutes = int(time_text[2:4])
+        if hours > 23 or minutes > 59:
+            return None
+
+        return hours * 60 + minutes
+
     def init_database(self):
         """
         Initialize database and create tables if they don't exist
@@ -662,8 +682,9 @@ class Database:
                 # BEGIN TRANSACTION for batch operation
                 cursor.execute('BEGIN TRANSACTION')
 
-                # Pre-load existing contacts for duplicate detection (much faster than N queries)
+                # Pre-load existing contacts for duplicate detection.
                 existing_contacts = set()
+                existing_contact_times = {}
                 if skip_duplicates:
                     if progress_callback:
                         progress_callback(0, len(contacts), "Building duplicate detection index...")
@@ -680,8 +701,13 @@ class Database:
                         date = row[1] if row[1] else ''
                         time_on = row[2] if row[2] else ''
                         if callsign and date and time_on:
-                            # Create lookup key for duplicate detection
-                            existing_contacts.add((callsign, date, time_on))
+                            normalized_date = self._normalize_qso_date(date)
+                            existing_contacts.add((callsign, normalized_date, time_on))
+
+                            minutes = self._qso_time_to_minutes(time_on)
+                            if minutes is not None:
+                                key = (callsign, normalized_date)
+                                existing_contact_times.setdefault(key, []).append(minutes)
 
                 # Prepare batch insert data
                 contacts_to_insert = []
@@ -702,16 +728,26 @@ class Database:
                         date = (contact.get('date') or '').strip()
                         time_on = (contact.get('time_on') or '').strip()
 
-                        # Check for duplicates using our pre-loaded set
+                        # Check for duplicates using the pre-loaded time index.
                         if skip_duplicates and callsign and date and time_on:
-                            # Simple exact match check
-                            if (callsign.upper(), date, time_on) in existing_contacts:
-                                duplicate_count += 1
-                                continue
+                            normalized_callsign = callsign.upper()
+                            normalized_date = self._normalize_qso_date(date)
+                            new_minutes = self._qso_time_to_minutes(time_on)
+                            duplicate_found = False
 
-                            # Also check if we're about to insert this contact multiple times in same batch
-                            batch_key = (callsign.upper(), date, time_on)
-                            if any(batch_key == (c[0].upper(), c[1], c[2]) for c in contacts_to_insert):
+                            if new_minutes is not None:
+                                existing_times = existing_contact_times.get(
+                                    (normalized_callsign, normalized_date),
+                                    [],
+                                )
+                                duplicate_found = any(
+                                    abs(new_minutes - existing_minutes) <= window_minutes
+                                    for existing_minutes in existing_times
+                                )
+                            elif (normalized_callsign, normalized_date, time_on) in existing_contacts:
+                                duplicate_found = True
+
+                            if duplicate_found:
                                 duplicate_count += 1
                                 continue
 
@@ -759,6 +795,11 @@ class Database:
                         )
 
                         contacts_to_insert.append(contact_tuple)
+                        if skip_duplicates and callsign and date and time_on:
+                            existing_contacts.add((normalized_callsign, normalized_date, time_on))
+                            if new_minutes is not None:
+                                key = (normalized_callsign, normalized_date)
+                                existing_contact_times.setdefault(key, []).append(new_minutes)
 
                     except Exception as e:
                         error_count += 1

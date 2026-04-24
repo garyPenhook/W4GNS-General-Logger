@@ -73,6 +73,43 @@ class DatabaseBootstrapTests(unittest.TestCase):
             self.assertTrue(os.path.exists(db_path))
             self.assertEqual(count, 0)
 
+    def test_batch_import_skips_duplicates_within_time_window(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            db_path = os.path.join(tempdir, "logger.db")
+            database = Database(db_path=db_path)
+            try:
+                database.add_contact(
+                    {
+                        "callsign": "N0CALL",
+                        "date": "2026-04-24",
+                        "time_on": "12:00",
+                        "band": "20m",
+                        "mode": "CW",
+                    }
+                )
+
+                result = database.add_contacts_batch(
+                    [
+                        {
+                            "callsign": "N0CALL",
+                            "date": "2026-04-24",
+                            "time_on": "12:05",
+                            "band": "20m",
+                            "mode": "CW",
+                        }
+                    ],
+                    skip_duplicates=True,
+                    window_minutes=10,
+                )
+
+                count = database.conn.execute("SELECT COUNT(*) FROM contacts").fetchone()[0]
+            finally:
+                database.close()
+
+            self.assertEqual(result["imported"], 0)
+            self.assertEqual(result["duplicates"], 1)
+            self.assertEqual(count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -71,7 +71,7 @@ class POTAClient:
                 spots = response.json()
                 break  # Success, exit retry loop
 
-            except requests.exceptions.Timeout as e:
+            except requests.exceptions.Timeout:
                 if attempt < max_retries - 1:
                     delay = retry_delays[attempt]
                     logger.warning(f"POTA API timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
